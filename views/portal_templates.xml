@@ -918,884 +918,815 @@
             </t>
         </t>
 
-        <!-- Custom CSS -->
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
-            
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap');
+
             .detail-container {
                 font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+                background: #f4f7fb;
                 min-height: 100vh;
-                padding: 2rem 0;
+                padding: 1.5rem 0 3rem;
+                color: #0f172a;
             }
-            
+
             .breadcrumb-custom {
                 background: #fff;
-                border-radius: 12px;
-                padding: 1rem 1.5rem;
-                margin-bottom: 2rem;
-                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                border: 1px solid #e8edf5;
+                border-radius: 14px;
+                padding: .9rem 1.25rem;
+                margin-bottom: 1.25rem;
+                box-shadow: 0 4px 16px rgba(15, 23, 42, .04);
             }
-            
+
             .breadcrumb-custom .breadcrumb {
                 margin: 0;
                 background: transparent;
                 padding: 0;
             }
-            
+
             .breadcrumb-custom .breadcrumb-item a {
-                color: #6366f1;
+                color: #4f46e5;
                 text-decoration: none;
                 font-weight: 600;
             }
-            
-            .breadcrumb-custom .breadcrumb-item.active {
-                color: #6b7280;
-            }
-            
+
             .hero-card {
-                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                background: linear-gradient(135deg, #172554 0%, #312e81 58%, #4f46e5 100%);
                 border-radius: 24px;
-                padding: 2.5rem;
-                margin-bottom: 2rem;
-                box-shadow: 0 20px 60px rgba(99, 102, 241, 0.25);
+                padding: 2rem;
+                margin-bottom: 1.25rem;
+                box-shadow: 0 18px 50px rgba(49, 46, 129, .22);
                 color: #fff;
                 position: relative;
                 overflow: hidden;
             }
-            
+
             .hero-card::before {
                 content: '';
                 position: absolute;
-                top: -50%;
-                right: -20%;
-                width: 400px;
-                height: 400px;
-                background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+                width: 420px;
+                height: 420px;
                 border-radius: 50%;
+                top: -250px;
+                right: -120px;
+                background: radial-gradient(circle, rgba(255,255,255,.18) 0%, rgba(255,255,255,0) 68%);
             }
-            
-            .hero-content {
-                position: relative;
-                z-index: 1;
-            }
-            
-            .hero-title {
-                font-size: 2rem;
-                font-weight: 700;
-                margin-bottom: 1rem;
-                letter-spacing: -0.5px;
-            }
-            
-            .hero-meta {
-                display: flex;
-                align-items: center;
-                gap: 1rem;
-                flex-wrap: wrap;
-                margin-bottom: 1rem;
-            }
-            
+
+            .hero-content { position: relative; z-index: 1; }
+            .hero-title { font-size: 2rem; font-weight: 700; margin: 0 0 .85rem; }
+            .hero-meta { display: flex; gap: .7rem; flex-wrap: wrap; align-items: center; }
+
             .hero-badge {
                 display: inline-flex;
                 align-items: center;
-                gap: 0.5rem;
-                background: rgba(255,255,255,0.2);
-                backdrop-filter: blur(10px);
-                padding: 0.5rem 1rem;
-                border-radius: 50px;
+                gap: .45rem;
+                padding: .48rem .8rem;
+                border-radius: 999px;
+                background: rgba(255,255,255,.13);
+                border: 1px solid rgba(255,255,255,.23);
+                color: #fff;
+                font-size: .88rem;
                 font-weight: 600;
-                border: 1px solid rgba(255,255,255,0.3);
             }
-            
+
             .hero-status {
                 display: inline-flex;
                 align-items: center;
-                gap: 0.5rem;
-                padding: 0.75rem 1.5rem;
-                border-radius: 50px;
+                gap: .5rem;
+                padding: .7rem 1rem;
+                border-radius: 999px;
                 font-weight: 700;
-                font-size: 1.1rem;
-                border: 2px solid;
+                border: 1px solid rgba(255,255,255,.25);
             }
-            
-            .status-alquilado {
-                background: #d1fae5;
-                color: #065f46;
-                border-color: #10b981;
-            }
-            
-            .status-problema {
-                background: #fee2e2;
-                color: #991b1b;
-                border-color: #ef4444;
-            }
-            
-            .status-default {
-                background: #f3f4f6;
-                color: #374151;
-                border-color: #9ca3af;
-            }
-            
+
+            .status-alquilado { background: #dcfce7; color: #166534; }
+            .status-problema { background: #fee2e2; color: #991b1b; }
+            .status-default { background: #f1f5f9; color: #334155; }
+
             .hero-info {
                 display: flex;
-                align-items: center;
-                gap: 2rem;
                 flex-wrap: wrap;
-                margin-top: 1.5rem;
-                padding-top: 1.5rem;
-                border-top: 1px solid rgba(255,255,255,0.2);
+                gap: 1rem 1.8rem;
+                margin-top: 1.35rem;
+                padding-top: 1.15rem;
+                border-top: 1px solid rgba(255,255,255,.18);
             }
-            
+
             .hero-info-item {
-                display: flex;
+                display: inline-flex;
                 align-items: center;
-                gap: 0.5rem;
+                gap: .48rem;
+                font-size: .92rem;
             }
-            
-            .info-card {
+
+            .dashboard-filter-card,
+            .info-card,
+            .kpi-card,
+            .chart-card {
                 background: #fff;
-                border-radius: 20px;
-                border: none;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-                margin-bottom: 1.5rem;
-                overflow: hidden;
-                height: 100%;
+                border: 1px solid #e6ebf3;
+                border-radius: 18px;
+                box-shadow: 0 8px 28px rgba(15, 23, 42, .055);
             }
-            
-            .info-card-header {
-                padding: 1.25rem 1.5rem;
-                font-weight: 700;
-                font-size: 1.1rem;
+
+            .dashboard-filter-card {
+                padding: 1.25rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .filter-heading {
                 display: flex;
                 align-items: center;
-                gap: 0.75rem;
-                border-bottom: 1px solid #f3f4f6;
-            }
-            
-            .info-card-header.primary {
-                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                color: #fff;
-                border: none;
-            }
-            
-            .info-card-header.info {
-                background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-                color: #fff;
-                border: none;
-            }
-            
-            .info-card-header.success {
-                background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-                color: #fff;
-                border: none;
-            }
-            
-            .info-card-header.warning {
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                color: #fff;
-                border: none;
-            }
-            
-            .info-card-header.secondary {
-                background: linear-gradient(135deg, #64748b 0%, #475569 100%);
-                color: #fff;
-                border: none;
-            }
-            
-            .info-card-body {
-                padding: 1.5rem;
-            }
-            
-            .info-table {
-                width: 100%;
-            }
-            
-            .info-table tr {
-                border-bottom: 1px solid #f3f4f6;
-            }
-            
-            .info-table tr:last-child {
-                border-bottom: none;
-            }
-            
-            .info-table td {
-                padding: 1rem 0;
-            }
-            
-            .info-table td:first-child {
-                color: #6b7280;
-                font-weight: 600;
-                width: 35%;
-            }
-            
-            .info-table td:last-child {
-                font-weight: 600;
-                color: #1a1f3a;
-            }
-            
-            .counter-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 1.5rem;
-            }
-            
-            .counter-box {
-                background: #f9fafb;
-                border: 2px solid #e5e7eb;
-                border-radius: 16px;
-                padding: 2rem 1.5rem;
-                text-align: center;
-                transition: all 0.2s;
-            }
-            
-            .counter-box:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-                border-color: #6366f1;
-            }
-            
-            .counter-label {
-                font-size: 0.875rem;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                color: #6b7280;
-                font-weight: 600;
+                justify-content: space-between;
+                gap: 1rem;
                 margin-bottom: 1rem;
             }
-            
-            .counter-value {
-                font-size: 2.5rem;
+
+            .filter-heading h3 {
+                margin: 0;
+                font-size: 1.05rem;
                 font-weight: 700;
-                font-family: 'JetBrains Mono', monospace;
-                line-height: 1;
             }
-            
-            .counter-bn { color: #1a1f3a; }
-            .counter-color { color: #6366f1; }
-            .counter-scan { color: #0891b2; }
-            
-            .action-buttons {
+
+            .filter-grid {
                 display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-                gap: 1rem;
+                grid-template-columns: repeat(6, minmax(145px, 1fr));
+                gap: .85rem;
+                align-items: end;
             }
-            
-            .btn-action {
+
+            .filter-field label {
+                display: block;
+                margin-bottom: .35rem;
+                color: #64748b;
+                font-size: .75rem;
+                font-weight: 700;
+                text-transform: uppercase;
+                letter-spacing: .04em;
+            }
+
+            .filter-control {
+                width: 100%;
+                min-height: 42px;
+                border: 1px solid #dbe2ec;
+                border-radius: 11px;
+                padding: .55rem .7rem;
+                background: #fff;
+                color: #0f172a;
+                font-size: .88rem;
+                outline: none;
+            }
+
+            .filter-control:focus {
+                border-color: #6366f1;
+                box-shadow: 0 0 0 3px rgba(99,102,241,.1);
+            }
+
+            .filter-actions {
+                display: flex;
+                gap: .55rem;
+            }
+
+            .btn-filter,
+            .btn-clear-filter {
+                min-height: 42px;
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: .45rem;
+                padding: .6rem .95rem;
+                border-radius: 11px;
+                font-weight: 700;
+                text-decoration: none;
+                border: 1px solid transparent;
+                white-space: nowrap;
+            }
+
+            .btn-filter { background: #4f46e5; color: #fff; }
+            .btn-filter:hover { background: #4338ca; color: #fff; }
+            .btn-clear-filter { background: #fff; color: #475569; border-color: #dbe2ec; }
+            .btn-clear-filter:hover { background: #f8fafc; color: #0f172a; }
+
+            .kpi-grid {
+                display: grid;
+                grid-template-columns: repeat(6, minmax(0, 1fr));
+                gap: .9rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .kpi-card { padding: 1rem; }
+            .kpi-top { display: flex; justify-content: space-between; gap: .7rem; align-items: flex-start; }
+            .kpi-icon {
+                width: 42px;
+                height: 42px;
+                border-radius: 12px;
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                gap: 0.75rem;
-                padding: 1.25rem 1.5rem;
-                border-radius: 14px;
-                font-weight: 700;
-                font-size: 1.05rem;
-                transition: all 0.2s;
-                text-decoration: none;
-                border: none;
+                background: #eef2ff;
+                color: #4f46e5;
+                flex: 0 0 auto;
             }
-            
-            .btn-action-danger {
-                background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-                color: #fff;
-            }
-            
-            .btn-action-danger:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 12px 24px rgba(239, 68, 68, 0.3);
-                color: #fff;
-            }
-            
-            .btn-action-primary {
-                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                color: #fff;
-            }
-            
-            .btn-action-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
-                color: #fff;
-            }
-            
-            .btn-action-info {
-                background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%);
-                color: #fff;
-            }
-            
-            .btn-action-info:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 12px 24px rgba(8, 145, 178, 0.3);
-                color: #fff;
-            }
-            
-            .tickets-table {
-                width: 100%;
-            }
-            
-            .tickets-table thead th {
-                background: #f9fafb;
-                padding: 1rem;
-                font-weight: 700;
-                font-size: 0.875rem;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                color: #6b7280;
-                border-bottom: 2px solid #e5e7eb;
-            }
-            
-            .tickets-table tbody tr {
-                border-bottom: 1px solid #f3f4f6;
-                transition: all 0.2s;
-            }
-            
-            .tickets-table tbody tr:hover {
-                background: #f9fafb;
-            }
-            
-            .tickets-table tbody td {
-                padding: 1.25rem 1rem;
-                vertical-align: middle;
-            }
-            
-            .empty-state {
-                text-align: center;
-                padding: 3rem 2rem;
-            }
-            
-            .empty-state i {
-                font-size: 3.5rem;
-                color: #e5e7eb;
+            .kpi-label { color: #64748b; font-size: .78rem; font-weight: 600; margin-bottom: .35rem; }
+            .kpi-value { font-size: 1.6rem; line-height: 1.1; font-weight: 700; color: #0f172a; }
+            .kpi-value.date-value { font-size: 1.05rem; }
+            .kpi-note { margin-top: .45rem; font-size: .72rem; color: #94a3b8; }
+
+            .analytics-grid {
+                display: grid;
+                grid-template-columns: minmax(0, 1.7fr) minmax(280px, .8fr);
+                gap: 1rem;
                 margin-bottom: 1rem;
             }
-            
-            .empty-state p {
-                color: #6b7280;
-                font-size: 1.1rem;
+
+            .analytics-grid.secondary-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
-            
+
+            .chart-card { padding: 1.15rem; min-width: 0; }
+            .chart-title { font-size: 1.02rem; font-weight: 700; margin: 0; }
+            .chart-subtitle { color: #64748b; font-size: .78rem; margin-top: .2rem; }
+            .chart-header { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; margin-bottom: 1rem; }
+            .chart-badge { background: #eef2ff; color: #4338ca; border-radius: 999px; padding: .35rem .65rem; font-size: .72rem; font-weight: 700; }
+
+            .vertical-chart {
+                height: 255px;
+                display: flex;
+                align-items: flex-end;
+                gap: .45rem;
+                padding: .75rem .2rem .1rem;
+                border-bottom: 1px solid #e8edf5;
+                background-image: linear-gradient(to top, rgba(226,232,240,.5) 1px, transparent 1px);
+                background-size: 100% 25%;
+                overflow-x: auto;
+            }
+
+            .vertical-chart-item {
+                min-width: 38px;
+                flex: 1 0 38px;
+                height: 100%;
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-end;
+                align-items: center;
+                gap: .35rem;
+            }
+
+            .vertical-chart-value {
+                color: #475569;
+                font-size: .72rem;
+                font-weight: 700;
+                min-height: 18px;
+            }
+
+            .vertical-chart-bar-wrap {
+                width: 100%;
+                height: 185px;
+                display: flex;
+                align-items: flex-end;
+                justify-content: center;
+            }
+
+            .vertical-chart-bar {
+                width: min(34px, 70%);
+                min-height: 3px;
+                border-radius: 8px 8px 3px 3px;
+                background: linear-gradient(180deg, #6366f1 0%, #2563eb 100%);
+                box-shadow: 0 7px 16px rgba(79,70,229,.18);
+            }
+
+            .vertical-chart-label {
+                font-size: .68rem;
+                color: #64748b;
+                white-space: nowrap;
+            }
+
+            .hbar-list { display: flex; flex-direction: column; gap: .9rem; }
+            .hbar-row { min-width: 0; }
+            .hbar-meta { display: flex; justify-content: space-between; gap: .7rem; margin-bottom: .35rem; font-size: .78rem; }
+            .hbar-label { color: #334155; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            .hbar-value { color: #0f172a; font-weight: 700; }
+            .hbar-track { height: 9px; border-radius: 999px; background: #eef2f7; overflow: hidden; }
+            .hbar-fill { height: 100%; min-width: 3px; border-radius: inherit; background: linear-gradient(90deg, #4f46e5 0%, #2563eb 100%); }
+
+            .state-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: .65rem; }
+            .state-box { border: 1px solid #e7ecf3; background: #f8fafc; border-radius: 12px; padding: .8rem; }
+            .state-box-label { color: #64748b; font-size: .73rem; font-weight: 600; }
+            .state-box-value { font-size: 1.35rem; font-weight: 700; color: #0f172a; margin-top: .2rem; }
+
+            .info-card { margin-bottom: 1rem; overflow: hidden; }
+            .info-card-header {
+                padding: 1rem 1.2rem;
+                font-weight: 700;
+                font-size: 1rem;
+                display: flex;
+                align-items: center;
+                gap: .65rem;
+                border-bottom: 1px solid #eef2f7;
+                color: #0f172a;
+                background: #fff;
+            }
+            .info-card-header.primary { border-top: 3px solid #6366f1; }
+            .info-card-header.info { border-top: 3px solid #0891b2; }
+            .info-card-header.success { border-top: 3px solid #10b981; }
+            .info-card-header.warning { border-top: 3px solid #f59e0b; }
+            .info-card-header.secondary { border-top: 3px solid #64748b; }
+            .info-card-body { padding: 1.2rem; }
+
+            .info-table { width: 100%; }
+            .info-table tr { border-bottom: 1px solid #f1f5f9; }
+            .info-table tr:last-child { border-bottom: none; }
+            .info-table td { padding: .75rem 0; }
+            .info-table td:first-child { width: 38%; color: #64748b; font-weight: 600; }
+            .info-table td:last-child { color: #0f172a; font-weight: 600; }
+
+            .counter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .9rem; }
+            .counter-box { background: #f8fafc; border: 1px solid #e5eaf2; border-radius: 15px; padding: 1.25rem; text-align: center; }
+            .counter-label { color: #64748b; font-size: .76rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+            .counter-value { margin-top: .65rem; font-family: 'JetBrains Mono', monospace; font-size: 2rem; font-weight: 700; }
+            .counter-bn { color: #0f172a; }
+            .counter-color { color: #4f46e5; }
+            .counter-scan { color: #0891b2; }
+
+            .action-buttons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
+            .btn-action {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: .55rem;
+                min-height: 48px;
+                border-radius: 12px;
+                font-weight: 700;
+                text-decoration: none;
+                padding: .7rem 1rem;
+            }
+            .btn-action-danger { background: #fee2e2; color: #b91c1c; }
+            .btn-action-primary { background: #e0e7ff; color: #4338ca; }
+            .btn-action-info { background: #cffafe; color: #0e7490; }
+            .btn-action:hover { filter: brightness(.97); text-decoration: none; }
+
             .badge-custom {
                 display: inline-flex;
                 align-items: center;
-                gap: 0.4rem;
-                padding: 0.5rem 1rem;
-                border-radius: 50px;
-                font-size: 0.875rem;
-                font-weight: 600;
-                border: 2px solid;
+                gap: .35rem;
+                padding: .34rem .65rem;
+                border-radius: 999px;
+                font-size: .73rem;
+                font-weight: 700;
             }
-            
-            .badge-nuevo {
-                background: #dbeafe;
-                color: #1e40af;
-                border-color: #3b82f6;
+            .badge-nuevo { background: #dbeafe; color: #1d4ed8; }
+            .badge-proceso { background: #fef3c7; color: #92400e; }
+            .badge-finalizado { background: #dcfce7; color: #166534; }
+
+            .tickets-table { width: 100%; min-width: 1050px; }
+            .tickets-table th {
+                background: #f8fafc;
+                padding: .8rem .85rem;
+                border-bottom: 1px solid #e5eaf2;
+                color: #64748b;
+                text-transform: uppercase;
+                letter-spacing: .035em;
+                font-size: .7rem;
+                white-space: nowrap;
             }
-            
-            .badge-proceso {
-                background: #fef3c7;
-                color: #92400e;
-                border-color: #fbbf24;
+            .tickets-table td {
+                padding: .8rem .85rem;
+                border-bottom: 1px solid #f1f5f9;
+                font-size: .83rem;
+                vertical-align: middle;
             }
-            
-            .badge-finalizado {
-                background: #d1fae5;
-                color: #065f46;
-                border-color: #10b981;
-            }
-            
+            .tickets-table tbody tr:hover { background: #fafbff; }
             .btn-view {
                 display: inline-flex;
                 align-items: center;
                 justify-content: center;
-                gap: 0.5rem;
-                padding: 0.5rem 1rem;
-                border-radius: 8px;
-                background: #fff;
-                color: #6366f1;
-                border: 2px solid #6366f1;
-                font-weight: 600;
+                gap: .35rem;
+                border-radius: 9px;
+                padding: .4rem .7rem;
+                background: #eef2ff;
+                color: #4338ca;
                 text-decoration: none;
-                transition: all 0.2s;
+                font-weight: 700;
             }
-            
-            .btn-view:hover {
-                background: #6366f1;
-                color: #fff;
-                transform: translateY(-2px);
+            .btn-view:hover { background: #e0e7ff; color: #3730a3; }
+            .report-available { color: #15803d; font-weight: 700; }
+            .report-missing { color: #94a3b8; }
+
+            .empty-state { padding: 2.5rem 1rem; text-align: center; color: #94a3b8; }
+            .empty-state i { font-size: 2.4rem; margin-bottom: .6rem; }
+            .card-footer-custom { padding: .85rem 1rem; background: #f8fafc; text-align: center; }
+            .btn-link-custom { color: #4f46e5; text-decoration: none; font-weight: 700; }
+
+            @media (max-width: 1199px) {
+                .filter-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+                .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
             }
-            
-            .card-footer-custom {
-                background: #f9fafb;
-                border-top: 1px solid #e5e7eb;
-                padding: 1rem 1.5rem;
-                text-align: center;
+
+            @media (max-width: 991px) {
+                .analytics-grid,
+                .analytics-grid.secondary-grid { grid-template-columns: 1fr; }
+                .action-buttons { grid-template-columns: 1fr; }
             }
-            
-            .btn-link-custom {
-                color: #6366f1;
-                font-weight: 600;
-                text-decoration: none;
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
+
+            @media (max-width: 767px) {
+                .detail-container { padding-top: 1rem; }
+                .hero-card { padding: 1.4rem; border-radius: 18px; }
+                .hero-title { font-size: 1.5rem; }
+                .filter-grid { grid-template-columns: 1fr; }
+                .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+                .filter-actions { flex-direction: column; }
             }
-            
-            .btn-link-custom:hover {
-                color: #4f46e5;
-                text-decoration: none;
-            }
-            
-            @media (max-width: 768px) {
-                .hero-card {
-                    padding: 2rem 1.5rem;
-                }
-                
-                .hero-title {
-                    font-size: 1.5rem;
-                }
-                
-                .counter-value {
-                    font-size: 2rem;
-                }
-                
-                .action-buttons {
-                    grid-template-columns: 1fr;
-                }
+
+            @media (max-width: 480px) {
+                .kpi-grid { grid-template-columns: 1fr; }
             }
         </style>
 
         <div class="detail-container">
             <div class="container">
-                
-                <!-- Breadcrumb -->
+
                 <div class="breadcrumb-custom">
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb">
                             <li class="breadcrumb-item"><a href="/my/home">Portal</a></li>
                             <li class="breadcrumb-item"><a href="/my/equipos">Mis Equipos</a></li>
-                            <li class="breadcrumb-item active" aria-current="page">
-                                <t t-esc="equipo.serie"/>
-                            </li>
+                            <li class="breadcrumb-item active" aria-current="page"><t t-esc="equipo.serie"/></li>
                         </ol>
                     </nav>
                 </div>
 
-                <!-- Hero Card -->
                 <div class="hero-card">
                     <div class="hero-content">
                         <div class="row align-items-center">
                             <div class="col-lg-8 mb-3 mb-lg-0">
-                                <!-- Cliente / Empresa primero -->
                                 <t t-if="equipo.cliente_id">
                                     <div class="mb-3">
-                                        <span class="hero-badge">
-                                            <i class="fa fa-building"></i>
-                                            <t t-esc="equipo.cliente_id.name"/>
-                                        </span>
+                                        <span class="hero-badge"><i class="fa fa-building"></i><t t-esc="equipo.cliente_id.name"/></span>
                                     </div>
                                 </t>
-                                <!-- Luego el equipo -->
-                                <h1 class="hero-title">
-                                    <i class="fa fa-print me-2"></i>
-                                    <t t-esc="equipo.name.name"/>
-                                </h1>
+                                <h1 class="hero-title"><i class="fa fa-print me-2"></i><t t-esc="equipo.name.name"/></h1>
                                 <div class="hero-meta">
-                                    <div class="hero-badge">
-                                        <i class="fa fa-barcode"></i>
-                                        <span><t t-esc="equipo.serie"/></span>
-                                    </div>
-                                    <t t-if="equipo.ubicacion_instalacion">
-                                        <div class="hero-badge">
-                                            <i class="fa fa-map-marker-alt"></i>
-                                            <span><t t-esc="equipo.ubicacion_instalacion"/></span>
-                                        </div>
-                                    </t>
-                                    <t t-if="equipo.marca">
-                                        <div class="hero-badge">
-                                            <i class="fa fa-industry"></i>
-                                            <span><t t-esc="equipo.marca"/></span>
-                                        </div>
-                                    </t>
+                                    <span class="hero-badge"><i class="fa fa-barcode"></i><t t-esc="equipo.serie"/></span>
+                                    <t t-if="equipo.marca"><span class="hero-badge"><i class="fa fa-industry"></i><t t-esc="equipo.marca"/></span></t>
+                                    <t t-if="equipo.ubicacion_instalacion"><span class="hero-badge"><i class="fa fa-map-marker-alt"></i><t t-esc="equipo.ubicacion_instalacion"/></span></t>
+                                    <t t-if="equipo.ip_address"><span class="hero-badge"><i class="fa fa-network-wired"></i><t t-esc="equipo.ip_address"/></span></t>
                                 </div>
                             </div>
                             <div class="col-lg-4 text-lg-end">
                                 <t t-if="equipo.estado_alquiler_id == 'alquilada'">
-                                    <div class="hero-status status-alquilado">
-                                        <i class="fa fa-check-circle"></i>
-                                        <span>Alquilado</span>
-                                    </div>
+                                    <span class="hero-status status-alquilado"><i class="fa fa-check-circle"></i>Alquilado</span>
                                 </t>
                                 <t t-elif="equipo.estado_alquiler_id == 'con_problemas'">
-                                    <div class="hero-status status-problema">
-                                        <i class="fa fa-exclamation-triangle"></i>
-                                        <span>Con Problemas</span>
-                                    </div>
+                                    <span class="hero-status status-problema"><i class="fa fa-exclamation-triangle"></i>Con Problemas</span>
                                 </t>
                                 <t t-else="">
-                                    <div class="hero-status status-default">
-                                        <t t-esc="dict(equipo._fields['estado_alquiler_id'].selection).get(equipo.estado_alquiler_id, equipo.estado_alquiler_id)"/>
-                                    </div>
+                                    <span class="hero-status status-default"><t t-esc="dict(equipo._fields['estado_alquiler_id'].selection).get(equipo.estado_alquiler_id, equipo.estado_alquiler_id)"/></span>
                                 </t>
                             </div>
                         </div>
 
-                        <!-- Info adicional -->
                         <div class="hero-info">
-                            <t t-if="'bloqueado' in equipo._fields or 'is_blocked' in equipo._fields">
+                            <div class="hero-info-item">
+                                <i class="fa fa-palette"></i><span>Tipo:</span>
+                                <strong><t t-esc="'Color' if equipo.tipo_maquina_id == 'color' else 'Monocromática'"/></strong>
+                            </div>
+                            <div class="hero-info-item">
+                                <i class="fa fa-wrench"></i><span>Próximo mantenimiento:</span>
+                                <t t-if="equipo.fecha_recurrente"><strong><t t-esc="equipo.fecha_recurrente.strftime('%d/%m/%Y')"/></strong></t>
+                                <t t-else=""><strong>No programado</strong></t>
+                            </div>
+                            <t t-if="equipo.fecha_ultimo_mantenimiento">
                                 <div class="hero-info-item">
-                                    <i class="fa fa-shield-alt"></i>
-                                    <span>Estado:</span>
-                                    <t t-if="'bloqueado' in equipo._fields and equipo.bloqueado">
-                                        <strong>Bloqueado</strong>
-                                    </t>
-                                    <t t-elif="'is_blocked' in equipo._fields and equipo.is_blocked">
-                                        <strong>Bloqueado</strong>
-                                    </t>
-                                    <t t-else="">
-                                        <strong>Activo</strong>
-                                    </t>
-                                </div>
-                            </t>
-
-                            <t t-if="'fecha_mantenimiento' in equipo._fields or 'proximo_mantenimiento' in equipo._fields">
-                                <div class="hero-info-item">
-                                    <i class="fa fa-wrench"></i>
-                                    <span>Mantenimiento:</span>
-                                    <t t-if="'fecha_mantenimiento' in equipo._fields and equipo.fecha_mantenimiento">
-                                        <strong><t t-esc="equipo.fecha_mantenimiento.strftime('%d/%m/%Y')"/></strong>
-                                    </t>
-                                    <t t-elif="'proximo_mantenimiento' in equipo._fields and equipo.proximo_mantenimiento">
-                                        <strong><t t-esc="equipo.proximo_mantenimiento.strftime('%d/%m/%Y')"/></strong>
-                                    </t>
-                                    <t t-else="">
-                                        <span style="opacity: 0.8;">No programado</span>
-                                    </t>
-                                </div>
-                            </t>
-
-                            <t t-if="equipo.tipo_maquina_id">
-                                <div class="hero-info-item">
-                                    <i class="fa fa-palette"></i>
-                                    <span>Tipo:</span>
-                                    <t t-if="equipo.tipo_maquina_id == 'color'">
-                                        <strong>Color</strong>
-                                    </t>
-                                    <t t-else="">
-                                        <strong>B/N</strong>
-                                    </t>
+                                    <i class="fa fa-history"></i><span>Último mantenimiento:</span>
+                                    <strong><t t-esc="equipo.fecha_ultimo_mantenimiento.strftime('%d/%m/%Y')"/></strong>
                                 </div>
                             </t>
                         </div>
                     </div>
                 </div>
 
-                <!-- Información General y Ubicación -->
+                <div class="dashboard-filter-card">
+                    <div class="filter-heading">
+                        <div>
+                            <h3><i class="fa fa-filter me-2"></i>Filtros del historial y gráficos</h3>
+                            <div class="chart-subtitle">Todos los indicadores inferiores usan los mismos filtros.</div>
+                        </div>
+                    </div>
+
+                    <form t-att-action="'/my/equipo/%s' % equipo.id" method="get">
+                        <div class="filter-grid">
+                            <div class="filter-field">
+                                <label>Periodo</label>
+                                <select name="periodo" class="filter-control">
+                                    <option value="hoy" t-att-selected="'selected' if periodo == 'hoy' else None">Hoy</option>
+                                    <option value="7dias" t-att-selected="'selected' if periodo == '7dias' else None">Últimos 7 días</option>
+                                    <option value="mes" t-att-selected="'selected' if periodo == 'mes' else None">Mes</option>
+                                    <option value="anio" t-att-selected="'selected' if periodo == 'anio' else None">Año</option>
+                                    <option value="todos" t-att-selected="'selected' if periodo == 'todos' else None">Todo el historial</option>
+                                    <option value="personalizado" t-att-selected="'selected' if periodo == 'personalizado' else None">Rango personalizado</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-field">
+                                <label>Año</label>
+                                <select name="anio" class="filter-control">
+                                    <t t-foreach="available_years" t-as="year_item">
+                                        <option t-att-value="year_item" t-att-selected="'selected' if year_item == selected_year else None"><t t-esc="year_item"/></option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="filter-field">
+                                <label>Mes</label>
+                                <select name="mes" class="filter-control">
+                                    <option value="1" t-att-selected="'selected' if selected_month == 1 else None">Enero</option>
+                                    <option value="2" t-att-selected="'selected' if selected_month == 2 else None">Febrero</option>
+                                    <option value="3" t-att-selected="'selected' if selected_month == 3 else None">Marzo</option>
+                                    <option value="4" t-att-selected="'selected' if selected_month == 4 else None">Abril</option>
+                                    <option value="5" t-att-selected="'selected' if selected_month == 5 else None">Mayo</option>
+                                    <option value="6" t-att-selected="'selected' if selected_month == 6 else None">Junio</option>
+                                    <option value="7" t-att-selected="'selected' if selected_month == 7 else None">Julio</option>
+                                    <option value="8" t-att-selected="'selected' if selected_month == 8 else None">Agosto</option>
+                                    <option value="9" t-att-selected="'selected' if selected_month == 9 else None">Septiembre</option>
+                                    <option value="10" t-att-selected="'selected' if selected_month == 10 else None">Octubre</option>
+                                    <option value="11" t-att-selected="'selected' if selected_month == 11 else None">Noviembre</option>
+                                    <option value="12" t-att-selected="'selected' if selected_month == 12 else None">Diciembre</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-field">
+                                <label>Técnico</label>
+                                <select name="tecnico_id" class="filter-control">
+                                    <option value="">Todos</option>
+                                    <t t-foreach="available_tecnicos" t-as="tecnico_item">
+                                        <option t-att-value="tecnico_item.id" t-att-selected="'selected' if tecnico_item.id == selected_tecnico_id else None"><t t-esc="tecnico_item.name"/></option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="filter-field">
+                                <label>Tipo de servicio</label>
+                                <select name="tipo_servicio" class="filter-control">
+                                    <option value="">Todos</option>
+                                    <t t-foreach="tipo_servicio_selection.items()" t-as="service_item">
+                                        <option t-att-value="service_item[0]" t-att-selected="'selected' if service_item[0] == selected_tipo_servicio else None"><t t-esc="service_item[1]"/></option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="filter-field">
+                                <label>Estado</label>
+                                <select name="estado" class="filter-control">
+                                    <option value="">Todos</option>
+                                    <t t-foreach="estado_selection.items()" t-as="state_item">
+                                        <option t-att-value="state_item[0]" t-att-selected="'selected' if state_item[0] == selected_estado else None"><t t-esc="state_item[1]"/></option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <div class="filter-field">
+                                <label>Desde</label>
+                                <input type="date" name="date_begin" class="filter-control" t-att-value="date_begin or ''"/>
+                            </div>
+
+                            <div class="filter-field">
+                                <label>Hasta</label>
+                                <input type="date" name="date_end" class="filter-control" t-att-value="date_end or ''"/>
+                            </div>
+
+                            <div class="filter-field" style="grid-column: span 2;">
+                                <label>Acciones</label>
+                                <div class="filter-actions">
+                                    <button type="submit" class="btn-filter"><i class="fa fa-search"></i>Aplicar filtros</button>
+                                    <a t-attf-href="/my/equipo/#{equipo.id}" class="btn-clear-filter"><i class="fa fa-undo"></i>Restablecer</a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-top"><div><div class="kpi-label">Servicios en el filtro</div><div class="kpi-value"><t t-esc="tickets_total"/></div></div><div class="kpi-icon"><i class="fa fa-wrench"></i></div></div>
+                        <div class="kpi-note">Según periodo y filtros seleccionados</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-top"><div><div class="kpi-label">Finalizados</div><div class="kpi-value"><t t-esc="servicios_finalizados"/></div></div><div class="kpi-icon"><i class="fa fa-check-circle"></i></div></div>
+                        <div class="kpi-note">Servicios finalizados dentro del filtro</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-top"><div><div class="kpi-label">Servicios este mes</div><div class="kpi-value"><t t-esc="servicios_mes_actual"/></div></div><div class="kpi-icon"><i class="fa fa-calendar"></i></div></div>
+                        <div class="kpi-note">Mes calendario actual</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-top"><div><div class="kpi-label">Servicios este año</div><div class="kpi-value"><t t-esc="servicios_anio_actual"/></div></div><div class="kpi-icon"><i class="fa fa-bar-chart"></i></div></div>
+                        <div class="kpi-note">Año calendario actual</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-top"><div><div class="kpi-label">Técnicos que atendieron</div><div class="kpi-value"><t t-esc="tecnicos_distintos_count"/></div></div><div class="kpi-icon"><i class="fa fa-users"></i></div></div>
+                        <div class="kpi-note">Técnicos distintos dentro del filtro</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-top">
+                            <div>
+                                <div class="kpi-label">Última atención</div>
+                                <t t-if="ultimo_ticket and ultimo_ticket.agenda_local"><div class="kpi-value date-value"><t t-esc="ultimo_ticket.agenda_local"/></div></t>
+                                <t t-elif="ultimo_ticket and ultimo_ticket.agenda"><div class="kpi-value date-value"><t t-esc="ultimo_ticket.agenda.strftime('%d/%m/%Y %H:%M')"/></div></t>
+                                <t t-else=""><div class="kpi-value date-value">Sin registro</div></t>
+                            </div>
+                            <div class="kpi-icon"><i class="fa fa-clock-o"></i></div>
+                        </div>
+                        <div class="kpi-note">Última fecha de visita registrada</div>
+                    </div>
+                </div>
+
+                <div class="analytics-grid">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div><h3 class="chart-title"><t t-esc="chart_title"/></h3><div class="chart-subtitle"><t t-esc="chart_subtitle"/></div></div>
+                            <span class="chart-badge"><t t-esc="tickets_total"/> servicios</span>
+                        </div>
+                        <t t-if="chart_rows">
+                            <div class="vertical-chart">
+                                <t t-foreach="chart_rows" t-as="row">
+                                    <div class="vertical-chart-item">
+                                        <div class="vertical-chart-value"><t t-esc="row['value']"/></div>
+                                        <div class="vertical-chart-bar-wrap">
+                                            <div class="vertical-chart-bar" t-att-style="'height: %s%%;' % row['percent']"></div>
+                                        </div>
+                                        <div class="vertical-chart-label"><t t-esc="row['label']"/></div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="empty-state"><i class="fa fa-bar-chart"></i><div>No hay datos para graficar en este periodo.</div></div></t>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header"><div><h3 class="chart-title">Estados de los servicios</h3><div class="chart-subtitle">Situación de los tickets dentro del filtro.</div></div></div>
+                        <t t-if="state_chart">
+                            <div class="state-grid">
+                                <t t-foreach="state_chart" t-as="state_row">
+                                    <div class="state-box"><div class="state-box-label"><t t-esc="state_row['label']"/></div><div class="state-box-value"><t t-esc="state_row['value']"/></div></div>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="empty-state"><i class="fa fa-pie-chart"></i><div>Sin estados para mostrar.</div></div></t>
+                    </div>
+                </div>
+
+                <div class="analytics-grid secondary-grid">
+                    <div class="chart-card">
+                        <div class="chart-header"><div><h3 class="chart-title">Tipos de servicio</h3><div class="chart-subtitle">Cantidad por tipo de atención realizada.</div></div></div>
+                        <t t-if="service_type_chart">
+                            <div class="hbar-list">
+                                <t t-foreach="service_type_chart" t-as="service_row">
+                                    <div class="hbar-row">
+                                        <div class="hbar-meta"><span class="hbar-label"><t t-esc="service_row['label']"/></span><span class="hbar-value"><t t-esc="service_row['value']"/></span></div>
+                                        <div class="hbar-track"><div class="hbar-fill" t-att-style="'width: %s%%;' % service_row['percent']"></div></div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="empty-state"><i class="fa fa-wrench"></i><div>Sin tipos de servicio para mostrar.</div></div></t>
+                    </div>
+
+                    <div class="chart-card">
+                        <div class="chart-header"><div><h3 class="chart-title">Técnicos que atendieron</h3><div class="chart-subtitle">Número de servicios registrados por técnico.</div></div></div>
+                        <t t-if="technician_chart">
+                            <div class="hbar-list">
+                                <t t-foreach="technician_chart" t-as="tech_row">
+                                    <div class="hbar-row">
+                                        <div class="hbar-meta"><span class="hbar-label"><t t-esc="tech_row['label']"/></span><span class="hbar-value"><t t-esc="tech_row['value']"/></span></div>
+                                        <div class="hbar-track"><div class="hbar-fill" t-att-style="'width: %s%%;' % tech_row['percent']"></div></div>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                        <t t-else=""><div class="empty-state"><i class="fa fa-users"></i><div>Sin técnicos para mostrar.</div></div></t>
+                    </div>
+                </div>
+
                 <div class="row">
                     <div class="col-lg-6 mb-3">
-                        <div class="info-card">
-                            <div class="info-card-header primary">
-                                <i class="fa fa-info-circle"></i>
-                                <span>Información General</span>
-                            </div>
+                        <div class="info-card h-100">
+                            <div class="info-card-header primary"><i class="fa fa-info-circle"></i><span>Información General</span></div>
                             <div class="info-card-body">
                                 <table class="info-table">
-                                    <t t-if="equipo.cliente_id">
-                                        <tr>
-                                            <td>Cliente / Empresa</td>
-                                            <td>
-                                                <strong>
-                                                    <i class="fa fa-building me-1"></i>
-                                                    <t t-esc="equipo.cliente_id.name"/>
-                                                </strong>
-                                            </td>
-                                        </tr>
-                                    </t>
-                                    <tr>
-                                        <td>Modelo</td>
-                                        <td><t t-esc="equipo.name.name"/></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Marca</td>
-                                        <td><t t-esc="equipo.marca"/></td>
-                                    </tr>
-                                    <tr>
-                                        <td>Serie</td>
-                                        <td>
-                                            <span class="badge badge-dark" style="font-size: 0.95rem; padding: 0.5rem 1rem;">
-                                                <t t-esc="equipo.serie"/>
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Área</td>
-                                        <td>
-                                            <t t-if="equipo.ubicacion_instalacion">
-                                                <t t-esc="equipo.ubicacion_instalacion"/>
-                                            </t>
-                                            <t t-else="">
-                                                <span style="color: #9ca3af;">No especificada</span>
-                                            </t>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td>Tipo</td>
-                                        <td>
-                                            <t t-if="equipo.tipo_maquina_id == 'color'">
-                                                <span class="badge-custom" style="background: #e0e7ff; color: #3730a3; border-color: #6366f1;">
-                                                    <i class="fa fa-palette"></i>
-                                                    Color
-                                                </span>
-                                            </t>
-                                            <t t-else="">
-                                                <span class="badge-custom" style="background: #f3f4f6; color: #374151; border-color: #9ca3af;">
-                                                    <i class="fa fa-circle"></i>
-                                                    Monocromática
-                                                </span>
-                                            </t>
-                                        </td>
-                                    </tr>
+                                    <t t-if="equipo.cliente_id"><tr><td>Cliente / Empresa</td><td><i class="fa fa-building me-1"></i><t t-esc="equipo.cliente_id.name"/></td></tr></t>
+                                    <tr><td>Modelo</td><td><t t-esc="equipo.name.name"/></td></tr>
+                                    <tr><td>Marca</td><td><t t-esc="equipo.marca"/></td></tr>
+                                    <tr><td>Serie</td><td><t t-esc="equipo.serie"/></td></tr>
+                                    <tr><td>Área</td><td><t t-esc="equipo.ubicacion_instalacion or 'No especificada'"/></td></tr>
+                                    <tr><td>Tipo</td><td><t t-esc="'Color' if equipo.tipo_maquina_id == 'color' else 'Monocromática'"/></td></tr>
+                                    <t t-if="equipo.ip_address"><tr><td>Dirección IP</td><td><t t-esc="equipo.ip_address"/></td></tr></t>
+                                    <t t-if="equipo.mac_address"><tr><td>MAC</td><td><t t-esc="equipo.mac_address"/></td></tr></t>
                                 </table>
                             </div>
                         </div>
                     </div>
-
                     <div class="col-lg-6 mb-3">
-                        <div class="info-card">
-                            <div class="info-card-header info">
-                                <i class="fa fa-map-marker-alt"></i>
-                                <span>Ubicación y Contacto</span>
-                            </div>
+                        <div class="info-card h-100">
+                            <div class="info-card-header info"><i class="fa fa-map-marker-alt"></i><span>Ubicación y Contacto</span></div>
                             <div class="info-card-body">
-                                <t t-if="equipo.direccion">
-                                    <div style="margin-bottom: 1.5rem;">
-                                        <div style="color: #6b7280; font-weight: 600; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
-                                            <i class="fa fa-building"></i>
-                                            <span>Dirección</span>
-                                        </div>
-                                        <div style="color: #1a1f3a; font-weight: 600; padding-left: 1.75rem;">
-                                            <t t-esc="equipo.direccion"/>
-                                        </div>
-                                    </div>
-                                </t>
-                                <t t-if="equipo.contacto_id">
-                                    <div style="margin-bottom: 1rem;">
-                                        <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
-                                            <i class="fa fa-user me-1"></i>Contacto
-                                        </div>
-                                        <div style="color: #1a1f3a; font-weight: 600;">
-                                            <t t-esc="equipo.contacto_id"/>
-                                        </div>
-                                    </div>
-                                </t>
-                                <t t-if="equipo.celular">
-                                    <div style="margin-bottom: 1rem;">
-                                        <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
-                                            <i class="fa fa-phone me-1"></i>Teléfono
-                                        </div>
-                                        <div style="color: #1a1f3a; font-weight: 600;">
-                                            <t t-esc="equipo.celular"/>
-                                        </div>
-                                    </div>
-                                </t>
-                                <t t-if="equipo.correo_">
-                                    <div>
-                                        <div style="color: #6b7280; font-size: 0.875rem; margin-bottom: 0.25rem;">
-                                            <i class="fa fa-envelope me-1"></i>Email
-                                        </div>
-                                        <div style="color: #1a1f3a; font-weight: 600;">
-                                            <t t-esc="equipo.correo_"/>
-                                        </div>
-                                    </div>
-                                </t>
+                                <table class="info-table">
+                                    <tr><td>Dirección</td><td><t t-esc="equipo.direccion or 'No especificada'"/></td></tr>
+                                    <tr><td>Contacto</td><td><t t-esc="equipo.contacto_id or 'No especificado'"/></td></tr>
+                                    <tr><td>Teléfono</td><td><t t-esc="equipo.celular or 'No especificado'"/></td></tr>
+                                    <tr><td>Correo</td><td><t t-esc="equipo.correo_ or 'No especificado'"/></td></tr>
+                                    <tr><td>Próximo mantenimiento</td><td><t t-if="equipo.fecha_recurrente"><t t-esc="equipo.fecha_recurrente.strftime('%d/%m/%Y')"/></t><t t-else="">No programado</t></td></tr>
+                                    <tr><td>Último mantenimiento</td><td><t t-if="equipo.fecha_ultimo_mantenimiento"><t t-esc="equipo.fecha_ultimo_mantenimiento.strftime('%d/%m/%Y')"/></t><t t-else="">Sin registro</t></td></tr>
+                                </table>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Contadores Actuales -->
                 <t t-if="equipo.contador_bn or equipo.contador_color or equipo.contador_scan">
                     <div class="info-card">
                         <div class="info-card-header success">
                             <i class="fa fa-tachometer-alt"></i>
-                            <div class="d-flex justify-content-between align-items-center w-100">
+                            <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
                                 <span>Contadores Actuales</span>
-                                <t t-if="equipo.fecha_ultima_actualizacion">
-                                    <small style="opacity: 0.9; font-weight: 600;">
-                                        <i class="fa fa-clock me-1"></i>
-                                        Actualizado: <t t-esc="equipo.fecha_ultima_actualizacion.strftime('%d/%m/%Y %H:%M')"/>
-                                    </small>
-                                </t>
+                                <t t-if="equipo.fecha_ultima_actualizacion"><small class="text-muted"><i class="fa fa-clock-o me-1"></i>Actualizado: <t t-esc="equipo.fecha_ultima_actualizacion.strftime('%d/%m/%Y %H:%M')"/></small></t>
                             </div>
                         </div>
                         <div class="info-card-body">
                             <div class="counter-grid">
-                                <div class="counter-box">
-                                    <div class="counter-label">
-                                        <i class="fa fa-circle me-1"></i>
-                                        Blanco y Negro
-                                    </div>
-                                    <div class="counter-value counter-bn">
-                                        <t t-esc="'{:,}'.format(equipo.contador_bn or 0)"/>
-                                    </div>
-                                </div>
-                                
-                                <t t-if="equipo.tipo_maquina_id == 'color'">
-                                    <div class="counter-box">
-                                        <div class="counter-label">
-                                            <i class="fa fa-palette me-1"></i>
-                                            Color
-                                        </div>
-                                        <div class="counter-value counter-color">
-                                            <t t-esc="'{:,}'.format(equipo.contador_color or 0)"/>
-                                        </div>
-                                    </div>
-                                </t>
-                                
-                                <div class="counter-box">
-                                    <div class="counter-label">
-                                        <i class="fa fa-scanner me-1"></i>
-                                        Escáner
-                                    </div>
-                                    <div class="counter-value counter-scan">
-                                        <t t-esc="'{:,}'.format(equipo.contador_scan or 0)"/>
-                                    </div>
-                                </div>
+                                <div class="counter-box"><div class="counter-label">Blanco y Negro</div><div class="counter-value counter-bn"><t t-esc="'{:,}'.format(equipo.contador_bn or 0)"/></div></div>
+                                <t t-if="equipo.tipo_maquina_id == 'color'"><div class="counter-box"><div class="counter-label">Color</div><div class="counter-value counter-color"><t t-esc="'{:,}'.format(equipo.contador_color or 0)"/></div></div></t>
+                                <div class="counter-box"><div class="counter-label">Escáner</div><div class="counter-value counter-scan"><t t-esc="'{:,}'.format(equipo.contador_scan or 0)"/></div></div>
                             </div>
                         </div>
                     </div>
                 </t>
 
-                <!-- Botones de Acción -->
                 <div class="info-card">
-                    <div class="info-card-header warning">
-                        <i class="fa fa-bolt"></i>
-                        <span>Acciones Rápidas</span>
-                    </div>
+                    <div class="info-card-header warning"><i class="fa fa-bolt"></i><span>Acciones Rápidas</span></div>
                     <div class="info-card-body">
                         <div class="action-buttons">
-                            <a t-attf-href="/ticket/reportar_incidencia?id_registro=#{equipo.id}"
-                               class="btn-action btn-action-danger">
-                                <i class="fa fa-exclamation-triangle"></i>
-                                <span>Reportar Problema</span>
-                            </a>
-                            
-                            <a t-attf-href="/toner/solicitar_toner?id_registro=#{equipo.id}"
-                               class="btn-action btn-action-primary">
-                                <i class="fa fa-fill-drip"></i>
-                                <span>Solicitar Tóner</span>
-                            </a>
-                            
-                            <a t-attf-href="/alquiler/repuestos/#{equipo.id}"
-                               class="btn-action btn-action-info">
-                                <i class="fa fa-cogs"></i>
-                                <span>Ver Repuestos</span>
-                            </a>
+                            <a t-attf-href="/ticket/reportar_incidencia?id_registro=#{equipo.id}" class="btn-action btn-action-danger"><i class="fa fa-exclamation-triangle"></i><span>Reportar Problema</span></a>
+                            <a t-attf-href="/toner/solicitar_toner?id_registro=#{equipo.id}" class="btn-action btn-action-primary"><i class="fa fa-fill-drip"></i><span>Solicitar Tóner</span></a>
+                            <a t-attf-href="/alquiler/repuestos/#{equipo.id}" class="btn-action btn-action-info"><i class="fa fa-cogs"></i><span>Ver Repuestos</span></a>
                         </div>
                     </div>
                 </div>
 
-                <!-- Historial de Tickets -->
                 <div class="info-card">
                     <div class="info-card-header secondary">
                         <i class="fa fa-history"></i>
-                        <div class="d-flex justify-content-between align-items-center w-100">
-                            <span>Historial de Tickets</span>
-                            <span class="hero-badge" style="background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.3);">
-                                <t t-esc="len(tickets)"/> tickets
-                            </span>
+                        <div class="d-flex justify-content-between align-items-center w-100 flex-wrap gap-2">
+                            <span>Historial de Servicios</span>
+                            <span class="chart-badge"><t t-esc="tickets_total"/> encontrados</span>
                         </div>
                     </div>
                     <div style="padding: 0;">
                         <t t-if="not tickets">
-                            <div class="empty-state">
-                                <i class="fa fa-inbox"></i>
-                                <p>No hay tickets registrados para este equipo</p>
-                            </div>
+                            <div class="empty-state"><i class="fa fa-inbox"></i><p>No hay servicios que coincidan con los filtros seleccionados.</p></div>
                         </t>
                         <t t-else="">
-                            <div style="overflow-x: auto;">
+                            <div style="overflow-x:auto;">
                                 <table class="tickets-table">
                                     <thead>
                                         <tr>
-                                            <th>Ticket</th>
-                                            <th>Fecha</th>
-                                            <th>Tipo de Servicio</th>
-                                            <th>Técnico</th>
-                                            <th>Estado</th>
-                                            <th style="text-align: right;">Acción</th>
+                                            <th>Ticket</th><th>Fecha de visita</th><th>Tipo</th><th>Técnico</th><th>Estado</th><th>Cont. B/N</th><th>Cont. Color</th><th>Informe</th><th style="text-align:right;">Detalle</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <t t-foreach="tickets" t-as="ticket">
                                             <tr>
-                                                <td style="font-weight: 700; color: #1a1f3a;">
-                                                    <t t-esc="ticket.name"/>
-                                                </td>
+                                                <td style="font-weight:700;"><t t-esc="ticket.name"/></td>
                                                 <td>
-                                                    <t t-if="ticket.agenda">
-                                                        <t t-esc="ticket.agenda.strftime('%d/%m/%Y')"/>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span style="color: #9ca3af;">Sin fecha</span>
-                                                    </t>
+                                                    <t t-if="ticket.agenda_local"><t t-esc="ticket.agenda_local"/></t>
+                                                    <t t-elif="ticket.agenda"><t t-esc="ticket.agenda.strftime('%d/%m/%Y %H:%M')"/></t>
+                                                    <t t-else=""><span class="text-muted">Sin fecha</span></t>
                                                 </td>
+                                                <td><t t-esc="tipo_servicio_selection.get(ticket.tipo_servicio_id, 'No especificado')"/></td>
+                                                <td><t t-esc="ticket.responsable.name if ticket.responsable else 'Sin asignar'"/></td>
                                                 <td>
-                                                    <t t-if="ticket.tipo_servicio_id">
-                                                        <t t-esc="dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, ticket.tipo_servicio_id)"/>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span style="color: #9ca3af;">-</span>
-                                                    </t>
+                                                    <t t-if="ticket.estado == 'nuevo'"><span class="badge-custom badge-nuevo">Nuevo</span></t>
+                                                    <t t-elif="ticket.estado in ('proceso', 'en_ruta', 'en_sitio', 'en_revision')"><span class="badge-custom badge-proceso"><t t-esc="estado_selection.get(ticket.estado, ticket.estado)"/></span></t>
+                                                    <t t-elif="ticket.estado == 'finalizado'"><span class="badge-custom badge-finalizado">Finalizado</span></t>
+                                                    <t t-else=""><span class="badge-custom status-default"><t t-esc="estado_selection.get(ticket.estado, ticket.estado or '-')"/></span></t>
                                                 </td>
+                                                <td><t t-esc="ticket.contometrok_id or '-'"/></td>
+                                                <td><t t-esc="ticket.contometroc_id or '-'"/></td>
                                                 <td>
-                                                    <t t-if="ticket.responsable">
-                                                        <t t-esc="ticket.responsable.name"/>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span style="color: #9ca3af;">Sin asignar</span>
-                                                    </t>
+                                                    <t t-if="ticket.informe_id"><span class="report-available"><i class="fa fa-check-circle me-1"></i>Disponible</span></t>
+                                                    <t t-else=""><span class="report-missing">Sin informe</span></t>
                                                 </td>
-                                                <td>
-                                                    <t t-if="ticket.estado == 'nuevo'">
-                                                        <span class="badge-custom badge-nuevo">
-                                                            <i class="fa fa-star"></i>
-                                                            Nuevo
-                                                        </span>
-                                                    </t>
-                                                    <t t-elif="ticket.estado == 'proceso'">
-                                                        <span class="badge-custom badge-proceso">
-                                                            <i class="fa fa-clock"></i>
-                                                            En Proceso
-                                                        </span>
-                                                    </t>
-                                                    <t t-elif="ticket.estado == 'finalizado'">
-                                                        <span class="badge-custom badge-finalizado">
-                                                            <i class="fa fa-check-circle"></i>
-                                                            Finalizado
-                                                        </span>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <span class="badge-custom status-default">
-                                                            <t t-esc="ticket.estado"/>
-                                                        </span>
-                                                    </t>
-                                                </td>
-                                                <td style="text-align: right;">
-                                                    <a t-attf-href="/my/ticket/#{ticket.id}"
-                                                       class="btn-view">
-                                                        <i class="fa fa-eye"></i>
-                                                        <span>Ver</span>
-                                                    </a>
-                                                </td>
+                                                <td style="text-align:right;"><a t-attf-href="/my/ticket/#{ticket.id}" class="btn-view"><i class="fa fa-eye"></i><span>Ver servicio</span></a></td>
                                             </tr>
                                         </t>
                                     </tbody>
                                 </table>
                             </div>
-                            <div class="card-footer-custom">
-                                <a href="/my/tickets" class="btn-link-custom">
-                                    <span>Ver todos los tickets</span>
-                                    <i class="fa fa-arrow-right"></i>
-                                </a>
-                            </div>
+                            <t t-if="tickets_total &gt; len(tickets)">
+                                <div class="card-footer-custom"><span class="text-muted">Se muestran los 100 servicios más recientes que coinciden con el filtro.</span></div>
+                            </t>
+                            <t t-else="">
+                                <div class="card-footer-custom"><a href="/my/tickets" class="btn-link-custom">Ver todos los tickets <i class="fa fa-arrow-right ms-1"></i></a></div>
+                            </t>
                         </t>
                     </div>
                 </div>
@@ -1806,10 +1737,6 @@
 </template>
 
 
-
-        <!-- ===================================================== -->
-        <!-- LISTA DE TICKETS (con iconos, mantiene lógica) -->
-        <!-- ===================================================== -->
         <template id="portal_my_tickets" name="Mis Tickets">
     <t t-call="portal.portal_layout">
         <t t-set="breadcrumbs_searchbar" t-value="True"/>
