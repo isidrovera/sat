@@ -1532,6 +1532,7 @@ class PrintTrackerAlert(models.Model):
         """
         try:
             event_id = event_data.get('id')
+            device_serial = str(device_serial or '').strip()
             if not event_id or not device_serial:
                 return None
 
@@ -1584,95 +1585,335 @@ class PrintTrackerAlert(models.Model):
             return None
 
     def _clasificar_event_api(self, event_data):
-        """Clasifica un event de la API según description/alertType/supplyKey."""
-        desc = (event_data.get('description', '')).lower()
-        alert_type = event_data.get('alertType', '') or ''
-        supply_key = event_data.get('supplyKey', '') or ''
+        """
+        Clasifica cualquier event recibido desde PrintTracker.
 
-        # Atasco de papel
-        if any(w in desc for w in ['jam', 'atasco', 'paper jam']):
-            return {'tipo': 'paper_jam', 'prioridad': 'alta', 'titulo': 'Atasco de Papel'}
+        La API documenta que un event puede incluir:
+        id, deviceSerialNumber, timestamp, description, alertType,
+        supplyKey, resolutionStatus, meterRead y supplies.
 
-        # Suministro reemplazado
-        if any(w in desc for w in ['replaced', 'reemplaz', 'installed', 'nuevo']):
-            return {'tipo': 'supply_replaced', 'prioridad': 'media', 'titulo': 'Suministro Reemplazado'}
+        REGLAS:
+        - Nunca descartar un event desconocido.
+        - Priorizar alertType cuando tenga contenido útil.
+        - Usar supplyKey para reconocer eventos de suministros.
+        - Usar description como respaldo.
+        - Todo lo no reconocido se conserva como device_event.
+        """
+        event_data = event_data or {}
 
-        # Suministro bajo (por supplyKey o descripción)
-        if supply_key or any(w in desc for w in ['toner', 'ink', 'drum', 'supply', 'low']):
-            if any(w in desc for w in ['empty', 'vacio', 'agotado', 'depleted', '0%']):
-                return {'tipo': 'suministro_vacio', 'prioridad': 'urgente', 'titulo': 'Suministro Vacío'}
-            if any(w in desc for w in ['critical', 'critico', 'very low']):
-                return {'tipo': 'suministro_critico', 'prioridad': 'critica', 'titulo': 'Suministro Crítico'}
-            if any(w in desc for w in ['low', 'bajo']):
-                return {'tipo': 'suministro_bajo', 'prioridad': 'alta', 'titulo': 'Suministro Bajo'}
-            if supply_key:
-                return {'tipo': 'supply_event', 'prioridad': 'media', 'titulo': 'Evento de Suministro'}
+        desc = str(event_data.get('description') or '').strip().lower()
+        alert_type = str(event_data.get('alertType') or '').strip().lower()
+        supply_key = str(event_data.get('supplyKey') or '').strip()
 
-        # Error de dispositivo
-        if any(w in desc for w in ['error', 'fault', 'fallo', 'codigo']):
-            return {'tipo': 'device_error', 'prioridad': 'critica', 'titulo': 'Error de Dispositivo'}
+        combined = " ".join(
+            value for value in (alert_type, desc)
+            if value
+        )
 
-        # Cubierta abierta
-        if any(w in desc for w in ['cover', 'door', 'tapa', 'cubierta', 'open']):
-            return {'tipo': 'cover_open', 'prioridad': 'baja', 'titulo': 'Cubierta Abierta'}
+        # ----------------------------------------------------------
+        # ATASCO DE PAPEL
+        # ----------------------------------------------------------
+        if any(term in combined for term in (
+            'paper jam',
+            'jammed',
+            'paperjam',
+            'atasco',
+        )):
+            return {
+                'tipo': 'paper_jam',
+                'prioridad': 'alta',
+                'titulo': 'Atasco de Papel',
+            }
 
-        # Mantenimiento
-        if any(w in desc for w in ['maintenance', 'mantenimiento', 'service']):
-            return {'tipo': 'mantenimiento_debido', 'prioridad': 'alta', 'titulo': 'Mantenimiento Requerido'}
+        # ----------------------------------------------------------
+        # SUMINISTROS
+        # supplyKey es una señal fuerte de que el event pertenece
+        # a un consumible. La descripción/alertType define la acción.
+        # ----------------------------------------------------------
+        supply_words = (
+            'toner',
+            'ink',
+            'drum',
+            'supply',
+            'cartridge',
+            'developer',
+            'waste',
+            'imaging unit',
+            'fuser',
+        )
+        is_supply_event = bool(supply_key) or any(
+            term in combined for term in supply_words
+        )
 
-        # Conectividad
-        if any(w in desc for w in ['offline', 'connection', 'connectivity', 'desconect']):
-            return {'tipo': 'connectivity_issue', 'prioridad': 'alta', 'titulo': 'Problema de Conectividad'}
+        if is_supply_event:
+            # Reemplazo confirmado / instalación.
+            if any(term in combined for term in (
+                'replaced',
+                'replacement',
+                'was replaced',
+                'installed',
+                'replacement detected',
+                'reemplaz',
+                'sustituid',
+                'instalad',
+            )):
+                return {
+                    'tipo': 'supply_replaced',
+                    'prioridad': 'media',
+                    'titulo': 'Suministro Reemplazado',
+                }
 
-        # Genérico
-        return {'tipo': 'device_event', 'prioridad': 'media', 'titulo': 'Evento de Dispositivo'}
+            # Vacío / agotado.
+            if any(term in combined for term in (
+                'empty',
+                'depleted',
+                'out of toner',
+                'out of ink',
+                'agotado',
+                'agotada',
+                'vacío',
+                'vacio',
+                'vacía',
+                'vacia',
+                '0%',
+            )):
+                return {
+                    'tipo': 'suministro_vacio',
+                    'prioridad': 'urgente',
+                    'titulo': 'Suministro Vacío',
+                }
 
-    # ==========================================
-    # NOTIFICACIONES
-    # ==========================================
+            # Crítico.
+            if any(term in combined for term in (
+                'critical',
+                'very low',
+                'critically low',
+                'crítico',
+                'critico',
+            )):
+                return {
+                    'tipo': 'suministro_critico',
+                    'prioridad': 'critica',
+                    'titulo': 'Suministro Crítico',
+                }
+
+            # Bajo.
+            if any(term in combined for term in (
+                'low supply',
+                'supply low',
+                'low toner',
+                'toner low',
+                'low ink',
+                'ink low',
+                'low',
+                'bajo',
+                'baja',
+            )):
+                return {
+                    'tipo': 'suministro_bajo',
+                    'prioridad': 'alta',
+                    'titulo': 'Suministro Bajo',
+                }
+
+            # Event de suministro sin semántica suficiente.
+            return {
+                'tipo': 'supply_event',
+                'prioridad': 'media',
+                'titulo': 'Evento de Suministro',
+            }
+
+        # ----------------------------------------------------------
+        # ERRORES DEL DISPOSITIVO
+        # ----------------------------------------------------------
+        if any(term in combined for term in (
+            'device error',
+            'error code',
+            'service call',
+            'fault',
+            'failure',
+            'malfunction',
+            'error',
+            'fallo',
+            'código',
+            'codigo',
+        )):
+            return {
+                'tipo': 'device_error',
+                'prioridad': 'critica',
+                'titulo': 'Error de Dispositivo',
+            }
+
+        # ----------------------------------------------------------
+        # CUBIERTA / PUERTA ABIERTA
+        # No se usa solamente "open" para evitar falsos positivos con
+        # resolutionStatus=Open u otras descripciones.
+        # ----------------------------------------------------------
+        if any(term in combined for term in (
+            'cover open',
+            'door open',
+            'cover is open',
+            'door is open',
+            'tapa abierta',
+            'cubierta abierta',
+            'puerta abierta',
+        )):
+            return {
+                'tipo': 'cover_open',
+                'prioridad': 'baja',
+                'titulo': 'Cubierta Abierta',
+            }
+
+        # ----------------------------------------------------------
+        # CONECTIVIDAD
+        # ----------------------------------------------------------
+        if any(term in combined for term in (
+            'offline',
+            'connectivity',
+            'connection lost',
+            'communication lost',
+            'not responding',
+            'unreachable',
+            'desconect',
+            'sin conexión',
+            'sin conexion',
+        )):
+            return {
+                'tipo': 'connectivity_issue',
+                'prioridad': 'alta',
+                'titulo': 'Problema de Conectividad',
+            }
+
+        # ----------------------------------------------------------
+        # MANTENIMIENTO
+        # ----------------------------------------------------------
+        if any(term in combined for term in (
+            'maintenance required',
+            'maintenance due',
+            'service required',
+            'maintenance',
+            'mantenimiento',
+        )):
+            return {
+                'tipo': 'mantenimiento_debido',
+                'prioridad': 'alta',
+                'titulo': 'Mantenimiento Requerido',
+            }
+
+        # ----------------------------------------------------------
+        # FALLBACK SEGURO
+        # Nunca perder un event porque PrintTracker agregue un nuevo
+        # alertType que todavía no conocemos.
+        # ----------------------------------------------------------
+        return {
+            'tipo': 'device_event',
+            'prioridad': 'media',
+            'titulo': 'Evento de Dispositivo',
+        }
+
     def procesar_notificaciones(self):
-        """Envía email a soporte + chatter en equipo."""
+        """
+        Envía email a soporte + chatter en equipo.
+
+        Una alerta solo pasa de 'nueva' a 'notificada' cuando todos los
+        canales configurados que correspondan fueron procesados con éxito.
+        Si el correo falla, permanece pendiente para que el cron lo reintente.
+        """
+        resultado = True
+
         for alert in self:
             try:
+                email_ok = True
+                chatter_ok = True
+
                 if alert.notificar_email and not alert.email_enviado:
-                    alert._enviar_notificacion_email()
+                    email_ok = bool(alert._enviar_notificacion_email())
 
                 if alert.notificar_chatter and not alert.chatter_enviado:
-                    alert._enviar_notificacion_chatter()
+                    chatter_ok = bool(alert._enviar_notificacion_chatter())
 
                 # Ejecutar acción automática
                 if alert.accion_automatica != 'ninguna' and not alert.accion_ejecutada:
                     alert._ejecutar_accion_automatica()
 
-                # Cambiar estado
-                if alert.estado == 'nueva':
+                email_completo = (
+                    not alert.notificar_email
+                    or alert.email_enviado
+                    or email_ok
+                )
+                chatter_completo = (
+                    not alert.notificar_chatter
+                    or alert.chatter_enviado
+                    or chatter_ok
+                )
+
+                if alert.estado == 'nueva' and email_completo and chatter_completo:
                     alert.estado = 'notificada'
 
+                if not (email_completo and chatter_completo):
+                    resultado = False
+                    _logger.warning(
+                        "⚠️ Alerta pendiente de notificación id=%s serie=%s "
+                        "email_ok=%s chatter_ok=%s",
+                        alert.id,
+                        alert.serie_equipo,
+                        email_completo,
+                        chatter_completo,
+                    )
+
             except Exception as e:
-                _logger.error(f"❌ Error notificación {alert.display_name}: {e}")
+                resultado = False
+                _logger.error(
+                    f"❌ Error notificación {alert.display_name}: "
+                    f"{e}\n{traceback.format_exc()}"
+                )
+
+        return resultado
 
     def _enviar_notificacion_email(self):
         """
         Envía email a soporte (configurable).
         SIEMPRE a soporte, NUNCA al cliente/entidad.
+
+        Retorna True únicamente cuando Odoo pudo ejecutar el envío.
         """
         self.ensure_one()
+
         try:
             email_destino = self._get_email_soporte()
             if not email_destino:
-                _logger.warning("⚠️ Email soporte no configurado")
-                return
+                _logger.warning(
+                    "⚠️ Email soporte no configurado para alerta=%s serie=%s",
+                    self.id,
+                    self.serie_equipo,
+                )
+                return False
 
             # Construir HTML del email
             html_body = self._construir_email_html()
 
-            prioridad_label = dict(self._fields['prioridad'].selection).get(self.prioridad, self.prioridad)
-            tipo_label = dict(self._fields['tipo_alerta'].selection).get(self.tipo_alerta, self.tipo_alerta)
+            prioridad_label = dict(
+                self._fields['prioridad'].selection
+            ).get(
+                self.prioridad,
+                self.prioridad,
+            )
+            tipo_label = dict(
+                self._fields['tipo_alerta'].selection
+            ).get(
+                self.tipo_alerta,
+                self.tipo_alerta,
+            )
 
             mail_values = {
-                'subject': f"[{prioridad_label.upper()}] Alerta PrintTracker - {self.serie_equipo} - {tipo_label}",
+                'subject': (
+                    f"[{prioridad_label.upper()}] Alerta PrintTracker - "
+                    f"{self.serie_equipo} - {tipo_label}"
+                ),
                 'body_html': html_body,
-                'email_from': self.env.company.email or 'noreply@andescopiers.com.pe',
+                'email_from': (
+                    self.env.company.email
+                    or 'noreply@andescopiers.com.pe'
+                ),
                 'email_to': email_destino,
                 'auto_delete': False,
             }
@@ -1680,11 +1921,25 @@ class PrintTrackerAlert(models.Model):
             mail = self.env['mail.mail'].sudo().create(mail_values)
             mail.send()
 
-            self.email_enviado = True
-            _logger.info(f"📧 Email enviado a {email_destino} para {self.serie_equipo}")
+            self.write({
+                'email_enviado': True,
+                'ultima_revision': fields.Datetime.now(),
+            })
+
+            _logger.info(
+                "📧 Email enviado a %s para %s alerta=%s",
+                email_destino,
+                self.serie_equipo,
+                self.id,
+            )
+            return True
 
         except Exception as e:
-            _logger.error(f"❌ Error email: {e}\n{traceback.format_exc()}")
+            _logger.error(
+                f"❌ Error email alerta={self.id} serie={self.serie_equipo}: "
+                f"{e}\n{traceback.format_exc()}"
+            )
+            return False
 
     def _construir_email_html(self):
         """Construye HTML profesional para email."""
