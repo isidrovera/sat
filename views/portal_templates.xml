@@ -1552,7 +1552,7 @@
                                     <div class="vertical-chart-item">
                                         <div class="vertical-chart-value"><t t-esc="row['value']"/></div>
                                         <div class="vertical-chart-bar-wrap">
-                                            <div class="vertical-chart-bar" t-att-style="'height: %s%%;' % row['percent']"></div>
+                                            <div class="vertical-chart-bar" t-att-style="'height: ' + str(row['percent']) + '%;'"></div>
                                         </div>
                                         <div class="vertical-chart-label"><t t-esc="row['label']"/></div>
                                     </div>
@@ -1583,7 +1583,7 @@
                                 <t t-foreach="service_type_chart" t-as="service_row">
                                     <div class="hbar-row">
                                         <div class="hbar-meta"><span class="hbar-label"><t t-esc="service_row['label']"/></span><span class="hbar-value"><t t-esc="service_row['value']"/></span></div>
-                                        <div class="hbar-track"><div class="hbar-fill" t-att-style="'width: %s%%;' % service_row['percent']"></div></div>
+                                        <div class="hbar-track"><div class="hbar-fill" t-att-style="'width: ' + str(service_row['percent']) + '%;'"></div></div>
                                     </div>
                                 </t>
                             </div>
@@ -1598,7 +1598,7 @@
                                 <t t-foreach="technician_chart" t-as="tech_row">
                                     <div class="hbar-row">
                                         <div class="hbar-meta"><span class="hbar-label"><t t-esc="tech_row['label']"/></span><span class="hbar-value"><t t-esc="tech_row['value']"/></span></div>
-                                        <div class="hbar-track"><div class="hbar-fill" t-att-style="'width: %s%%;' % tech_row['percent']"></div></div>
+                                        <div class="hbar-track"><div class="hbar-fill" t-att-style="'width: ' + str(tech_row['percent']) + '%;'"></div></div>
                                     </div>
                                 </t>
                             </div>
