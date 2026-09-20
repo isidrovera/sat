@@ -680,26 +680,135 @@ class PortalAlquiler(CustomerPortal):
             row["percent"] = round((row["value"] / chart_max) * 100, 2) if chart_max else 0
 
         # ======================================================
+        # GRÁFICO MENSUAL APILADO POR TIPO DE SERVICIO
+        # ======================================================
+        # Este gráfico es independiente del selector de periodo para que el
+        # cliente siempre pueda visualizar los 12 meses del año seleccionado.
+        # Respeta los demás filtros: técnico, tipo de servicio y estado.
+
+        powerbi_service_colors = {
+            "instalacion": "#118DFF",
+            "retiro": "#12239E",
+            "mantenimiento_preventivo": "#00A6A6",
+            "mantenimiento_correctivo": "#E66C37",
+            "cambio_repuestos": "#D64550",
+            "remoto": "#6B007B",
+            "revision": "#E044A7",
+            "alquiler": "#744EC2",
+            "sin_tipo": "#8A8A8A",
+        }
+
+        monthly_domain = list(base_domain)
+        monthly_domain += [
+            ("agenda", ">=", _local_midnight_to_utc(datetime(selected_year, 1, 1).date())),
+            ("agenda", "<", _local_midnight_to_utc(datetime(selected_year + 1, 1, 1).date())),
+        ]
+
+        if selected_tecnico_id:
+            monthly_domain.append(("responsable", "=", selected_tecnico_id))
+        if selected_tipo_servicio:
+            monthly_domain.append(("tipo_servicio_id", "=", selected_tipo_servicio))
+        if selected_estado:
+            monthly_domain.append(("estado", "=", selected_estado))
+
+        monthly_tickets = Ticket.search(
+            monthly_domain,
+            order="agenda asc, create_date asc",
+        )
+
+        month_names_full = [
+            "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+            "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+        ]
+
+        monthly_counts = {
+            month: {} for month in range(1, 13)
+        }
+
+        service_keys_present = set()
+        for ticket in monthly_tickets:
+            if not ticket.agenda:
+                continue
+            local_agenda = ticket.agenda.replace(tzinfo=UTC).astimezone(user_tz)
+            service_key = ticket.tipo_servicio_id or "sin_tipo"
+            service_keys_present.add(service_key)
+            month_bucket = monthly_counts[local_agenda.month]
+            month_bucket[service_key] = month_bucket.get(service_key, 0) + 1
+
+        # Mantener el orden definido en el Selection del modelo y colocar
+        # "Sin especificar" al final cuando exista.
+        service_order = [key for key in tipo_servicio_selection if key in service_keys_present]
+        if "sin_tipo" in service_keys_present:
+            service_order.append("sin_tipo")
+
+        monthly_service_legend = []
+        for service_key in service_order:
+            label = tipo_servicio_selection.get(service_key, "Sin especificar")
+            if service_key == "sin_tipo":
+                label = "Sin especificar"
+            monthly_service_legend.append({
+                "key": service_key,
+                "label": label,
+                "color": powerbi_service_colors.get(service_key, "#8A8A8A"),
+            })
+
+        month_totals = {
+            month: sum(monthly_counts[month].values())
+            for month in range(1, 13)
+        }
+        monthly_max = max(month_totals.values() or [1]) or 1
+
+        monthly_type_chart = []
+        for month in range(1, 13):
+            segments = []
+            for service_key in service_order:
+                value = monthly_counts[month].get(service_key, 0)
+                if not value:
+                    continue
+                label = tipo_servicio_selection.get(service_key, "Sin especificar")
+                if service_key == "sin_tipo":
+                    label = "Sin especificar"
+                segments.append({
+                    "key": service_key,
+                    "label": label,
+                    "value": value,
+                    "height_percent": round((value / monthly_max) * 100, 2),
+                    "color": powerbi_service_colors.get(service_key, "#8A8A8A"),
+                })
+
+            monthly_type_chart.append({
+                "month": month,
+                "label": month_names_full[month - 1],
+                "total": month_totals[month],
+                "active": periodo == "mes" and selected_month == month,
+                "segments": segments,
+            })
+
+        # ======================================================
         # DISTRIBUCIÓN POR TIPO DE SERVICIO
         # ======================================================
 
         type_counts = {}
         for ticket in stats_tickets:
             key = ticket.tipo_servicio_id or "sin_tipo"
-            label = tipo_servicio_selection.get(key, "Sin especificar")
-            if key == "sin_tipo":
-                label = "Sin especificar"
-            type_counts[label] = type_counts.get(label, 0) + 1
+            type_counts[key] = type_counts.get(key, 0) + 1
 
         type_max = max(type_counts.values() or [1])
-        service_type_chart = [
-            {
+        service_type_chart = []
+        for service_key, value in sorted(
+            type_counts.items(),
+            key=lambda item: (-item[1], tipo_servicio_selection.get(item[0], "Sin especificar")),
+        ):
+            label = tipo_servicio_selection.get(service_key, "Sin especificar")
+            if service_key == "sin_tipo":
+                label = "Sin especificar"
+            service_type_chart.append({
+                "key": service_key,
                 "label": label,
                 "value": value,
                 "percent": round((value / type_max) * 100, 2),
-            }
-            for label, value in sorted(type_counts.items(), key=lambda item: (-item[1], item[0]))
-        ]
+                "color": powerbi_service_colors.get(service_key, "#8A8A8A"),
+            })
 
         # ======================================================
         # DISTRIBUCIÓN POR TÉCNICO
@@ -769,6 +878,8 @@ class PortalAlquiler(CustomerPortal):
             "chart_title": chart_title,
             "chart_subtitle": chart_subtitle,
             "chart_rows": chart_rows,
+            "monthly_type_chart": monthly_type_chart,
+            "monthly_service_legend": monthly_service_legend,
             "service_type_chart": service_type_chart,
             "technician_chart": technician_chart,
             "state_chart": state_chart,
