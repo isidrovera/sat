@@ -125,7 +125,7 @@
                                 <group string="Resumen de Contadores" class="o_toner_panel">
                                     <group class="o_toner_inner_group">
                                         <field name="counter_bn" readonly="source != 'manual' or state not in ['recibida', 'devuelta']"/>
-                                        <field name="previous_counter_bn" force_save="1"/>
+                                        <field name="previous_counter_bn"/>
                                         <field name="copies_bn_period" readonly="1"/>
                                     </group>
                                     <group invisible="tipo_maquina_id != 'color'" class="o_toner_inner_group">
