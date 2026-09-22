@@ -906,53 +906,157 @@ class TonerCounterSubmission(models.Model):
     @api.model
     def _analyze_color(self, equipment, color, current_counters,
                        exclude_submission_id=False, base_counters=None):
-        # Se conserva la firma pública; nunca se acepta una base manual.
-        duplicate = self._find_open_duplicate(equipment.id, color, exclude_submission_id)
+        """
+        Analiza el consumo de un color.
+
+        Regla de contador base:
+        - Si existe una entrega anterior, SIEMPRE usa el contador actual de esa
+          solicitud entregada como contador anterior del nuevo pedido.
+        - Si no existe ninguna entrega anterior, permite usar el contador
+          anterior ingresado manualmente en el formulario.
+        """
+        duplicate = self._find_open_duplicate(
+            equipment.id, color, exclude_submission_id
+        )
         if duplicate:
-            return {"color": color, "label": self.COLOR_LABELS[color],
-                    "status": "duplicate", "can_create": False,
-                    "duplicate_id": duplicate.id, "duplicate_sequence": duplicate.secuencia,
-                    "message": _("Ya existe una solicitud activa para el tóner %s.") % self.COLOR_LABELS[color]}
+            return {
+                "color": color,
+                "label": self.COLOR_LABELS[color],
+                "status": "duplicate",
+                "can_create": False,
+                "duplicate_id": duplicate.id,
+                "duplicate_sequence": duplicate.secuencia,
+                "message": _(
+                    "Ya existe una solicitud activa para el tóner %s."
+                ) % self.COLOR_LABELS[color],
+            }
+
         history = None
+        record = False
         if exclude_submission_id:
             record = self.browse(exclude_submission_id).exists()
-            if record and record.equipment_id == equipment and record.history_snapshot_json:
-                history = json.loads(record.history_snapshot_json).get(color)
+            if (
+                record
+                and record.equipment_id == equipment
+                and record.history_snapshot_json
+            ):
+                try:
+                    history = json.loads(record.history_snapshot_json).get(color)
+                except (ValueError, TypeError):
+                    history = None
+
         if history is None:
             service = self
             if exclude_submission_id and record:
-                service = self.with_context(toner_history_before=fields.Datetime.to_string(record.submission_date),
-                                            toner_history_exclude=record.id)
+                service = self.with_context(
+                    toner_history_before=fields.Datetime.to_string(
+                        record.submission_date
+                    ),
+                    toner_history_exclude=record.id,
+                )
             history = service._get_color_history(equipment, color)
-        current = int(current_counters.get("bn" if color == "black" else "color", 0) or 0)
+
+        history = history or {
+            "history_available": False,
+            "last_delivery_id": False,
+            "last_delivery_date": False,
+            "base_counter": 0,
+        }
+
+        counter_key = "bn" if color == "black" else "color"
+        current = int(current_counters.get(counter_key, 0) or 0)
         expected = self._get_expected_yield(equipment, color)
-        result = dict(history, color=color, label=self.COLOR_LABELS[color],
-                      current_counter=current, expected_yield=expected,
-                      can_create=True, requires_evidence=False,
-                      consumed_copies=0, consumption_percent=0.0, days_since_last_delivery=0)
-        if not history.get("history_available"):
-            result.update(status="no_history", message=_("Sin historial con contador verificable para el tóner %s.") % self.COLOR_LABELS[color])
+
+        manual_base = 0
+        if base_counters:
+            manual_base = int(base_counters.get(counter_key, 0) or 0)
+
+        # La entrega anterior tiene prioridad absoluta. Solo si no existe
+        # historial se acepta el contador anterior escrito manualmente.
+        if history.get("history_available"):
+            base = int(history.get("base_counter", 0) or 0)
+            base_source = "history"
+        elif manual_base > 0:
+            base = manual_base
+            base_source = "manual"
+        else:
+            base = 0
+            base_source = "none"
+
+        result = dict(
+            history,
+            color=color,
+            label=self.COLOR_LABELS[color],
+            current_counter=current,
+            expected_yield=expected,
+            can_create=True,
+            requires_evidence=False,
+            consumed_copies=0,
+            consumption_percent=0.0,
+            days_since_last_delivery=0,
+            base_counter=base,
+            base_source=base_source,
+            manual_base=(base_source == "manual"),
+        )
+
+        if base_source == "none":
+            result.update(
+                status="no_history",
+                message=_(
+                    "Sin historial anterior para el tóner %s. "
+                    "Puede ingresar manualmente el contador anterior."
+                ) % self.COLOR_LABELS[color],
+            )
             return result
-        base = int(history["base_counter"])
+
         if current < base:
-            result.update(status="invalid_counter", can_create=False,
-                          message=_("El contador actual de %s no puede ser menor al de la última entrega.") % self.COLOR_LABELS[color])
+            result.update(
+                status="invalid_counter",
+                can_create=False,
+                message=_(
+                    "El contador actual de %s no puede ser menor al contador anterior."
+                ) % self.COLOR_LABELS[color],
+            )
             return result
+
         consumed = current - base
         percent = consumed / expected * 100 if expected else 0.0
-        threshold = float(self.env["ir.config_parameter"].sudo().get_param("sat.toner_early_consumption_percent", "50"))
+        threshold = float(
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param("sat.toner_early_consumption_percent", "50")
+        )
+
         reference_date = fields.Datetime.now()
-        if exclude_submission_id:
-            record = self.browse(exclude_submission_id).exists()
-            if record:
-                reference_date = fields.Datetime.to_datetime(record.submission_date)
-        delivery_date = fields.Datetime.to_datetime(history.get("last_delivery_date"))
-        days = max(0, (reference_date - delivery_date).days) if delivery_date else 0
-        result.update(status="early_consumption" if percent < threshold else "normal",
-                      requires_evidence=percent < threshold, consumed_copies=consumed,
-                      consumption_percent=round(percent, 2), days_since_last_delivery=days,
-                      message=_("%(color)s: %(copies)s de %(yield)s copias (%(percent).2f%%), %(days)s días desde la entrega.") %
-                      {"color": self.COLOR_LABELS[color], "copies": consumed, "yield": expected, "percent": percent, "days": days})
+        if exclude_submission_id and record:
+            reference_date = fields.Datetime.to_datetime(record.submission_date)
+
+        delivery_date = fields.Datetime.to_datetime(
+            history.get("last_delivery_date")
+        )
+        days = (
+            max(0, (reference_date - delivery_date).days)
+            if delivery_date
+            else 0
+        )
+
+        result.update(
+            status="early_consumption" if percent < threshold else "normal",
+            requires_evidence=percent < threshold,
+            consumed_copies=consumed,
+            consumption_percent=round(percent, 2),
+            days_since_last_delivery=days,
+            message=_(
+                "%(color)s: %(copies)s de %(yield)s copias "
+                "(%(percent).2f%%), %(days)s días desde la entrega."
+            ) % {
+                "color": self.COLOR_LABELS[color],
+                "copies": consumed,
+                "yield": expected,
+                "percent": percent,
+                "days": days,
+            },
+        )
         return result
 
     @api.model
@@ -1451,11 +1555,34 @@ class TonerCounterSubmission(models.Model):
         )
 
         by_color = {item["color"]: item for item in color_results}
-        self.previous_counter_bn = int(by_color.get("black", {}).get("base_counter", 0) or 0)
-        # Campo legado: referencia representativa; las bases exactas están por color.
-        reference = next((by_color[c] for c in ("cyan", "magenta", "yellow")
-                          if by_color.get(c, {}).get("history_available")), {})
-        self.previous_counter_color = int(reference.get("base_counter", 0) or 0)
+
+        # B/N: si existe historial real, el contador actual de la última
+        # solicitud entregada se convierte en el contador anterior.
+        # Si no existe historial, se conserva exactamente el valor manual.
+        black_result = by_color.get("black", {})
+        if black_result.get("history_available"):
+            automatic_previous_bn = int(
+                black_result.get("base_counter", 0) or 0
+            )
+            if automatic_previous_bn > 0:
+                self.previous_counter_bn = automatic_previous_bn
+
+        # Color: misma regla. Cian, magenta y amarillo comparten el contador
+        # color del equipo, por eso se toma una referencia histórica válida.
+        reference = next(
+            (
+                by_color[c]
+                for c in ("cyan", "magenta", "yellow")
+                if by_color.get(c, {}).get("history_available")
+            ),
+            {},
+        )
+        if reference:
+            automatic_previous_color = int(
+                reference.get("base_counter", 0) or 0
+            )
+            if automatic_previous_color > 0:
+                self.previous_counter_color = automatic_previous_color
 
         for color in self.COLOR_LABELS:
             requested_field = self._requested_quantity_field(color)
@@ -1518,7 +1645,10 @@ class TonerCounterSubmission(models.Model):
         if not any(requested_toners.values()):
             raise UserError(_("Debe seleccionar al menos un tóner."))
 
-        base_counters = None
+        base_counters = {
+            "bn": int(self.previous_counter_bn or 0),
+            "color": int(self.previous_counter_color or 0),
+        }
 
         validation = self.validate_web_toner_request(
             equipment_id=self.equipment_id.id,
@@ -1666,7 +1796,10 @@ class TonerCounterSubmission(models.Model):
                 record.duplicate_submission_id = False
                 continue
 
-            base_counters = None
+            base_counters = {
+                "bn": int(record.previous_counter_bn or 0),
+                "color": int(record.previous_counter_color or 0),
+            }
 
             validation = record.validate_web_toner_request(
                 equipment_id=record.equipment_id.id,
@@ -1730,8 +1863,11 @@ class TonerCounterSubmission(models.Model):
                         raise ValidationError(_("Debe enviar el contador color actual de esta solicitud."))
                     if int(vals.get("counter_color") or 0) <= 0:
                         raise ValidationError(_("El contador color debe ser mayor que cero."))
-                vals["previous_counter_bn"] = 0
-                vals["previous_counter_color"] = 0
+                # Respetar contadores anteriores ingresados manualmente.
+                # Si hay historial entregado, el análisis posterior los
+                # reemplazará por el contador actual de la última entrega.
+                vals.setdefault("previous_counter_bn", 0)
+                vals.setdefault("previous_counter_color", 0)
                 vals["history_snapshot_json"] = False
 
                 if vals.get("secuencia", "New") == "New":
@@ -1763,9 +1899,15 @@ class TonerCounterSubmission(models.Model):
             return super().write(vals)
         vals = dict(vals)
         vals.pop("history_snapshot_json", None)
-        vals.pop("previous_counter_bn", None)
-        vals.pop("previous_counter_color", None)
-        triggers = {"equipment_id", "counter_bn", "counter_color"}
+        # previous_counter_bn y previous_counter_color NO se eliminan.
+        # Deben poder guardarse manualmente cuando no existe historial.
+        triggers = {
+            "equipment_id",
+            "counter_bn",
+            "counter_color",
+            "previous_counter_bn",
+            "previous_counter_color",
+        }
         triggers.update("requiere_toner_" + c for c in self.COLOR_LABELS)
         triggers.update("cantidad_solicitada_" + c for c in self.COLOR_LABELS)
         if "equipment_id" in vals:
@@ -2049,7 +2191,10 @@ class TonerCounterSubmission(models.Model):
             "color": int(self.counter_color or 0),
         }
 
-        base_counters = None
+        base_counters = {
+            "bn": int(self.previous_counter_bn or 0),
+            "color": int(self.previous_counter_color or 0),
+        }
 
         lines = []
         for color, label in self.COLOR_LABELS.items():
@@ -2059,8 +2204,13 @@ class TonerCounterSubmission(models.Model):
             saved = json.loads(self.analysis_json or "{}").get("colors", [])
             result = next((item for item in saved if item.get("color") == color), {})
             if not result:
-                result = self._analyze_color(self.equipment_id, color, current_counters,
-                                             exclude_submission_id=self.id)
+                result = self._analyze_color(
+                    self.equipment_id,
+                    color,
+                    current_counters,
+                    exclude_submission_id=self.id,
+                    base_counters=base_counters,
+                )
 
             counter_key = "bn" if color == "black" else "color"
             lines.append(
