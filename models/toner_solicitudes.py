@@ -146,6 +146,19 @@ class TonerCounterSubmission(models.Model):
         index=True,
     )
 
+    automation_event_id = fields.Many2one(
+        "sat.automation.event",
+        string="Evento de automatización SAT",
+        ondelete="set null",
+        index=True,
+        copy=False,
+        readonly=True,
+        help=(
+            "Evento central que originó esta solicitud. Se utiliza para "
+            "idempotencia y trazabilidad de correo/IA/PrintTracker."
+        ),
+    )
+
     created_by_user_id = fields.Many2one(
         "res.users",
         string="Registrado por",
@@ -1338,7 +1351,16 @@ class TonerCounterSubmission(models.Model):
 
             vals = {
                 "equipment_id": equipment.id,
-                "source": "portal",
+                "automation_event_id": (
+                    int(web_data.get("automation_event_id"))
+                    if web_data.get("automation_event_id")
+                    else False
+                ),
+                "source": (
+                    web_data.get("source")
+                    if web_data.get("source") in ("portal", "manual", "api")
+                    else "portal"
+                ),
                 "created_by_user_id": self.env.user.id,
                 "client_name": web_data.get("client_name") or _("Sin nombre"),
                 "client_email": web_data.get("client_email")
@@ -1352,10 +1374,26 @@ class TonerCounterSubmission(models.Model):
                 "requiere_toner_cyan": requested_toners["cyan"],
                 "requiere_toner_magenta": requested_toners["magenta"],
                 "requiere_toner_yellow": requested_toners["yellow"],
-                "cantidad_solicitada_black": 1 if requested_toners["black"] else 0,
-                "cantidad_solicitada_cyan": 1 if requested_toners["cyan"] else 0,
-                "cantidad_solicitada_magenta": 1 if requested_toners["magenta"] else 0,
-                "cantidad_solicitada_yellow": 1 if requested_toners["yellow"] else 0,
+                "cantidad_solicitada_black": (
+                    max(int(web_data.get("quantity_black", 1) or 1), 1)
+                    if requested_toners["black"]
+                    else 0
+                ),
+                "cantidad_solicitada_cyan": (
+                    max(int(web_data.get("quantity_cyan", 1) or 1), 1)
+                    if requested_toners["cyan"]
+                    else 0
+                ),
+                "cantidad_solicitada_magenta": (
+                    max(int(web_data.get("quantity_magenta", 1) or 1), 1)
+                    if requested_toners["magenta"]
+                    else 0
+                ),
+                "cantidad_solicitada_yellow": (
+                    max(int(web_data.get("quantity_yellow", 1) or 1), 1)
+                    if requested_toners["yellow"]
+                    else 0
+                ),
                 "cantidad_sugerida_black": 1
                 if requested_toners["black"]
                 and not next(
@@ -1472,6 +1510,252 @@ class TonerCounterSubmission(models.Model):
             )
             return {"success": False, "error": str(error)}
 
+
+    # -------------------------------------------------------------------------
+    # Integración con motor central SAT
+    # -------------------------------------------------------------------------
+
+    @api.model
+    def automation_create_toner_request(self, automation_event):
+        """
+        Crea una solicitud explícita de tóner originada por el motor SAT.
+
+        Reutiliza create_from_web_request() y validate_web_toner_request();
+        por tanto conserva las reglas actuales de:
+            - equipo;
+            - contadores;
+            - historial;
+            - consumo temprano;
+            - duplicados;
+            - evidencia;
+            - actividad interna.
+
+        La IA únicamente interpreta el correo. Nunca aprueba ni despacha.
+        """
+        if not automation_event or not automation_event.exists():
+            raise ValidationError(_("El evento de automatización no existe."))
+
+        if automation_event.event_type != "toner_request":
+            raise ValidationError(
+                _(
+                    "El evento SAT debe ser 'toner_request'. Tipo recibido: %s"
+                ) % automation_event.event_type
+            )
+
+        # Idempotencia fuerte: un evento SAT no debe crear dos solicitudes.
+        existing = self.sudo().search(
+            [("automation_event_id", "=", automation_event.id)],
+            order="id desc",
+            limit=1,
+        )
+        if existing:
+            _logger.info(
+                "[TONER][AUTOMATION][DUPLICATE] automation_event=%s "
+                "submission=%s",
+                automation_event.id,
+                existing.id,
+            )
+            return {
+                "model": existing._name,
+                "record_id": existing.id,
+                "description": _(
+                    "La solicitud ya existía para este evento de automatización."
+                ),
+            }
+
+        equipment = automation_event.equipment_id
+        if not equipment and automation_event.serial_number:
+            equipment = self.env["alquiler"].sudo().search(
+                [("serie", "=ilike", automation_event.serial_number.strip())],
+                limit=1,
+            )
+
+        if not equipment:
+            raise ValidationError(
+                _("No se pudo identificar el equipo de la solicitud de tóner.")
+            )
+
+        color = automation_event.supply_color or "unknown"
+        if color not in self.COLOR_LABELS:
+            raise ValidationError(
+                _(
+                    "No se pudo identificar un color de tóner válido. "
+                    "Valor recibido: %s"
+                ) % color
+            )
+
+        # --------------------------------------------------------
+        # Contadores: primero evento; luego equipo automático reciente.
+        # --------------------------------------------------------
+        counter_bn = int(automation_event.meter_bn or 0)
+        counter_color = int(automation_event.meter_color or 0)
+
+        if (
+            counter_bn <= 0
+            and "has_auto_counters" in equipment._fields
+            and equipment.has_auto_counters
+        ):
+            counter_bn = int(equipment.contador_bn or 0)
+            counter_color = int(equipment.contador_color or 0)
+
+            _logger.info(
+                "[TONER][AUTOMATION][COUNTERS] automation_event=%s "
+                "using_recent_equipment_counters equipment=%s bn=%s color=%s",
+                automation_event.id,
+                equipment.id,
+                counter_bn,
+                counter_color,
+            )
+
+        if counter_bn <= 0:
+            raise ValidationError(
+                _(
+                    "No existe contador B/N válido en el evento ni un contador "
+                    "automático reciente del equipo."
+                )
+            )
+
+        if equipment.tipo_maquina_id == "color" and counter_color <= 0:
+            raise ValidationError(
+                _(
+                    "El equipo es color y no existe contador color válido en "
+                    "el evento ni en los contadores automáticos recientes."
+                )
+            )
+
+        quantity = max(int(automation_event.requested_quantity or 1), 1)
+
+        sender = automation_event.sender or ""
+        contact = automation_event.contact_id
+
+        client_name = (
+            contact.name
+            if contact
+            else sender
+            or _("Solicitud automática")
+        )
+        client_email = (
+            contact.email
+            if contact and contact.email
+            else sender
+            if "@" in sender
+            else self.env.company.email
+            or "soporte@andescopiers.com.pe"
+        )
+        client_phone = (
+            (contact.mobile or contact.phone or "")
+            if contact
+            else ""
+        )
+
+        web_data = {
+            "equipment_id": equipment.id,
+            "automation_event_id": automation_event.id,
+            "source": "api",
+            "client_name": client_name,
+            "client_email": client_email,
+            "client_phone": client_phone,
+            "counter_bn": counter_bn,
+            "counter_color": counter_color,
+            "requires_black": color == "black",
+            "requires_cyan": color == "cyan",
+            "requires_magenta": color == "magenta",
+            "requires_yellow": color == "yellow",
+            "quantity_black": quantity if color == "black" else 0,
+            "quantity_cyan": quantity if color == "cyan" else 0,
+            "quantity_magenta": quantity if color == "magenta" else 0,
+            "quantity_yellow": quantity if color == "yellow" else 0,
+            "notes": _(
+                "Solicitud creada por Automatización SAT.\n"
+                "Evento: %(event)s\n"
+                "Origen: %(source)s\n"
+                "Asunto: %(subject)s\n"
+                "Detalle: %(detail)s"
+            ) % {
+                "event": automation_event.display_name,
+                "source": automation_event.source,
+                "subject": automation_event.subject or "-",
+                "detail": (
+                    automation_event.issue_description
+                    or automation_event.body_plain
+                    or "-"
+                ),
+            },
+        }
+
+        _logger.info(
+            "[TONER][AUTOMATION][CREATE_START] automation_event=%s "
+            "equipment=%s color=%s quantity=%s bn=%s color_counter=%s",
+            automation_event.id,
+            equipment.id,
+            color,
+            quantity,
+            counter_bn,
+            counter_color,
+        )
+
+        result = self.sudo().create_from_web_request(web_data)
+
+        if not result.get("success"):
+            duplicate_id = (
+                (result.get("validation") or {}).get("duplicate_submission_id")
+                or (result.get("validation") or {}).get("duplicate_id")
+            )
+
+            if duplicate_id:
+                duplicate = self.sudo().browse(int(duplicate_id)).exists()
+                if duplicate:
+                    _logger.info(
+                        "[TONER][AUTOMATION][EXISTING_OPEN] "
+                        "automation_event=%s submission=%s",
+                        automation_event.id,
+                        duplicate.id,
+                    )
+                    return {
+                        "model": duplicate._name,
+                        "record_id": duplicate.id,
+                        "description": result.get("error") or _(
+                            "Se relacionó una solicitud de tóner activa existente."
+                        ),
+                    }
+
+            raise ValidationError(
+                result.get("error")
+                or _("No se pudo crear la solicitud de tóner.")
+            )
+
+        submission = self.sudo().browse(
+            int(result["submission_id"])
+        ).exists()
+
+        if not submission:
+            raise ValidationError(
+                _("La creación indicó éxito pero no devolvió una solicitud válida.")
+            )
+
+        # Garantizar relación aunque una personalización futura de
+        # create_from_web_request omita el campo.
+        if submission.automation_event_id != automation_event:
+            submission.sudo().write({
+                "automation_event_id": automation_event.id,
+            })
+
+        _logger.info(
+            "[TONER][AUTOMATION][CREATE_OK] automation_event=%s "
+            "submission=%s sequence=%s state=%s",
+            automation_event.id,
+            submission.id,
+            submission.secuencia,
+            submission.state,
+        )
+
+        return {
+            "model": submission._name,
+            "record_id": submission.id,
+            "description": result.get("message") or _(
+                "Solicitud de tóner creada correctamente."
+            ),
+        }
 
     # -------------------------------------------------------------------------
     # Creación manual segura

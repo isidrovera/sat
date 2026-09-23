@@ -1,5 +1,6 @@
 from odoo import models, fields, api
 import logging
+import json
 import re
 import html
 from html.parser import HTMLParser
@@ -53,6 +54,21 @@ class ContadorAutomatico(models.Model):
     aprendizaje_completado = fields.Boolean('Aprendizaje Completado', default=False)
     patrones_usados = fields.Text('Patrones utilizados', readonly=True, 
                                 help="Registro de qué patrones se usaron para detectar datos")
+
+
+    # INTEGRACIÓN CON EL MOTOR CENTRAL (NO BLOQUEA EL FLUJO LEGACY)
+    automation_event_id = fields.Many2one(
+        'sat.automation.event', string='Evento de automatización',
+        readonly=True, copy=False, index=True, ondelete='set null',
+    )
+    automation_sync_state = fields.Selection([
+        ('pending', 'Pendiente'),
+        ('synced', 'Sincronizado'),
+        ('error', 'Error'),
+    ], string='Sincronización automatización', default='pending', readonly=True, copy=False)
+    automation_sync_error = fields.Text('Error sincronización automatización', readonly=True, copy=False)
+    ia_fallback_usada = fields.Boolean('IA usada como fallback', default=False, readonly=True, copy=False)
+    ia_fallback_confianza = fields.Float('Confianza IA fallback (%)', default=0.0, readonly=True, copy=False)
     # NUEVOS CAMPOS PARA INFORMACIÓN DEL EQUIPO
     cliente_detectado = fields.Char('Cliente Detectado', readonly=True)
     tipo_equipo_detectado = fields.Selection([
@@ -327,56 +343,56 @@ class ContadorAutomatico(models.Model):
 
     def generar_patrones_automaticamente(self):
         """
-        Motor principal de generación automática de patrones
+        Genera patrones candidatos DESPUÉS del procesamiento.
+
+        IMPORTANTE:
+        - nunca reprocesa el correo actual;
+        - nunca activa automáticamente el patrón recién creado;
+        - nunca cambia el estado operativo del correo;
+        - el patrón se valida posteriormente en shadow mode.
         """
         try:
-            _logger.info(f"🤖 === INICIANDO GENERACIÓN AUTOMÁTICA DE PATRONES ===")
-            _logger.info(f"📝 Analizando contenido para generar patrones...")
-            
+            _logger.info('[CONTADOR][APRENDIZAJE] === GENERANDO CANDIDATOS ===')
+
             if not self.contenido_procesado:
-                _logger.warning("⚠️ No hay contenido procesado para analizar")
+                _logger.warning('[CONTADOR][APRENDIZAJE] Sin contenido procesado')
                 return False
-            
+
             texto = self.contenido_procesado
-            patrones_generados = []
-            
-            # Generar patrones según el formato detectado
             formato = self.formato_detectado or 'desconocida'
             idioma = self.idioma_detectado or 'desconocido'
             marca = self.marca_detectada or 'desconocida'
-            
-            _logger.info(f"📋 Generando patrones para: Formato={formato}, Idioma={idioma}, Marca={marca}")
-            
-            # 1. GENERAR PATRONES PARA SERIE
-            patrones_serie = self._generar_patrones_serie(texto, formato, idioma, marca)
-            patrones_generados.extend(patrones_serie)
-            
-            # 2. GENERAR PATRONES PARA CONTADORES
-            patrones_contadores = self._generar_patrones_contadores(texto, formato, idioma, marca)
-            patrones_generados.extend(patrones_contadores)
-            
-            # 3. CREAR LOS PATRONES EN LA BASE DE DATOS
-            patrones_creados = 0
-            for patron_data in patrones_generados:
-                if self._crear_patron_si_no_existe(patron_data):
-                    patrones_creados += 1
-            
-            _logger.info(f"✅ Patrones generados automáticamente: {patrones_creados}")
-            
-            # 4. ACTUALIZAR INFORMACIÓN DEL REGISTRO
-            self.patrones_auto_generados = patrones_creados
-            
-            # 5. INTENTAR PROCESAR CON LOS NUEVOS PATRONES
-            if patrones_creados > 0:
-                _logger.info(f"🔄 Reintentando procesamiento con nuevos patrones...")
-                return self._procesar_con_patrones_generados()
-            
-            return patrones_creados > 0
-            
-        except Exception as e:
-            _logger.error(f"❌ Error generando patrones automáticamente: {e}")
-            import traceback
-            _logger.error(f"Traceback: {traceback.format_exc()}")
+
+            propuestas = []
+            propuestas.extend(
+                self._generar_patrones_serie(texto, formato, idioma, marca)
+            )
+            propuestas.extend(
+                self._generar_patrones_contadores(texto, formato, idioma, marca)
+            )
+
+            creados = 0
+            for data in propuestas:
+                data = dict(data)
+                data.update({
+                    'auto_generado': True,
+                    'activo': False,
+                    'estado_aprendizaje': 'candidato',
+                    'orden': max(int(data.get('orden') or 50), 50),
+                })
+                if self._crear_patron_si_no_existe(data):
+                    creados += 1
+
+            self.patrones_auto_generados = creados
+            _logger.info(
+                '[CONTADOR][APRENDIZAJE] Candidatos nuevos=%s. '
+                'El correo actual NO se reprocesará con ellos.',
+                creados,
+            )
+            return creados > 0
+
+        except Exception:
+            _logger.exception('[CONTADOR][APRENDIZAJE][ERROR] generando candidatos')
             return False
 
     def _generar_patrones_serie(self, texto, formato, idioma, marca):
@@ -675,106 +691,75 @@ class ContadorAutomatico(models.Model):
 
     def _crear_patron_si_no_existe(self, patron_data):
         """
-        Crea un patrón solo si no existe uno similar
+        Crea patrones de forma segura.
+
+        - Auto-generado: candidato inactivo; nunca participa inmediatamente.
+        - Aprendido/validado manualmente: puede quedar activo.
         """
         try:
-            # Buscar patrones similares existentes
-            patrones_similares = self.env['patron.contador'].search([
-                ('tipo', '=', patron_data['tipo']),
-                ('patron_regex', '=', patron_data['patron_regex']),
-                ('activo', '=', True)
-            ])
-            
-            if patrones_similares:
-                _logger.info(f"⏭️ Patrón similar ya existe: {patron_data['name']}")
+            data = dict(patron_data or {})
+            if not data.get('tipo') or not data.get('patron_regex'):
                 return False
-            
-            # Verificar si existe uno con el mismo nombre
-            patron_mismo_nombre = self.env['patron.contador'].search([
-                ('name', '=', patron_data['name'])
+
+            existing = self.env['patron.contador'].search([
+                ('tipo', '=', data['tipo']),
+                ('patron_regex', '=', data['patron_regex']),
+                ('estado_aprendizaje', 'not in', ['rechazado', 'obsoleto']),
+            ], limit=1)
+            if existing:
+                _logger.info(
+                    '[CONTADOR][APRENDIZAJE] Patrón ya existe id=%s nombre=%s',
+                    existing.id, existing.name,
+                )
+                return False
+
+            if data.get('auto_generado') and not data.get('validado_manualmente'):
+                patron = self.env['patron.contador'].crear_candidato(
+                    data, evento_origen=self
+                )
+                return bool(patron)
+
+            # Aprendizaje manual explícito: sí puede quedar productivo.
+            data.setdefault('activo', True)
+            data.setdefault('estado_aprendizaje', 'activo')
+            if data.get('validado_manualmente'):
+                data['activo'] = True
+                data['estado_aprendizaje'] = 'activo'
+
+            same_name = self.env['patron.contador'].search_count([
+                ('name', '=', data.get('name'))
             ])
-            
-            if patron_mismo_nombre:
-                # Modificar el nombre para hacerlo único
-                patron_data['name'] = f"{patron_data['name']} v{len(patron_mismo_nombre) + 1}"
-            
-            # Crear el patrón
-            nuevo_patron = self.env['patron.contador'].create(patron_data)
-            _logger.info(f"✅ Patrón creado: {nuevo_patron.name} (ID: {nuevo_patron.id})")
-            
+            if same_name:
+                data['name'] = f"{data.get('name')} v{same_name + 1}"
+
+            patron = self.env['patron.contador'].create(data)
+            _logger.info(
+                '[CONTADOR][APRENDIZAJE] Patrón productivo creado id=%s nombre=%s',
+                patron.id, patron.name,
+            )
             return True
-            
-        except Exception as e:
-            _logger.error(f"❌ Error creando patrón: {e}")
+
+        except Exception:
+            _logger.exception(
+                '[CONTADOR][APRENDIZAJE][ERROR] creando patrón data=%s',
+                patron_data,
+            )
             return False
 
     def _procesar_con_patrones_generados(self):
         """
-        Intenta procesar el correo con los patrones recién generados
+        Compatibilidad histórica.
+
+        Antes este método reprocesaba el correo con un patrón recién generado y
+        podía dejar el flujo detenido o usar una regex no validada. Desde ahora
+        los patrones recién creados solo se prueban en shadow mode.
         """
-        try:
-            _logger.info(f"🔄 === PROCESANDO CON PATRONES GENERADOS ===")
-            
-            texto = self.contenido_procesado
-            
-            # Buscar serie usando los nuevos patrones
-            serie_encontrada = self.env['patron.contador'].buscar_por_tipo('serie', texto)
-            if serie_encontrada:
-                self.serie_detectada = serie_encontrada
-                _logger.info(f"✅ Serie detectada con patrones generados: {serie_encontrada}")
-            
-            # Buscar contadores usando los nuevos patrones
-            contadores_encontrados = {}
-            for tipo in ['contador_bn', 'contador_color', 'contador_scan']:
-                resultado = self.env['patron.contador'].buscar_por_tipo(tipo, texto)
-                if resultado:
-                    contadores_encontrados[tipo] = resultado
-                    _logger.info(f"✅ {tipo} detectado: {resultado}")
-            
-            # Actualizar campos de contadores detectados
-            if 'contador_bn' in contadores_encontrados:
-                self.contador_bn_detectado = contadores_encontrados['contador_bn']
-            
-            if 'contador_color' in contadores_encontrados:
-                self.contador_color_detectado = contadores_encontrados['contador_color']
-            
-            if 'contador_scan' in contadores_encontrados:
-                self.contador_scan_detectado = contadores_encontrados['contador_scan']
-            
-            # Evaluar si el procesamiento fue exitoso
-            if serie_encontrada and contadores_encontrados:
-                # Buscar equipo
-                equipo = self.buscar_equipo_por_serie(serie_encontrada)
-                if equipo:
-                    self.equipo_id = equipo.id
-                    # Actualizar contadores del equipo
-                    self.actualizar_contadores_equipo(equipo, contadores_encontrados)
-                    self.estado = 'procesado'
-                    self.procesado_automaticamente = True
-                    self.aprendizaje_completado = True
-                    _logger.info(f"🎉 Procesamiento exitoso con patrones generados")
-                    return True
-                else:
-                    self.estado = 'manual'
-                    self.mensaje_error = f"Serie detectada pero equipo no encontrado: {serie_encontrada}"
-            elif serie_encontrada:
-                self.estado = 'manual' 
-                self.mensaje_error = "Serie detectada pero sin contadores válidos"
-            elif contadores_encontrados:
-                self.estado = 'manual'
-                self.mensaje_error = "Contadores detectados pero sin serie válida"
-            else:
-                self.estado = 'manual'
-                self.mensaje_error = "Patrones generados pero no se detectaron valores"
-            
-            self.fecha_procesamiento = fields.Datetime.now()
-            return False
-            
-        except Exception as e:
-            _logger.error(f"❌ Error procesando con patrones generados: {e}")
-            self.estado = 'error'
-            self.mensaje_error = f"Error procesando con patrones generados: {str(e)}"
-            return False
+        _logger.warning(
+            '[CONTADOR][APRENDIZAJE] _procesar_con_patrones_generados() '
+            'ya no modifica el procesamiento operativo; se usa shadow mode.'
+        )
+        self._probar_patrones_candidatos_shadow()
+        return False
 
     def identificar_tipo_equipo_por_serie(self, serie):
         """
@@ -983,191 +968,365 @@ class ContadorAutomatico(models.Model):
             _logger.error(f"Traceback: {traceback.format_exc()}")
             return contadores_detectados
     
-    def procesar_correo_inteligente(self):
-        """
-        Procesamiento inteligente del correo con análisis y generación automática
-        CORREGIDO: Asignación correcta de contadores a los campos del registro
-        """
+
+    def _datos_suficientes(self, serie, contadores, equipo=False, tipo_maquina=False):
+        if not serie:
+            return False
+        if not contadores:
+            return False
+
+        bn = int(contadores.get('contador_bn') or 0)
+        color = int(contadores.get('contador_color') or 0)
+        scan = int(contadores.get('contador_scan') or 0)
+
+        if tipo_maquina == 'color':
+            return bn > 0 and color > 0
+        if tipo_maquina == 'monocromatica':
+            return bn > 0
+        return any([bn > 0, color > 0, scan > 0])
+
+    def _crear_evento_automatizacion(self, estado_forzado=False):
+        """Crea/actualiza el evento central sin bloquear el procesamiento legacy."""
+        self.ensure_one()
+        if 'sat.automation.event' not in self.env:
+            return self.env['contador.automatico'].browse()
+
+        event_type = 'meter_reading'
+        event_state = estado_forzado or (
+            'done' if self.estado == 'procesado'
+            else 'ignored' if self.estado == 'filtrado'
+            else 'review' if self.estado == 'manual'
+            else 'error' if self.estado == 'error'
+            else 'new'
+        )
+
+        values = {
+            'source': 'email',
+            'source_subtype': 'contador.automatico',
+            'source_model': self._name,
+            'source_record_id': self.id,
+            'external_id': (
+                f'mail.message:{self.original_mail_id.id}'
+                if self.original_mail_id else f'contador.automatico:{self.id}'
+            ),
+            'event_type': event_type,
+            'state': event_state,
+            'sender': self.remitente,
+            'subject': self.name,
+            'body_original': self.contenido_original,
+            'body_plain': self.contenido_procesado,
+            'original_mail_message_id': self.original_mail_id.id if self.original_mail_id else False,
+            'serial_number': self.serie_detectada,
+            'equipment_id': self.equipo_id.id if self.equipo_id else False,
+            'partner_id': self.equipo_id.cliente_id.id if self.equipo_id and self.equipo_id.cliente_id else False,
+            'meter_bn': int(self.contador_bn_detectado or 0),
+            'meter_color': int(self.contador_color_detectado or 0),
+            'meter_scan': int(self.contador_scan_detectado or 0),
+            'meter_total': int(self.contador_total_detectado or 0),
+            'classification_method': 'pattern' if self.patrones_usados else 'none',
+            'pattern_confidence': float(self.confianza_deteccion or 0.0),
+            'patterns_used': self.patrones_usados,
+            'action_type': 'update_record' if self.estado == 'procesado' else 'none',
+            'action_model': 'alquiler' if self.estado == 'procesado' and self.equipo_id else False,
+            'action_record_id': self.equipo_id.id if self.estado == 'procesado' and self.equipo_id else False,
+            'action_description': (
+                'Contadores procesados por contador.automatico.'
+                if self.estado == 'procesado' else self.mensaje_error
+            ),
+        }
+
         try:
-            _logger.info(f"🧠 === INICIO PROCESAMIENTO INTELIGENTE ===")
-            _logger.info(f"📧 Registro ID={self.id}, Asunto='{self.name}'")
+            event, created = self.env['sat.automation.event'].sudo().create_from_source(
+                values, auto_process=False
+            )
+            if not created:
+                # Mantener el evento central alineado con el resultado más reciente.
+                safe_update = {
+                    k: v for k, v in values.items()
+                    if k not in ('source', 'source_model', 'source_record_id', 'external_id')
+                }
+                event.sudo().write(safe_update)
 
-            # 1. VERIFICAR SI ES CORREO DE CONTADORES
-            if not self._es_correo_de_contadores_mejorado(self.name):
-                self.estado = 'filtrado'
-                self.mensaje_error = 'Asunto no corresponde a correo de contadores'
-                _logger.info(f"🚫 Correo filtrado - No es de contadores")
-                return False
+            self.sudo().write({
+                'automation_event_id': event.id,
+                'automation_sync_state': 'synced',
+                'automation_sync_error': False,
+            })
+            _logger.info(
+                '[CONTADOR][AUTOMATION][SYNC] contador=%s event=%s created=%s state=%s',
+                self.id, event.id, created, event.state,
+            )
+            return event
+        except Exception as exc:
+            _logger.exception(
+                '[CONTADOR][AUTOMATION][SYNC_ERROR] contador=%s', self.id
+            )
+            self.sudo().write({
+                'automation_sync_state': 'error',
+                'automation_sync_error': str(exc),
+            })
+            return self.env['sat.automation.event'].browse()
 
-            # 2. LIMPIAR CONTENIDO HTML
-            if self.contenido_original:
-                texto_limpio = self.limpiar_html_correo(self.contenido_original)
-                self.contenido_procesado = texto_limpio
-            else:
-                texto_limpio = self.name or ""
+    def _intentar_ia_fallback(self, texto, serie_actual=False, contadores_actuales=None):
+        """
+        Usa el servicio IA central únicamente como fallback.
+        Si IA está desactivada, no configurada o falla, devuelve los datos actuales.
+        """
+        self.ensure_one()
+        contadores_actuales = dict(contadores_actuales or {})
 
-            # 3. ANÁLISIS INTELIGENTE DEL CONTENIDO
-            _logger.info(f"🔍 === FASE: ANÁLISIS INTELIGENTE ===")
+        if 'sat.automation.config' not in self.env or 'sat.ai.service' not in self.env:
+            return serie_actual, contadores_actuales, False
 
-            # Detectar idioma
-            idioma, confianza_idioma, palabras_clave = self.detectar_idioma_automatico(texto_limpio)
-            self.idioma_detectado = idioma
-            self.confianza_deteccion = confianza_idioma
-            self.palabras_clave_encontradas = ', '.join(palabras_clave)
+        try:
+            config = self.env['sat.automation.config'].get_config()
+            if config.ai_mode == 'disabled':
+                _logger.info('[CONTADOR][IA] IA desactivada; continúa lógica tradicional')
+                return serie_actual, contadores_actuales, False
 
-            # Detectar marca
-            marca = self.detectar_marca_automatico(texto_limpio)
-            self.marca_detectada = marca
+            event = self._crear_evento_automatizacion(estado_forzado='new')
+            if not event:
+                return serie_actual, contadores_actuales, False
 
-            # Analizar estructura
-            estructura = self.analizar_estructura_contenido(texto_limpio)
-            self.formato_detectado = estructura.get('estructura_tipo', 'desconocida')
-            self.estructura_detectada = str(estructura)
+            # Cargar parciales conocidos para que IA solo complete lo faltante.
+            partial_vals = {
+                'serial_number': serie_actual or self.serie_detectada,
+                'meter_bn': int(contadores_actuales.get('contador_bn') or self.contador_bn_detectado or 0),
+                'meter_color': int(contadores_actuales.get('contador_color') or self.contador_color_detectado or 0),
+                'meter_scan': int(contadores_actuales.get('contador_scan') or self.contador_scan_detectado or 0),
+                'body_plain': texto or '',
+            }
+            event.sudo().write(partial_vals)
 
-            _logger.info(f"🌍 Idioma: {idioma} ({confianza_idioma:.1f}%)")
-            _logger.info(f"🏭 Marca: {marca}")
-            _logger.info(f"📐 Formato: {estructura.get('estructura_tipo')}")
+            result = self.env['sat.ai.service'].sudo().analyze_event(
+                event, task_type='extract_event', fail_silently=True
+            )
+            if not result.get('ok'):
+                _logger.warning(
+                    '[CONTADOR][IA] Fallback no disponible contador=%s error=%s',
+                    self.id, result.get('error'),
+                )
+                return serie_actual, contadores_actuales, False
 
-            # 4. INTENTAR PROCESAMIENTO CON PATRONES EXISTENTES
-            _logger.info(f"📊 === FASE: PROCESAMIENTO CON PATRONES EXISTENTES ===")
+            data = result.get('data') or {}
+            serie = data.get('serial_number') or serie_actual
+            contadores = dict(contadores_actuales)
+            mapping = {
+                'meter_bn': 'contador_bn',
+                'meter_color': 'contador_color',
+                'meter_scan': 'contador_scan',
+            }
+            for ai_key, legacy_key in mapping.items():
+                value = data.get(ai_key)
+                if value not in (None, False, ''):
+                    try:
+                        value = int(value)
+                    except (TypeError, ValueError):
+                        continue
+                    if value > 0:
+                        contadores[legacy_key] = value
 
-            serie_encontrada = self.buscar_serie_dinamico(texto_limpio)
-            # Descartar si la "serie" es solo dígitos
-            if serie_encontrada and serie_encontrada.isdigit():
-                _logger.warning(f"💥 Serie descartada tras validación: '{serie_encontrada}'")
-                serie_encontrada = None
+            self.sudo().write({
+                'ia_fallback_usada': True,
+                'ia_fallback_confianza': float(result.get('confidence') or data.get('confidence') or 0.0),
+            })
+            _logger.info(
+                '[CONTADOR][IA][OK] contador=%s serie=%s contadores=%s confianza=%s',
+                self.id, serie, contadores, self.ia_fallback_confianza,
+            )
+            return serie, contadores, True
 
-            contadores_encontrados = self.buscar_patrones_contadores_dinamico(texto_limpio)
+        except Exception:
+            _logger.exception('[CONTADOR][IA][ERROR] contador=%s; continúa sin IA', self.id)
+            return serie_actual, contadores_actuales, False
 
-            # ===== NUEVA LÓGICA: IDENTIFICACIÓN DE TIPO DE EQUIPO =====
-            equipo_detectado = None
-            tipo_maquina_detectado = None
-            cliente_detectado = None
-
-            if serie_encontrada:
-                _logger.info(f"🎯 === IDENTIFICANDO TIPO DE EQUIPO POR SERIE ===")
-                
-                # NUEVO: Identificar tipo de equipo por serie
-                equipo_detectado, tipo_maquina_detectado, cliente_detectado = self.identificar_tipo_equipo_por_serie(serie_encontrada)
-                
-                if equipo_detectado and tipo_maquina_detectado:
-                    _logger.info(f"🎯 Equipo identificado: {equipo_detectado.id} - Tipo: {tipo_maquina_detectado}")
-                    
-                    # NUEVO: Asignar contadores según tipo de equipo
-                    contadores_encontrados = self.asignar_contadores_por_tipo_equipo(
-                        contadores_encontrados, tipo_maquina_detectado
-                    )
-                    
-                    # CORRECCIÓN: Actualizar campos del registro INMEDIATAMENTE
-                    _logger.info(f"📊 === ACTUALIZANDO CAMPOS DEL REGISTRO ===")
-                    _logger.info(f"📊 Contadores procesados: {contadores_encontrados}")
-                    
-                    # Asignar serie
-                    self.serie_detectada = serie_encontrada
-                    _logger.info(f"✅ Serie asignada: {self.serie_detectada}")
-                    
-                    # Asignar contadores al registro
-                    if 'contador_bn' in contadores_encontrados:
-                        self.contador_bn_detectado = contadores_encontrados['contador_bn']
-                        _logger.info(f"✅ BN asignado: {self.contador_bn_detectado}")
-                    
-                    if 'contador_color' in contadores_encontrados:
-                        self.contador_color_detectado = contadores_encontrados['contador_color']
-                        _logger.info(f"✅ Color asignado: {self.contador_color_detectado}")
-                    
-                    if 'contador_scan' in contadores_encontrados:
-                        self.contador_scan_detectado = contadores_encontrados['contador_scan']
-                        _logger.info(f"✅ Scan asignado: {self.contador_scan_detectado}")
-                    
-                    # NUEVO: Guardar información adicional del equipo
-                    self.tipo_equipo_detectado = tipo_maquina_detectado
-                    if cliente_detectado:
-                        self.cliente_detectado = cliente_detectado.name
-                        _logger.info(f"👤 Cliente detectado: {cliente_detectado.name}")
-                    
-                    _logger.info(f"📊 === VERIFICACIÓN FINAL DE ASIGNACIÓN ===")
-                    _logger.info(f"   BN: {self.contador_bn_detectado}")
-                    _logger.info(f"   Color: {self.contador_color_detectado}")
-                    _logger.info(f"   Scan: {self.contador_scan_detectado}")
-                    _logger.info(f"   Serie: {self.serie_detectada}")
-                    
-                else:
-                    _logger.warning(f"⚠️ No se pudo identificar tipo de equipo para serie: {serie_encontrada}")
-                    
-                    # Asignar datos básicos aunque no se identifique el equipo
-                    self.serie_detectada = serie_encontrada
-                    if 'contador_bn' in contadores_encontrados:
-                        self.contador_bn_detectado = contadores_encontrados['contador_bn']
-                    if 'contador_color' in contadores_encontrados:
-                        self.contador_color_detectado = contadores_encontrados['contador_color']
-                    if 'contador_scan' in contadores_encontrados:
-                        self.contador_scan_detectado = contadores_encontrados['contador_scan']
-
-            # 5. SI NO ENCONTRÓ DATOS, GENERAR PATRONES AUTOMÁTICAMENTE
-            if not serie_encontrada or not contadores_encontrados:
-                _logger.info(f"🤖 === FASE: GENERACIÓN AUTOMÁTICA DE PATRONES ===")
-                _logger.warning(f"⚠️ Patrones existentes insuficientes. Generando automáticamente...")
-
-                self.requiere_aprendizaje = True
-
-                # Generar patrones automáticamente
-                if self.generar_patrones_automaticamente():
-                    _logger.info(f"✅ Patrones generados y aplicados exitosamente")
-                else:
-                    _logger.warning(f"⚠️ No se pudieron generar patrones efectivos")
-            else:
-                # Procesamiento exitoso con patrones existentes
-                _logger.info(f"✅ Procesamiento exitoso con patrones existentes")
-
-                # Usar equipo ya detectado o buscarlo de nuevo
-                if equipo_detectado:
-                    equipo = equipo_detectado
-                else:
-                    equipo = self.buscar_equipo_por_serie(serie_encontrada) if serie_encontrada else None
-                
-                if equipo and contadores_encontrados:
-                    self.equipo_id = equipo.id
-                    
-                    # CORRECCIÓN: Pasar contadores_encontrados que ya están procesados
-                    self.actualizar_contadores_equipo(equipo, contadores_encontrados)
-                    self.estado = 'procesado'
-                    self.procesado_automaticamente = True
-                    _logger.info(f"🎉 === PROCESAMIENTO EXITOSO CON TIPO DE EQUIPO ===")
-                    _logger.info(f"🎯 Equipo: {equipo.id} - Tipo: {tipo_maquina_detectado}")
-                    _logger.info(f"👤 Cliente: {cliente_detectado.name if cliente_detectado else 'N/A'}")
-                elif serie_encontrada:
-                    self.estado = 'manual'
-                    self.mensaje_error = f"Serie detectada pero equipo no encontrado: {serie_encontrada}"
-                else:
-                    self.estado = 'manual'
-                    self.mensaje_error = "No se detectó número de serie"
-
-            # 6. ACTUALIZAR fecha_procesamiento
-            self.write({'fecha_procesamiento': fields.Datetime.now()})
-
-            _logger.info(f"📊 === RESUMEN PROCESAMIENTO INTELIGENTE ===")
-            _logger.info(f"Estado final: {self.estado}")
-            _logger.info(f"Idioma: {self.idioma_detectado}")
-            _logger.info(f"Marca: {self.marca_detectada}")
-            _logger.info(f"Formato: {self.formato_detectado}")
-            _logger.info(f"Serie: {self.serie_detectada or 'No detectada'}")
-            _logger.info(f"Tipo equipo: {self.tipo_equipo_detectado or 'No detectado'}")
-            _logger.info(f"Cliente: {self.cliente_detectado or 'No detectado'}")
-            _logger.info(f"Requiere aprendizaje: {self.requiere_aprendizaje}")
-            _logger.info(f"Patrones auto-generados: {self.patrones_auto_generados}")
-            _logger.info(f"🏁 === FIN PROCESAMIENTO INTELIGENTE ===")
-
+    def _probar_patrones_candidatos_shadow(self):
+        self.ensure_one()
+        if not self.contenido_procesado:
             return True
 
-        except Exception as e:
-            _logger.error(f"❌ === ERROR EN PROCESAMIENTO INTELIGENTE ===")
-            _logger.error(f"Error: {e}")
-            import traceback
-            _logger.error(f"Traceback: {traceback.format_exc()}")
+        Patron = self.env['patron.contador']
+        referencias = {
+            'serie': self.serie_detectada,
+            'contador_bn': self.contador_bn_detectado,
+            'contador_color': self.contador_color_detectado,
+            'contador_scan': self.contador_scan_detectado,
+        }
+        for tipo, valor in referencias.items():
+            if valor not in (None, False, '', 0):
+                Patron.probar_candidatos_shadow(
+                    tipo, self.contenido_procesado, valor, evento=self
+                )
+        return True
 
-            self.estado = 'error'
-            self.mensaje_error = f"Error en procesamiento inteligente: {str(e)}"
-            self.write({'fecha_procesamiento': fields.Datetime.now()})
+    def _aprender_despues_de_procesar(self):
+        """Aprendizaje desacoplado: jamás altera el resultado operativo actual."""
+        self.ensure_one()
+        try:
+            if self.estado != 'procesado':
+                return True
+
+            self.requiere_aprendizaje = True
+            self.generar_patrones_automaticamente()
+            self._probar_patrones_candidatos_shadow()
+            self.requiere_aprendizaje = False
+            self.aprendizaje_completado = True
+            _logger.info(
+                '[CONTADOR][APRENDIZAJE][FIN] contador=%s candidatos=%s',
+                self.id, self.patrones_auto_generados,
+            )
+        except Exception:
+            _logger.exception(
+                '[CONTADOR][APRENDIZAJE][ERROR] contador=%s. '
+                'El procesamiento ya realizado NO se revierte.',
+                self.id,
+            )
+        return True
+
+    def procesar_correo_inteligente(self):
+        """
+        Procesa primero con la lógica tradicional. Si faltan datos, intenta IA
+        como fallback opcional. El aprendizaje ocurre únicamente DESPUÉS del
+        resultado operativo y nunca puede bloquear el correo actual.
+        """
+        self.ensure_one()
+        try:
+            _logger.info('[CONTADOR] === INICIO PROCESAMIENTO === id=%s asunto=%s', self.id, self.name)
+
+            if not self._es_correo_de_contadores_mejorado(self.name):
+                self.write({
+                    'estado': 'filtrado',
+                    'mensaje_error': 'Asunto no corresponde a correo de contadores',
+                    'fecha_procesamiento': fields.Datetime.now(),
+                })
+                _logger.info('[CONTADOR] Correo filtrado id=%s', self.id)
+                self._crear_evento_automatizacion()
+                return False
+
+            texto_limpio = (
+                self.limpiar_html_correo(self.contenido_original)
+                if self.contenido_original else (self.name or '')
+            )
+            self.contenido_procesado = texto_limpio
+
+            idioma, confianza_idioma, palabras_clave = self.detectar_idioma_automatico(texto_limpio)
+            marca = self.detectar_marca_automatico(texto_limpio)
+            estructura = self.analizar_estructura_contenido(texto_limpio)
+
+            self.write({
+                'idioma_detectado': idioma,
+                'confianza_deteccion': confianza_idioma,
+                'palabras_clave_encontradas': ', '.join(palabras_clave),
+                'marca_detectada': marca,
+                'formato_detectado': estructura.get('estructura_tipo', 'desconocida'),
+                'estructura_detectada': str(estructura),
+            })
+
+            _logger.info(
+                '[CONTADOR] Análisis id=%s idioma=%s confianza=%.1f marca=%s formato=%s',
+                self.id, idioma, confianza_idioma, marca, self.formato_detectado,
+            )
+
+            # 1) LÓGICA ACTUAL / SIN IA
+            serie_encontrada = self.buscar_serie_dinamico(texto_limpio)
+            if serie_encontrada and serie_encontrada.isdigit():
+                _logger.warning('[CONTADOR] Serie solo numérica descartada: %s', serie_encontrada)
+                serie_encontrada = None
+
+            contadores_encontrados = self.buscar_patrones_contadores_dinamico(texto_limpio) or {}
+
+            equipo = False
+            tipo_maquina = False
+            cliente = False
+            if serie_encontrada:
+                equipo, tipo_maquina, cliente = self.identificar_tipo_equipo_por_serie(serie_encontrada)
+                if equipo and tipo_maquina:
+                    contadores_encontrados = self.asignar_contadores_por_tipo_equipo(
+                        contadores_encontrados, tipo_maquina
+                    )
+
+            # 2) IA SOLO SI REALMENTE FALTA INFORMACIÓN
+            if not self._datos_suficientes(
+                serie_encontrada, contadores_encontrados, equipo, tipo_maquina
+            ):
+                _logger.info(
+                    '[CONTADOR][IA] Datos tradicionales insuficientes; intentando fallback opcional id=%s',
+                    self.id,
+                )
+                serie_encontrada, contadores_encontrados, ia_usada = self._intentar_ia_fallback(
+                    texto_limpio,
+                    serie_actual=serie_encontrada,
+                    contadores_actuales=contadores_encontrados,
+                )
+
+                if serie_encontrada:
+                    equipo, tipo_maquina, cliente = self.identificar_tipo_equipo_por_serie(serie_encontrada)
+                    if equipo and tipo_maquina:
+                        contadores_encontrados = self.asignar_contadores_por_tipo_equipo(
+                            contadores_encontrados, tipo_maquina
+                        )
+
+            # 3) GUARDAR LO DETECTADO ANTES DE DECIDIR
+            vals_detectados = {
+                'serie_detectada': serie_encontrada or False,
+                'contador_bn_detectado': int(contadores_encontrados.get('contador_bn') or 0),
+                'contador_color_detectado': int(contadores_encontrados.get('contador_color') or 0),
+                'contador_scan_detectado': int(contadores_encontrados.get('contador_scan') or 0),
+                'tipo_equipo_detectado': tipo_maquina or False,
+                'cliente_detectado': cliente.name if cliente else False,
+            }
+            if equipo:
+                vals_detectados['equipo_id'] = equipo.id
+            self.write(vals_detectados)
+
+            # 4) RESULTADO OPERATIVO: NO DEPENDE DEL APRENDIZAJE
+            if self._datos_suficientes(
+                serie_encontrada, contadores_encontrados, equipo, tipo_maquina
+            ) and equipo:
+                self.actualizar_contadores_equipo(equipo, contadores_encontrados)
+                self.write({
+                    'estado': 'procesado',
+                    'procesado_automaticamente': True,
+                    'mensaje_error': False,
+                    'fecha_procesamiento': fields.Datetime.now(),
+                })
+                _logger.info(
+                    '[CONTADOR][OK] id=%s equipo=%s serie=%s tipo=%s contadores=%s ia=%s',
+                    self.id, equipo.id, serie_encontrada, tipo_maquina,
+                    contadores_encontrados, self.ia_fallback_usada,
+                )
+
+                # 5) SINCRONIZAR Y APRENDER SOLO DESPUÉS DEL ÉXITO
+                self._crear_evento_automatizacion()
+                self._aprender_despues_de_procesar()
+                return True
+
+            if serie_encontrada and not equipo:
+                mensaje = f'Serie detectada pero equipo no encontrado: {serie_encontrada}'
+            elif not serie_encontrada:
+                mensaje = 'No se detectó número de serie'
+            else:
+                mensaje = 'No se detectaron contadores válidos suficientes para el tipo de equipo'
+
+            self.write({
+                'estado': 'manual',
+                'procesado_automaticamente': False,
+                'mensaje_error': mensaje,
+                'fecha_procesamiento': fields.Datetime.now(),
+                'requiere_aprendizaje': False,
+            })
+            _logger.warning('[CONTADOR][MANUAL] id=%s motivo=%s', self.id, mensaje)
+            self._crear_evento_automatizacion()
+            return False
+
+        except Exception as exc:
+            _logger.exception('[CONTADOR][ERROR] id=%s', self.id)
+            self.write({
+                'estado': 'error',
+                'mensaje_error': f'Error en procesamiento inteligente: {str(exc)}',
+                'fecha_procesamiento': fields.Datetime.now(),
+            })
+            self._crear_evento_automatizacion()
             return False
 
 
@@ -1217,6 +1376,8 @@ class ContadorAutomatico(models.Model):
             self.requiere_aprendizaje = False
             self.aprendizaje_completado = True
             self.patrones_auto_generados += patrones_aprendidos
+            self._probar_patrones_candidatos_shadow()
+            self._crear_evento_automatizacion()
             
             return patrones_aprendidos > 0
             

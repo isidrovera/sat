@@ -144,3 +144,5 @@ from . import toner_monitoring_event
 from . import toner_installation_history
 from . import toner_stock_movement
 from . import toner_delivery_stock_integration
+from . import automation
+from . import ai

@@ -357,3 +357,17 @@ access_toner_installation_history_user,toner.installation.history user,model_ton
 access_toner_installation_history_admin,toner.installation.history admin,model_toner_installation_history,base.group_system,1,1,1,1
 access_toner_stock_movement_user,toner.stock.movement user,model_toner_stock_movement,base.group_user,1,0,0,0
 access_toner_stock_movement_admin,toner.stock.movement admin,model_toner_stock_movement,base.group_system,1,1,1,1
+access_sat_automation_event_user,sat.automation.event user,model_sat_automation_event,base.group_user,1,1,0,0
+access_sat_automation_event_system,sat.automation.event system,model_sat_automation_event,base.group_system,1,1,1,1
+access_sat_automation_audit_user,sat.automation.audit user,model_sat_automation_audit,base.group_user,1,0,0,0
+access_sat_automation_audit_system,sat.automation.audit system,model_sat_automation_audit,base.group_system,1,1,1,1
+access_sat_automation_pattern_learning_user,sat.automation.pattern.learning user,model_sat_automation_pattern_learning,base.group_user,1,0,0,0
+access_sat_automation_pattern_learning_system,sat.automation.pattern.learning system,model_sat_automation_pattern_learning,base.group_system,1,1,1,1
+access_sat_ai_usage_user,sat.ai.usage user,model_sat_ai_usage,base.group_user,1,0,0,0
+access_sat_ai_usage_system,sat.ai.usage system,model_sat_ai_usage,base.group_system,1,1,1,1
+access_sat_automation_config_system,sat.automation.config system,model_sat_automation_config,base.group_system,1,1,1,1
+access_sat_automation_rule_system,sat.automation.rule system,model_sat_automation_rule,base.group_system,1,1,1,1
+access_sat_automation_mail_filter_system,sat.automation.mail.filter system,model_sat_automation_mail_filter,base.group_system,1,1,1,1
+access_sat_automation_capture_pattern_system,sat.automation.capture.pattern system,model_sat_automation_capture_pattern,base.group_system,1,1,1,1
+access_sat_ai_provider_system,sat.ai.provider system,model_sat_ai_provider,base.group_system,1,1,1,1
+access_sat_ai_prompt_system,sat.ai.prompt system,model_sat_ai_prompt,base.group_system,1,1,1,1

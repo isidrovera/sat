@@ -12,8 +12,7 @@
                   decoration-success="estado_patron == 'efectivo'"
                   decoration-warning="estado_patron == 'problematico'"
                   decoration-info="auto_generado"
-                  multi_edit="1" 
-                  editable="bottom">
+                  multi_edit="1">
                 <header>
                     <button name="create_default_patterns" type="object" 
                             string="🔧 Crear Patrones por Defecto" class="btn-primary"/>
@@ -186,11 +185,11 @@
                                     <ul>
                                         <li><code>\[Texto\],?\s*([A-Z0-9]+)</code> - Detecta: [Texto], VALOR</li>
                                         <li><code>(?:palabra1|palabra2)\s*:?\s*(\d+)</code> - Detecta: palabra1: 123456</li>
-                                        <li><code>([A-Z]{2,4}\d{5,10})</code> - Detecta códigos alfanuméricos</li>
-                                        <li><code>(\d{1,9})</code> - Captura números de 1-9 dígitos</li>
+                                        <li><code>Serie\s*:?\s*([A-Z]{2,4}\d{5,10})</code> - Serie con contexto explícito</li>
+                                        <li><code>Contador\s*B/N\s*:?\s*(\d{1,9})</code> - Contador con etiqueta explícita</li>
                                         <li><code>T_\w+\s*:?\s*(\d+)</code> - Para formatos Ricoh como T_TotalPrtPGS:123</li>
                                     </ul>
-                                    <p><strong>Importante:</strong> Use paréntesis () para capturar el valor que quiere extraer.</p>
+                                    <p><strong>Importante:</strong> Use paréntesis () para capturar el valor y evite patrones genéricos sin contexto, porque pueden confundir fechas, teléfonos o documentos con contadores.</p>
                                     
                                     <h5>Patrones por Marca:</h5>
                                     <ul>

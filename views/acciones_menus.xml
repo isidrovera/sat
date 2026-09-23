@@ -1,7 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
   <data>
-
     <!-- ================================================================== -->
     <!-- ACCIÓN: Asignar componentes masivo (server action / binding)        -->
     <!-- ================================================================== -->
@@ -13,80 +12,25 @@
       <field name="binding_model_id" ref="model_modelo_maquina"/>
       <field name="binding_view_types">list</field>
     </record>
-
     <!-- ================================================================== -->
     <!-- MENÚ RAÍZ — debe existir antes que cualquier hijo                   -->
     <!-- ================================================================== -->
-    <menuitem id="sat_menu_root"
-              name="Sistema de taller"
-              web_icon="sat,static/description/icon.png"
-              sequence="1"/>
-
     <!-- ================================================================== -->
     <!-- SUB-RAÍCES DE SECCIÓN (hijos directos de sat_menu_root)            -->
     <!-- Espaciado de 10 entre secciones para futuras inserciones            -->
     <!-- ================================================================== -->
-
     <!-- seq 10: Corapsac -->
-    <menuitem id="menu_corapsac_root"
-              name="Corapsac"
-              parent="sat_menu_root"
-              sequence="10"/>
-    
-
     <!-- seq 20: Andes -->
-    <menuitem id="menu_andes_root"
-              name="Andes"
-              parent="sat_menu_root"
-              sequence="20"/>
-
     <!-- seq 30: Evaluaciones -->
-    <menuitem id="menu_evaluaciones_root"
-              name="Evaluaciones"
-              parent="sat_menu_root"
-              sequence="30"/>
-
     <!-- seq 40: Tóner -->
-    <menuitem id="menu_toner_root"
-              name="Tóner"
-              parent="sat_menu_root"
-              sequence="40"/>
-
     <!-- seq 50: Contadores -->
-    <menuitem id="menu_contadores_root"
-              name="Contadores"
-              parent="sat_menu_root"
-              sequence="50"/>
-
     <!-- seq 60: Control MDM -->
-    <menuitem id="menu_mdm_root"
-              name="Control MDM"
-              parent="sat_menu_root"
-              sequence="60"/>
-
     <!-- seq 70: PrintTracker Pro -->
-    <menuitem id="menu_printtracker_root"
-              name="PrintTracker Pro"
-              parent="sat_menu_root"
-              sequence="70"/>
-
     <!-- seq 80: Reportes Estado de Máquinas -->
-    <menuitem id="menu_reporte_estado_maquinas_main"
-              name="Reportes Estado Máquinas"
-              parent="sat_menu_root"
-              sequence="80"/>
-
     <!-- seq 200: Configuración / Ajustes -->
-    <menuitem id="sat.ajustes"
-              name="Configuración"
-              parent="sat_menu_root"
-              sequence="200"/>
-
-
     <!-- ================================================================== -->
     <!-- ACCIONES                                                            -->
     <!-- ================================================================== -->
-
     <!-- ── MDM ────────────────────────────────────────────────────────── -->
     <record id="action_mdm_config" model="ir.actions.act_window">
       <field name="name">Configuración MDM</field>
@@ -97,7 +41,6 @@
         <p>Agrega la URL, usuario y contraseña de tu servidor MDM.</p>
       </field>
     </record>
-
     <record id="action_mdm_device" model="ir.actions.act_window">
       <field name="name">Dispositivos MDM</field>
       <field name="res_model">mdm.device</field>
@@ -109,7 +52,6 @@
         <p>Ve a Configuración MDM y ejecuta "Sincronizar dispositivos".</p>
       </field>
     </record>
-
     <record id="action_mdm_command_log" model="ir.actions.act_window">
       <field name="name">Historial de Comandos MDM</field>
       <field name="res_model">mdm.command.log</field>
@@ -117,7 +59,6 @@
       <field name="search_view_id" ref="view_mdm_command_log_search"/>
       <field name="context">{'search_default_today': 1}</field>
     </record>
-
     <!-- ── GPS Tracking ───────────────────────────────────────────────── -->
     <record id="action_tracking_diagnostico" model="ir.actions.act_window">
       <field name="name">Diagnóstico GPS</field>
@@ -125,7 +66,6 @@
       <field name="view_mode">form</field>
       <field name="target">new</field>
     </record>
-
     <record id="action_tecnico_dispositivo_gps" model="ir.actions.act_window">
       <field name="name">Dispositivos GPS Técnicos</field>
       <field name="res_model">tecnico.dispositivo.gps</field>
@@ -137,7 +77,6 @@
         <p>Configure la relación entre cada técnico y su dispositivo de rastreo en Traccar.</p>
       </field>
     </record>
-
     <!-- ── Importación / Wizards ──────────────────────────────────────── -->
     <record id="action_sat_import_line" model="ir.actions.act_window">
       <field name="name">Carga rápida</field>
@@ -146,14 +85,12 @@
       <field name="search_view_id" ref="view_sat_import_line_search"/>
       <field name="context">{'search_default_flt_pending': 1}</field>
     </record>
-
     <record id="action_sat_import_assign_header_wizard" model="ir.actions.act_window">
       <field name="name">Asignar cabecera</field>
       <field name="res_model">sat.import.assign.header.wizard</field>
       <field name="view_mode">form</field>
       <field name="target">new</field>
     </record>
-
     <record id="action_reparacion_add_subparts_wizard" model="ir.actions.act_window">
       <field name="name">Añadir/Editar Subpartes</field>
       <field name="res_model">reparacion.add.subparts.wizard</field>
@@ -161,13 +98,11 @@
       <field name="view_id" ref="view_reparacion_add_subparts_wizard_form"/>
       <field name="target">new</field>
     </record>
-
     <!-- ── Dashboard ─────────────────────────────────────────────────── -->
     <record id="sat_dashboard_action" model="ir.actions.client">
       <field name="name">Dashboard</field>
       <field name="tag">sat_dashboard_tag</field>
     </record>
-
     <!-- ── Máquinas (Corapsac) ───────────────────────────────────────── -->
     <record id="sat.action_window" model="ir.actions.act_window">
       <field name="name">Máquinas</field>
@@ -178,7 +113,6 @@
         <p class="button_in_list">Registra un equipo</p>
       </field>
     </record>
-
     <!-- ── Reparaciones ──────────────────────────────────────────────── -->
     <record id="sat.action_reparaciones_window" model="ir.actions.act_window">
       <field name="name">Reparaciones</field>
@@ -186,7 +120,6 @@
       <field name="view_mode">list,form,graph,kanban</field>
       <field name="search_view_id" ref="reparaciones_search_view"/>
     </record>
-
     <!-- ── Máquinas / Equipos (Andes) ────────────────────────────────── -->
     <record id="sat.action_alquiler_window" model="ir.actions.act_window">
       <field name="name">Máquinas</field>
@@ -194,26 +127,22 @@
       <field name="view_mode">list,form,calendar,graph,kanban</field>
     </record>
     <!-- Acción para Tickets -->
-<record id="action_ticket_alquiler_soporte" model="ir.actions.act_window">
-  <field name="name">Tickets</field>
-  <field name="res_model">ticket.alquiler</field>
-  <field name="view_mode">list,kanban,form,graph,pivot</field>
-  
-</record>
-
+    <record id="action_ticket_alquiler_soporte" model="ir.actions.act_window">
+      <field name="name">Tickets</field>
+      <field name="res_model">ticket.alquiler</field>
+      <field name="view_mode">list,kanban,form,graph,pivot</field>
+    </record>
     <record id="sat.action_repuestos_window" model="ir.actions.act_window">
       <field name="name">Repuestos</field>
       <field name="res_model">repuestos.alquiler</field>
       <field name="view_mode">list,form,kanban</field>
     </record>
-
     <!-- ── Solicitudes de partes ──────────────────────────────────────── -->
     <record id="action_solicitud_partes" model="ir.actions.act_window">
       <field name="name">Solicitudes de Partes</field>
       <field name="res_model">solicitud.partes</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="action_copier_parts_request" model="ir.actions.act_window">
       <field name="name">Solicitudes de Partes</field>
       <field name="res_model">copier.parts.request</field>
@@ -227,14 +156,12 @@
         <p class="o_view_nocontent_smiling_face">Crear una nueva solicitud de partes</p>
       </field>
     </record>
-
     <record id="action_solicitud_parte_tecnico" model="ir.actions.act_window">
       <field name="name">Solicitudes de Partes Técnico</field>
       <field name="res_model">solicitud.parte.tecnico</field>
       <field name="view_mode">list,form</field>
       <field name="context">{'search_default_enviadas': 1}</field>
     </record>
-
     <!-- ── Evaluaciones ───────────────────────────────────────────────── -->
     <record id="action_evaluacion_personal" model="ir.actions.act_window">
       <field name="name">Evaluación de Personal</field>
@@ -245,21 +172,18 @@
         <p>Realice evaluaciones periódicas del personal técnico.</p>
       </field>
     </record>
-
     <record id="action_client_service_evaluation" model="ir.actions.act_window">
       <field name="name">Evaluaciones de Servicio</field>
       <field name="res_model">client.service.evaluation</field>
       <field name="view_mode">kanban,list,form</field>
       <field name="context">{'search_default_today': 1}</field>
     </record>
-
     <!-- ── Tóner ──────────────────────────────────────────────────────── -->
-
     <record id="action_toner_brand" model="ir.actions.act_window">
-    <field name="name">Marcas de tóner</field>
-    <field name="res_model">toner.brand</field>
-    <field name="view_mode">list,form</field>
-</record>
+      <field name="name">Marcas de tóner</field>
+      <field name="res_model">toner.brand</field>
+      <field name="view_mode">list,form</field>
+    </record>
     <record id="action_toner_counter_submission" model="ir.actions.act_window">
       <field name="name">Gestión de Tóner</field>
       <field name="res_model">toner.counter.submission</field>
@@ -267,19 +191,16 @@
       <field name="search_view_id" ref="view_toner_counter_submission_search"/>
       <field name="context">{'search_default_pending': 1}</field>
     </record>
-
     <record id="action_toner_delivery_schedule" model="ir.actions.act_window">
       <field name="name">Programación de Entregas</field>
       <field name="res_model">toner.delivery.schedule</field>
       <field name="view_mode">kanban,list,form</field>
     </record>
-
     <record id="action_toner_delivery_dashboard" model="ir.actions.act_window">
       <field name="name">Dashboard de Entregas</field>
       <field name="res_model">toner.delivery.schedule</field>
       <field name="view_mode">kanban</field>
     </record>
-
     <record id="action_toner_delivery_confirmation" model="ir.actions.act_window">
       <field name="name">Confirmaciones de Entrega</field>
       <field name="res_model">toner.delivery.confirmation</field>
@@ -287,7 +208,6 @@
       <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
       <field name="context">{}</field>
     </record>
-
     <record id="action_toner_delivery_validation_pending" model="ir.actions.act_window">
       <field name="name">Validaciones Pendientes</field>
       <field name="res_model">toner.delivery.confirmation</field>
@@ -295,7 +215,6 @@
       <field name="search_view_id" ref="view_toner_delivery_confirmation_search"/>
       <field name="domain">[('validation_status', '=', 'pending')]</field>
     </record>
-
     <!-- ── Contadores automáticos ─────────────────────────────────────── -->
     <record id="action_contador_automatico" model="ir.actions.act_window">
       <field name="name">Contadores Automáticos</field>
@@ -303,7 +222,6 @@
       <field name="view_mode">list,form</field>
       <field name="context">{'search_default_hoy': 1}</field>
     </record>
-
     <record id="action_patron_contador" model="ir.actions.act_window">
       <field name="name">Patrones de Detección</field>
       <field name="res_model">patron.contador</field>
@@ -312,7 +230,6 @@
       <field name="search_view_id" ref="view_patron_contador_search"/>
       <field name="context">{'search_default_activos': 1}</field>
     </record>
-
     <!-- ── PrintTracker Pro ───────────────────────────────────────────── -->
     <record id="action_printtracker_config" model="ir.actions.act_window">
       <field name="name">Configuración PrintTracker</field>
@@ -323,7 +240,6 @@
         <p>Configura tu API key y entidad principal para sincronizar automáticamente.</p>
       </field>
     </record>
-
     <record id="action_printtracker_entity" model="ir.actions.act_window">
       <field name="name">Entidades PrintTracker</field>
       <field name="res_model">printtracker.entity</field>
@@ -333,7 +249,6 @@
         <p>Las entidades se sincronizan automáticamente desde PrintTracker Pro.</p>
       </field>
     </record>
-
     <record id="action_printtracker_meter" model="ir.actions.act_window">
       <field name="name">Medidores PrintTracker</field>
       <field name="res_model">printtracker.meter</field>
@@ -343,7 +258,6 @@
         <p>Las lecturas se sincronizan automáticamente desde PrintTracker Pro.</p>
       </field>
     </record>
-
     <record id="action_printtracker_supply" model="ir.actions.act_window">
       <field name="name">Suministros PrintTracker</field>
       <field name="res_model">printtracker.supply</field>
@@ -353,13 +267,11 @@
         <p>Los suministros se sincronizan automáticamente desde PrintTracker Pro.</p>
       </field>
     </record>
-
     <record id="action_printtracker_daily_reading" model="ir.actions.act_window">
       <field name="name">Lecturas Diarias Consolidadas</field>
       <field name="res_model">printtracker.daily.reading</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="action_printtracker_alert" model="ir.actions.act_window">
       <field name="name">Alertas PrintTracker</field>
       <field name="res_model">printtracker.alert</field>
@@ -369,21 +281,18 @@
         <p>Las alertas se generan automáticamente cada 5 minutos.</p>
       </field>
     </record>
-
     <record id="action_printtracker_consolidator" model="ir.actions.act_window">
       <field name="name">Consolidador de Datos</field>
       <field name="res_model">printtracker.processor</field>
       <field name="view_mode">form</field>
       <field name="target">new</field>
     </record>
-
     <record id="action_printtracker_alert_manager" model="ir.actions.act_window">
       <field name="name">Gestor de Alertas</field>
       <field name="res_model">printtracker.alert.manager</field>
       <field name="view_mode">form</field>
       <field name="target">new</field>
     </record>
-
     <!-- ── Reportes Estado de Máquinas ───────────────────────────────── -->
     <record id="action_reporte_estado_maquinas" model="ir.actions.act_window">
       <field name="name">Reportes Estado de Máquinas</field>
@@ -396,7 +305,6 @@
         'search_default_filter_esta_semana': 1
       }</field>
     </record>
-
     <record id="action_reporte_estado_maquinas_wizard" model="ir.actions.act_window">
       <field name="name">Generar Reporte Estado Máquinas</field>
       <field name="res_model">reporte.estado.maquina.wizard</field>
@@ -404,7 +312,6 @@
       <field name="view_id" ref="view_reporte_estado_maquina_wizard_form"/>
       <field name="target">new</field>
     </record>
-
     <record id="action_reporte_estado_maquinas_semana_actual" model="ir.actions.act_window">
       <field name="name">Reportes Semana Actual</field>
       <field name="res_model">reporte.estado.maquina</field>
@@ -413,7 +320,6 @@
       <field name="domain">[('fecha_generacion','&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]</field>
       <field name="context">{'search_default_group_by_estado': 1}</field>
     </record>
-
     <record id="action_reporte_estado_maquinas_sin_revisar" model="ir.actions.act_window">
       <field name="name">Máquinas Sin Revisar</field>
       <field name="res_model">reporte.estado.maquina</field>
@@ -424,7 +330,6 @@
         ('fecha_generacion','&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))
       ]</field>
     </record>
-
     <record id="action_reporte_estado_maquinas_con_problemas" model="ir.actions.act_window">
       <field name="name">Máquinas Con Problemas</field>
       <field name="res_model">reporte.estado.maquina</field>
@@ -435,7 +340,6 @@
         ('fecha_generacion','&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))
       ]</field>
     </record>
-
     <record id="action_reporte_estado_maquinas_partes" model="ir.actions.act_window">
       <field name="name">Máquinas de Partes</field>
       <field name="res_model">reporte.estado.maquina</field>
@@ -446,25 +350,23 @@
         ('fecha_generacion','&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))
       ]</field>
     </record>
-
     <!-- ── Acciones de Configuración (sat.ajustes) ────────────────────── -->
     <record id="sat.action_marca_window" model="ir.actions.act_window">
       <field name="name">Marcas</field>
       <field name="res_model">marca.marca</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="sat.action_modelo_window" model="ir.actions.act_window">
       <field name="name">Modelo</field>
       <field name="res_model">modelo.maquina</field>
       <field name="view_mode">list,form,kanban</field>
     </record>
     <record id="action_modelo_maquina_familia" model="ir.actions.act_window">
-    <field name="name">Familias de modelos</field>
-    <field name="res_model">modelo.maquina.familia</field>
-    <field name="view_mode">list,form</field>
-    <field name="search_view_id" ref="modelo_maquina_familia_search_view"/>
-    <field name="help" type="html">
+      <field name="name">Familias de modelos</field>
+      <field name="res_model">modelo.maquina.familia</field>
+      <field name="view_mode">list,form</field>
+      <field name="search_view_id" ref="modelo_maquina_familia_search_view"/>
+      <field name="help" type="html">
         <p class="o_view_nocontent_smiling_face">
             Cree una familia técnica de modelos
         </p>
@@ -472,59 +374,50 @@
             Las familias permiten agrupar modelos que comparten accesorios
             o características técnicas.
         </p>
-    </field>
-</record>
-
+      </field>
+    </record>
     <record id="sat.action_tipo_window" model="ir.actions.act_window">
       <field name="name">Tipo de maquina</field>
       <field name="res_model">tipo.maquina</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="sat.action_falla_window" model="ir.actions.act_window">
       <field name="name">Fallas</field>
       <field name="res_model">fallas</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="sat.action_informe_window" model="ir.actions.act_window">
       <field name="name">Informes</field>
       <field name="res_model">informes</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="action_equipment_visit_report_settings" model="ir.actions.act_window">
       <field name="name">Configuración de Informes</field>
       <field name="res_model">equipment.visit.report.settings</field>
       <field name="view_mode">form</field>
       <field name="target">new</field>
     </record>
-
     <record id="action_equipment_visit_report" model="ir.actions.act_window">
       <field name="name">Informes de Visitas</field>
       <field name="res_model">equipment.visit.report</field>
       <field name="view_mode">kanban,list,form</field>
     </record>
-
     <record id="action_equipment_technician_performance_report" model="ir.actions.act_window">
       <field name="name">Desempeño de Técnicos</field>
       <field name="res_model">equipment.technician.performance.report</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="action_reparacion_foto" model="ir.actions.act_window">
       <field name="name">Fotos de Reparaciones</field>
       <field name="res_model">reparaciones.foto</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="action_excel_import_model" model="ir.actions.act_window">
       <field name="name">Importar desde Excel</field>
       <field name="res_model">excel.import.model</field>
       <field name="view_mode">form</field>
       <field name="target">new</field>
     </record>
-
     <record id="action_universal_excel_import" model="ir.actions.act_window">
       <field name="name">Importador Universal Excel</field>
       <field name="res_model">universal.excel.import</field>
@@ -532,13 +425,12 @@
       <field name="search_view_id" ref="view_universal_excel_import_search"/>
       <field name="context">{'search_default_my_imports': 1}</field>
     </record>
-
     <record id="action_incidencias" model="ir.actions.act_window">
-    <field name="name">Incidencias</field>
-    <field name="res_model">taller.incidencia</field>
-    <field name="view_mode">list,kanban,form,graph,pivot,activity</field>
-    <field name="context">{'search_default_filter_abiertas': 1}</field>
-    <field name="help" type="html">
+      <field name="name">Incidencias</field>
+      <field name="res_model">taller.incidencia</field>
+      <field name="view_mode">list,kanban,form,graph,pivot,activity</field>
+      <field name="context">{'search_default_filter_abiertas': 1}</field>
+      <field name="help" type="html">
         <p class="o_view_nocontent_smiling_face">
             Registra el primer reclamo de taller
         </p>
@@ -546,50 +438,43 @@
             Selecciona la serie/equipo y el sistema cargará automáticamente
             el cliente, la asesora, la reparación y el técnico responsable.
         </p>
-    </field>
-</record>
-
+      </field>
+    </record>
     <record id="action_inspeccion_resultado" model="ir.actions.act_window">
       <field name="name">Inspecciones</field>
       <field name="res_model">inspeccion.resultado</field>
       <field name="view_mode">kanban,list,form</field>
     </record>
-
     <record id="action_componente_tipo" model="ir.actions.act_window">
       <field name="name">Tipos de Componente</field>
       <field name="res_model">componente.tipo</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_componente_tipo_search"/>
     </record>
-
     <record id="action_componente_subparte" model="ir.actions.act_window">
       <field name="name">Subpartes</field>
       <field name="res_model">componente.subparte</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_componente_subparte_search"/>
     </record>
-
     <record id="action_modelo_maquina_componente" model="ir.actions.act_window">
       <field name="name">Componentes por Modelo</field>
       <field name="res_model">modelo.maquina.componente</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_modelo_maquina_componente_search"/>
     </record>
-
     <record id="action_informe_regla" model="ir.actions.act_window">
       <field name="name">Reglas de Informe</field>
       <field name="res_model">informe.regla</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_informe_regla_search"/>
     </record>
-
     <record id="action_checklist_map" model="ir.actions.act_window">
       <field name="name">Mapa Checklist → Componente</field>
       <field name="res_model">checklist.componente.map</field>
       <field name="view_mode">list,form</field>
       <field name="search_view_id" ref="view_checklist_map_search"/>
     </record>
-
     <record id="action_reparacion_subparte" model="ir.actions.act_window">
       <field name="name">Subpartes por Componente</field>
       <field name="res_model">reparacion.subparte</field>
@@ -601,7 +486,6 @@
         </p>
       </field>
     </record>
-
     <record id="action_reparacion_intervencion" model="ir.actions.act_window">
       <field name="name">Intervenciones de Reparación</field>
       <field name="res_model">reparacion.intervencion</field>
@@ -612,13 +496,11 @@
         <p>Registra las intervenciones realizadas en cada componente y sus subpartes asociadas.</p>
       </field>
     </record>
-
     <record id="action_componente_estado" model="ir.actions.act_window">
       <field name="name">Estados de componente</field>
       <field name="res_model">componente.estado</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="action_gemini_configuracion" model="ir.actions.act_window">
       <field name="name">Configuración Gemini API</field>
       <field name="res_model">gemini.configuracion</field>
@@ -628,19 +510,16 @@
         <p>Necesitas una API key para generar informes con IA.</p>
       </field>
     </record>
-
     <record id="action_accesorio_tipo" model="ir.actions.act_window">
       <field name="name">Tipos de accesorio</field>
       <field name="res_model">accesorio.tipo</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="action_accesorio_estado" model="ir.actions.act_window">
       <field name="name">Estados de accesorio</field>
       <field name="res_model">accesorio.estado</field>
       <field name="view_mode">list,form</field>
     </record>
-
     <record id="action_accesorio_subparte" model="ir.actions.act_window">
       <field name="name">Subpartes de Accesorio</field>
       <field name="res_model">accesorio.subparte</field>
@@ -650,7 +529,6 @@
         <p>Define las piezas individuales que componen cada accesorio.</p>
       </field>
     </record>
-
     <record id="action_modelo_maquina_accesorio" model="ir.actions.act_window">
       <field name="name">Accesorios por Modelo</field>
       <field name="res_model">modelo.maquina.accesorio</field>
@@ -660,7 +538,6 @@
         <p>Configura la plantilla de accesorios estándar para cada modelo.</p>
       </field>
     </record>
-
     <record id="action_reparacion_accesorio_evaluacion" model="ir.actions.act_window">
       <field name="name">Evaluaciones de Accesorios</field>
       <field name="res_model">reparacion.accesorio.evaluacion</field>
@@ -669,7 +546,6 @@
         <p class="o_view_nocontent_smiling_face">Historial de evaluaciones de accesorios en reparaciones</p>
       </field>
     </record>
-
     <record id="action_reparacion_componente_evaluacion" model="ir.actions.act_window">
       <field name="name">Evaluaciones de Componentes</field>
       <field name="res_model">reparacion.componente.evaluacion</field>
@@ -680,7 +556,6 @@
         <p class="o_view_nocontent_smiling_face">Historial de evaluaciones de componentes en reparaciones</p>
       </field>
     </record>
-
     <record id="action_reparacion_comp_eval_v18" model="ir.actions.act_window">
       <field name="name">Evaluaciones de Componentes</field>
       <field name="res_model">reparacion.componente.evaluacion</field>
@@ -689,56 +564,49 @@
       <field name="search_view_id" ref="view_reparacion_comp_eval_search_v18"/>
     </record>
     <!-- ===================================================== -->
-<!-- ACCIONES MOBILE: EVALUACIONES DE TICKETS              -->
-<!-- Estas acciones son usadas por mobile_ticket_layout.js  -->
-<!-- ===================================================== -->
-
-<record id="action_ticket_componente_evaluacion_mobile" model="ir.actions.act_window">
-    <field name="name">Componentes</field>
-    <field name="res_model">ticket.componente.evaluacion</field>
-    <field name="view_mode">kanban,form</field>
-    <field name="view_id" ref="view_ticket_componente_evaluacion_mobile_kanban"/>
-    <field name="domain">[('ticket_id', '=', active_id)]</field>
-    <field name="context">{'default_ticket_id': active_id, 'mobile_ticket_eval': True}</field>
-</record>
-
-<record id="action_ticket_componente_evaluacion_mobile_kanban_view" model="ir.actions.act_window.view">
-    <field name="sequence" eval="1"/>
-    <field name="view_mode">kanban</field>
-    <field name="view_id" ref="view_ticket_componente_evaluacion_mobile_kanban"/>
-    <field name="act_window_id" ref="action_ticket_componente_evaluacion_mobile"/>
-</record>
-
-<record id="action_ticket_componente_evaluacion_mobile_form_view" model="ir.actions.act_window.view">
-    <field name="sequence" eval="2"/>
-    <field name="view_mode">form</field>
-    <field name="view_id" ref="view_ticket_componente_evaluacion_form"/>
-    <field name="act_window_id" ref="action_ticket_componente_evaluacion_mobile"/>
-</record>
-
-
-<record id="action_ticket_accesorio_evaluacion_mobile" model="ir.actions.act_window">
-    <field name="name">Accesorios</field>
-    <field name="res_model">ticket.accesorio.evaluacion</field>
-    <field name="view_mode">kanban,form</field>
-    <field name="view_id" ref="view_ticket_accesorio_evaluacion_mobile_kanban"/>
-    <field name="domain">[('ticket_id', '=', active_id)]</field>
-    <field name="context">{'default_ticket_id': active_id, 'mobile_ticket_eval': True}</field>
-</record>
-
-<record id="action_ticket_accesorio_evaluacion_mobile_kanban_view" model="ir.actions.act_window.view">
-    <field name="sequence" eval="1"/>
-    <field name="view_mode">kanban</field>
-    <field name="view_id" ref="view_ticket_accesorio_evaluacion_mobile_kanban"/>
-    <field name="act_window_id" ref="action_ticket_accesorio_evaluacion_mobile"/>
-</record>
-
-<record id="action_ticket_accesorio_evaluacion_mobile_form_view" model="ir.actions.act_window.view">
-    <field name="sequence" eval="2"/>
-    <field name="view_mode">form</field>
-    <field name="view_id" ref="view_ticket_accesorio_evaluacion_form"/>
-    <field name="act_window_id" ref="action_ticket_accesorio_evaluacion_mobile"/>
-</record>
+    <!-- ACCIONES MOBILE: EVALUACIONES DE TICKETS              -->
+    <!-- Estas acciones son usadas por mobile_ticket_layout.js  -->
+    <!-- ===================================================== -->
+    <record id="action_ticket_componente_evaluacion_mobile" model="ir.actions.act_window">
+      <field name="name">Componentes</field>
+      <field name="res_model">ticket.componente.evaluacion</field>
+      <field name="view_mode">kanban,form</field>
+      <field name="view_id" ref="view_ticket_componente_evaluacion_mobile_kanban"/>
+      <field name="domain">[('ticket_id', '=', active_id)]</field>
+      <field name="context">{'default_ticket_id': active_id, 'mobile_ticket_eval': True}</field>
+    </record>
+    <record id="action_ticket_componente_evaluacion_mobile_kanban_view" model="ir.actions.act_window.view">
+      <field name="sequence" eval="1"/>
+      <field name="view_mode">kanban</field>
+      <field name="view_id" ref="view_ticket_componente_evaluacion_mobile_kanban"/>
+      <field name="act_window_id" ref="action_ticket_componente_evaluacion_mobile"/>
+    </record>
+    <record id="action_ticket_componente_evaluacion_mobile_form_view" model="ir.actions.act_window.view">
+      <field name="sequence" eval="2"/>
+      <field name="view_mode">form</field>
+      <field name="view_id" ref="view_ticket_componente_evaluacion_form"/>
+      <field name="act_window_id" ref="action_ticket_componente_evaluacion_mobile"/>
+    </record>
+    <record id="action_ticket_accesorio_evaluacion_mobile" model="ir.actions.act_window">
+      <field name="name">Accesorios</field>
+      <field name="res_model">ticket.accesorio.evaluacion</field>
+      <field name="view_mode">kanban,form</field>
+      <field name="view_id" ref="view_ticket_accesorio_evaluacion_mobile_kanban"/>
+      <field name="domain">[('ticket_id', '=', active_id)]</field>
+      <field name="context">{'default_ticket_id': active_id, 'mobile_ticket_eval': True}</field>
+    </record>
+    <record id="action_ticket_accesorio_evaluacion_mobile_kanban_view" model="ir.actions.act_window.view">
+      <field name="sequence" eval="1"/>
+      <field name="view_mode">kanban</field>
+      <field name="view_id" ref="view_ticket_accesorio_evaluacion_mobile_kanban"/>
+      <field name="act_window_id" ref="action_ticket_accesorio_evaluacion_mobile"/>
+    </record>
+    <record id="action_ticket_accesorio_evaluacion_mobile_form_view" model="ir.actions.act_window.view">
+      <field name="sequence" eval="2"/>
+      <field name="view_mode">form</field>
+      <field name="view_id" ref="view_ticket_accesorio_evaluacion_form"/>
+      <field name="act_window_id" ref="action_ticket_accesorio_evaluacion_mobile"/>
+    </record>
     <!-- ── Tickets ────────────────────────────────────────────────────── -->
     <record id="action_ticket_componente_evaluacion" model="ir.actions.act_window">
       <field name="name">Evaluaciones de Componentes (Tickets)</field>
@@ -749,7 +617,6 @@
         <p>Las evaluaciones se generan automáticamente al crear un ticket.</p>
       </field>
     </record>
-
     <record id="action_ticket_accesorio_evaluacion" model="ir.actions.act_window">
       <field name="name">Evaluaciones de Accesorios (Tickets)</field>
       <field name="res_model">ticket.accesorio.evaluacion</field>
@@ -759,7 +626,6 @@
         <p>Las evaluaciones se generan automáticamente al crear un ticket.</p>
       </field>
     </record>
-
     <record id="action_ticket_componente_intervencion" model="ir.actions.act_window">
       <field name="name">Intervenciones de Tickets</field>
       <field name="res_model">ticket.componente.intervencion</field>
@@ -768,7 +634,6 @@
         <p class="o_view_nocontent_smiling_face">Sin intervenciones registradas</p>
       </field>
     </record>
-
     <record id="action_ticket_repuesto_pedido" model="ir.actions.act_window">
       <field name="name">Pedidos de Repuestos</field>
       <field name="res_model">ticket.repuesto.pedido</field>
@@ -778,7 +643,6 @@
         <p class="o_view_nocontent_smiling_face">Sin pedidos de repuestos</p>
       </field>
     </record>
-
     <record id="action_ticket_repuesto_historial" model="ir.actions.act_window">
       <field name="name">Historial de Repuestos</field>
       <field name="res_model">ticket.repuesto.historial</field>
@@ -787,7 +651,6 @@
         <p class="o_view_nocontent_smiling_face">Sin historial de cambios registrado</p>
       </field>
     </record>
-
     <!-- ── Server actions / bindings ──────────────────────────────────── -->
     <record id="action_assign_header_from_import_line" model="ir.actions.act_window">
       <field name="name">Asignar Importación/Invoice/Proveedor</field>
@@ -797,7 +660,6 @@
       <field name="binding_model_id" ref="model_sat_import_line"/>
       <field name="binding_view_types">list</field>
     </record>
-
     <record id="server_action_sat_import_create_sat" model="ir.actions.server">
       <field name="name">Crear en SAT</field>
       <field name="model_id" ref="model_sat_import_line"/>
@@ -808,614 +670,286 @@
 action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action_create_sat()
       </field>
     </record>
-
-
     <!-- ================================================================== -->
     <!-- MENÚS PRINCIPALES                                                   -->
     <!-- ================================================================== -->
-
     <!-- ── seq 1: Dashboard ──────────────────────────────────────────── -->
-    <menuitem id="sat_dashboard_menu"
-              name="Dashboard"
-              parent="sat_menu_root"
-              action="sat_dashboard_action"
-              sequence="1"/>
-
     <!-- ================================================================== -->
     <!-- CORAPSAC — seq interno de 10 en 10 (hasta 200 libres)              -->
     <!-- ================================================================== -->
-    <menuitem id="sat.stock_maquinas"
-              name="Máquinas"
-              parent="menu_corapsac_root"
-              action="sat.action_window"
-              sequence="10"/>
-
-    <menuitem id="sat.reparaciones"
-              name="Reparaciones"
-              parent="menu_corapsac_root"
-              action="sat.action_reparaciones_window"
-              sequence="20"/>
-
-    <menuitem id="menu_copier_parts"
-              name="Solicitudes de Partes Reparaciones"
-              parent="menu_corapsac_root"
-              action="action_copier_parts_request"
-              sequence="30"/>
-
-    <menuitem id="menu_solicitud_parte_tecnico"
-              name="Solicitudes de Partes Técnico"
-              parent="menu_corapsac_root"
-              action="action_solicitud_parte_tecnico"
-              sequence="40"/>
-     <menuitem id="sat.menu_incidencia"
-          name="Reclamos y Garantías"
-          parent="menu_corapsac_root"
-          action="action_incidencias"
-          sequence="50"/>
-
     <!-- seq 50-200: libres para futuras adiciones en Corapsac -->
-
     <!-- ================================================================== -->
     <!-- ANDES — seq interno de 10 en 10 (hasta 200 libres)                 -->
     <!-- ================================================================== -->
-    <menuitem id="sat.alquiler"
-              name="Máquinas"
-              parent="menu_andes_root"
-              action="sat.action_alquiler_window"
-              sequence="10"/>
-
-    <menuitem id="menu_ticket_alquiler"
-          name="Tickets"
-          parent="menu_andes_root"
-          action="action_ticket_alquiler_soporte"
-          sequence="20"/>
-
-    <menuitem id="sat.repuestos"
-              name="Repuestos"
-              parent="menu_andes_root"
-              action="sat.action_repuestos_window"
-              sequence="25"/>
-
-    <menuitem id="menu_solicitud_partes"
-              name="Solicitudes de Partes"
-              parent="menu_andes_root"
-              action="action_solicitud_partes"
-              sequence="30"/>
-
-    <menuitem id="menu_ticket_repuesto_pedido"
-              name="Pedidos de Repuestos"
-              parent="menu_andes_root"
-              action="action_ticket_repuesto_pedido"
-              sequence="40"/>
-
-    <menuitem id="menu_ticket_repuesto_historial"
-              name="Historial de Repuestos"
-              parent="menu_andes_root"
-              action="action_ticket_repuesto_historial"
-              sequence="50"/>
-
     <!-- seq 60-200: libres para futuras adiciones en Andes -->
-
     <!-- ================================================================== -->
     <!-- EVALUACIONES — seq interno de 10 en 10                             -->
     <!-- ================================================================== -->
-    <menuitem id="menu_evaluacion_personal"
-              name="Evaluación de Personal"
-              parent="menu_evaluaciones_root"
-              action="action_evaluacion_personal"
-              sequence="10"/>
-
-    <menuitem id="menu_service_evaluation"
-              name="Evaluaciones de Servicio"
-              parent="menu_evaluaciones_root"
-              action="action_client_service_evaluation"
-              sequence="20"/>
-
-      <menuitem id="menu_prueba_maquina"
-          name="Pruebas de Máquina"
-          parent="menu_evaluaciones_root"
-          action="action_prueba_maquina"
-          sequence="30"/>
-
     <!-- seq 30-200: libres para futuras adiciones en Evaluaciones -->
-
     <!-- ================================================================== -->
     <!-- TÓNER — estructura simplificada                                   -->
     <!-- ================================================================== -->
-
     <!-- Operación principal -->
-    <menuitem id="menu_toner_counter_submission"
-              name="Gestión de Tóner"
-              parent="menu_toner_root"
-              action="action_toner_counter_submission"
-              sequence="10"/>
-
     <!-- Monitoreo -->
-    <menuitem id="menu_toner_monitoring_root"
-              name="Monitoreo"
-              parent="menu_toner_root"
-              sequence="20"/>
-
-    <menuitem id="menu_toner_monitoring_event"
-              name="Eventos de Tóner"
-              parent="menu_toner_monitoring_root"
-              action="action_toner_monitoring_event"
-              sequence="10"/>
-
-    <menuitem id="menu_toner_installation_history"
-              name="Historial de Instalaciones"
-              parent="menu_toner_monitoring_root"
-              action="action_toner_installation_history"
-              sequence="20"/>
-
-    <menuitem id="menu_toner_stock_movement"
-              name="Kardex de Stock"
-              parent="menu_toner_monitoring_root"
-              action="action_toner_stock_movement"
-              sequence="30"/>
-
     <!-- Configuración -->
-    <menuitem id="menu_toner_config_root"
-              name="Configuración"
-              parent="menu_toner_root"
-              sequence="90"/>
-
-    <menuitem id="menu_toner_brand"
-              name="Marcas de Tóner"
-              parent="menu_toner_config_root"
-              action="action_toner_brand"
-              sequence="10"/>
-
     <!--
         Los procesos de despacho/confirmación/validación siguen existiendo
         mediante sus acciones y smart buttons, pero no se muestran como
         menús principales para evitar duplicar el flujo de Gestión de Tóner.
     -->
-
     <!-- ================================================================== -->
     <!-- CONTADORES — seq interno de 10 en 10                               -->
     <!-- ================================================================== -->
-    <menuitem id="menu_contador_automatico_root"
-              name="Contadores Automáticos"
-              parent="menu_contadores_root"
-              action="action_contador_automatico"
-              sequence="10"/>
-
-    <menuitem id="menu_patron_contador"
-              name="Patrones de Detección"
-              parent="menu_contadores_root"
-              action="action_patron_contador"
-              sequence="20"/>
-
     <!-- seq 30-200: libres para futuras adiciones en Contadores -->
-
     <!-- ================================================================== -->
     <!-- CONTROL MDM — seq interno de 10 en 10                              -->
     <!-- ================================================================== -->
-    <menuitem id="menu_mdm_devices"
-              name="Dispositivos MDM"
-              parent="menu_mdm_root"
-              action="action_mdm_device"
-              sequence="10"/>
-
-    <menuitem id="menu_mdm_command_log"
-              name="Historial de Comandos"
-              parent="menu_mdm_root"
-              action="action_mdm_command_log"
-              sequence="20"/>
-
-    <menuitem id="menu_tracking_diagnostico"
-              name="Diagnóstico GPS"
-              parent="menu_mdm_root"
-              action="action_tracking_diagnostico"
-              sequence="30"/>
-
     <!-- seq 40-200: libres para futuras adiciones en MDM -->
-
     <!-- ================================================================== -->
     <!-- PRINTTRACKER PRO — seq interno de 10 en 10                         -->
     <!-- ================================================================== -->
-    <menuitem id="menu_printtracker_config"
-              name="Configuración API"
-              parent="menu_printtracker_root"
-              action="action_printtracker_config"
-              sequence="10"/>
-
-    <menuitem id="menu_printtracker_entities"
-              name="Entidades"
-              parent="menu_printtracker_root"
-              action="action_printtracker_entity"
-              sequence="20"/>
-
-    <menuitem id="menu_printtracker_meters"
-              name="Medidores"
-              parent="menu_printtracker_root"
-              action="action_printtracker_meter"
-              sequence="30"/>
-
-    <menuitem id="menu_printtracker_supplies"
-              name="Suministros"
-              parent="menu_printtracker_root"
-              action="action_printtracker_supply"
-              sequence="40"/>
-
-    <menuitem id="menu_printtracker_sep1"
-              name="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              parent="menu_printtracker_root"
-              sequence="50"/>
-
-    <menuitem id="menu_printtracker_daily_readings"
-              name="Lecturas Diarias Consolidadas"
-              parent="menu_printtracker_root"
-              action="action_printtracker_daily_reading"
-              sequence="60"/>
-
-    <menuitem id="menu_printtracker_alerts"
-              name="Alertas del Sistema"
-              parent="menu_printtracker_root"
-              action="action_printtracker_alert"
-              sequence="70"/>
-
-    <menuitem id="menu_printtracker_sep2"
-              name="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              parent="menu_printtracker_root"
-              sequence="80"/>
-
-    <menuitem id="menu_printtracker_consolidator"
-              name="Ejecutar Consolidación"
-              parent="menu_printtracker_root"
-              action="action_printtracker_consolidator"
-              sequence="90"/>
-
-    <menuitem id="menu_printtracker_alert_manager"
-              name="Ejecutar Revisión de Alertas"
-              parent="menu_printtracker_root"
-              action="action_printtracker_alert_manager"
-              sequence="100"/>
-
     <!-- seq 110-200: libres para futuras adiciones en PrintTracker -->
-
     <!-- ================================================================== -->
     <!-- REPORTES ESTADO MÁQUINAS — seq interno de 10 en 10                 -->
     <!-- ================================================================== -->
-    <menuitem id="menu_reporte_estado_maquinas_ver"
-              name="Ver Reportes"
-              parent="menu_reporte_estado_maquinas_main"
-              action="action_reporte_estado_maquinas"
-              sequence="10"/>
-
-    <menuitem id="menu_reporte_estado_maquinas_generar"
-              name="Generar Reporte"
-              parent="menu_reporte_estado_maquinas_main"
-              action="action_reporte_estado_maquinas_wizard"
-              sequence="20"/>
-
-    <menuitem id="menu_reporte_estado_maquinas_semana"
-              name="Semana Actual"
-              parent="menu_reporte_estado_maquinas_main"
-              action="action_reporte_estado_maquinas_semana_actual"
-              sequence="30"/>
-
-    <menuitem id="menu_reporte_estado_maquinas_separator"
-              name="────────────────"
-              parent="menu_reporte_estado_maquinas_main"
-              sequence="40"/>
-
-    <menuitem id="menu_reporte_estado_maquinas_sin_revisar"
-              name="Sin Revisar"
-              parent="menu_reporte_estado_maquinas_main"
-              action="action_reporte_estado_maquinas_sin_revisar"
-              sequence="50"/>
-
-    <menuitem id="menu_reporte_estado_maquinas_problemas"
-              name="Con Problemas"
-              parent="menu_reporte_estado_maquinas_main"
-              action="action_reporte_estado_maquinas_con_problemas"
-              sequence="60"/>
-
-    <menuitem id="menu_reporte_estado_maquinas_partes"
-              name="De Partes"
-              parent="menu_reporte_estado_maquinas_main"
-              action="action_reporte_estado_maquinas_partes"
-              sequence="70"/>
-
     <!-- seq 80-200: libres para futuras adiciones en Reportes -->
-
     <!-- ================================================================== -->
     <!-- CONFIGURACIÓN (sat.ajustes) — seq interno de 10 en 10              -->
     <!-- ================================================================== -->
-
     <!-- ── Catálogos básicos (seq 10-50) ──────────────────────────────── -->
-    <menuitem id="sat.menu_marca"
-              name="Marcas"
-              parent="sat.ajustes"
-              action="sat.action_marca_window"
-              sequence="10"/>
-
-
-    <menuitem id="menu_modelo_maquina_familia"
-          name="Familias de modelos"
-          parent="sat.ajustes"
-          action="action_modelo_maquina_familia"
-          sequence="15"/>
-
-    <menuitem id="sat.menu_modelo"
-              name="Modelo"
-              parent="sat.ajustes"
-              action="sat.action_modelo_window"
-              sequence="20"/>
-
-    <menuitem id="sat.menu_tipo"
-              name="Tipo de maquina"
-              parent="sat.ajustes"
-              action="sat.action_tipo_window"
-              sequence="30"/>
-
-    <menuitem id="sat.menu_fallas"
-              name="Registro de fallas"
-              parent="sat.ajustes"
-              action="sat.action_falla_window"
-              sequence="40"/>
-
-    <menuitem id="sat.menu_informes"
-              name="Informes proveedor"
-              parent="sat.ajustes"
-              action="sat.action_informe_window"
-              sequence="50"/>
-
     <!-- ── Informes / Visitas (seq 60-80) ─────────────────────────────── -->
-    <menuitem id="menu_equipment_visit_report_settings"
-              name="Configuración de Informes"
-              parent="sat.ajustes"
-              action="action_equipment_visit_report_settings"
-              sequence="60"/>
-
-    <menuitem id="menu_equipment_visit_reports"
-              name="Informes de Visitas"
-              parent="sat.ajustes"
-              action="action_equipment_visit_report"
-              sequence="70"/>
-
-    <menuitem id="menu_equipment_technician_reports"
-              name="Desempeño de Técnicos"
-              parent="sat.ajustes"
-              action="action_equipment_technician_performance_report"
-              sequence="80"/>
-
     <!-- ── Herramientas / Utilidades (seq 90-120) ─────────────────────── -->
-    <menuitem id="menu_reparacion_foto_action"
-              name="Fotos de Reparaciones"
-              parent="sat.ajustes"
-              action="action_reparacion_foto"
-              sequence="90"/>
-
-    <menuitem id="menu_excel_import_action"
-              name="Importar desde Excel"
-              parent="sat.ajustes"
-              action="action_excel_import_model"
-              sequence="100"/>
-
-    <menuitem id="menu_universal_excel_import"
-              name="Importador Universal"
-              parent="sat.ajustes"
-              action="action_universal_excel_import"
-              sequence="110"/>
-
-    <menuitem id="menu_sat_import_line"
-              name="Carga rápida"
-              parent="sat.ajustes"
-              action="action_sat_import_line"
-              sequence="120"/>
-
     <!-- ── Operaciones y seguimiento (seq 130-140) ────────────────────── -->
-   
-
-    <menuitem id="menu_inspeccion_resultado"
-              name="Inspecciones"
-              parent="sat.ajustes"
-              action="action_inspeccion_resultado"
-              sequence="140"/>
-
     <!-- ── Componentes técnicos (seq 150-200) ─────────────────────────── -->
-    <menuitem id="menu_componente_tipo"
-              name="Tipos de Componente"
-              parent="sat.ajustes"
-              action="action_componente_tipo"
-              sequence="150"/>
-
-    <menuitem id="menu_componente_subparte"
-              name="Subpartes"
-              parent="sat.ajustes"
-              action="action_componente_subparte"
-              sequence="160"/>
-
-    <menuitem id="menu_modelo_maquina_componente"
-              name="Componentes por Modelo"
-              parent="sat.ajustes"
-              action="action_modelo_maquina_componente"
-              sequence="170"/>
-
-    <menuitem id="menu_reparacion_subparte"
-              name="Catálogo de Subpartes"
-              parent="sat.ajustes"
-              action="action_reparacion_subparte"
-              sequence="180"/>
-
-    <menuitem id="menu_reparacion_intervencion"
-              name="Intervenciones"
-              parent="sat.ajustes"
-              action="action_reparacion_intervencion"
-              sequence="190"/>
-
-    <menuitem id="menu_componente_estado"
-              name="Estados de componente"
-              parent="sat.ajustes"
-              action="action_componente_estado"
-              sequence="200"/>
-
     <!-- ── Reglas / Mapas (seq 210-220) ───────────────────────────────── -->
-    <menuitem id="menu_informe_regla"
-              name="Reglas de Informe"
-              parent="sat.ajustes"
-              action="action_informe_regla"
-              sequence="210"/>
-
-    <menuitem id="menu_checklist_map"
-              name="Mapa Checklist → Componente"
-              parent="sat.ajustes"
-              action="action_checklist_map"
-              sequence="220"/>
-
     <!-- ── APIs (seq 230-240) ─────────────────────────────────────────── -->
-    <menuitem id="menu_gemini_config"
-              name="Gemini API"
-              parent="sat.ajustes"
-              action="action_gemini_configuracion"
-              sequence="230"/>
-
-    <menuitem id="menu_mdm_config"
-              name="Headwind MDM"
-              parent="sat.ajustes"
-              action="action_mdm_config"
-              sequence="240"/>
-
     <!-- ── GPS Tracking (seq 250-260) ────────────────────────────────── -->
-    <menuitem id="menu_gps_tracking_separator"
-              name="━━━━━━━━━━━ GPS Tracking ━━━━━━━━━━━"
-              parent="sat.ajustes"
-              sequence="250"/>
-
-    <menuitem id="menu_dispositivos_gps"
-              name="Dispositivos GPS Técnicos"
-              parent="sat.ajustes"
-              action="action_tecnico_dispositivo_gps"
-              sequence="260"
-              groups="base.group_system"/>
-
     <!-- ── Accesorios (submenú propio, seq 280) ───────────────────────── -->
-    <menuitem id="menu_accesorios_root"
-              name="Accesorios"
-              parent="sat.ajustes"
-              sequence="280"/>
-
     <!-- seq interno Accesorios de 10 en 10 -->
-    <menuitem id="menu_accesorio_tipos"
-              name="Tipos"
-              parent="menu_accesorios_root"
-              action="action_accesorio_tipo"
-              sequence="10"/>
-
-    <menuitem id="menu_accesorio_estados"
-              name="Estados"
-              parent="menu_accesorios_root"
-              action="action_accesorio_estado"
-              sequence="20"/>
-
-    <menuitem id="menu_accesorio_subpartes"
-              name="Subpartes"
-              parent="menu_accesorios_root"
-              action="action_accesorio_subparte"
-              sequence="30"/>
-
-    <menuitem id="menu_modelo_maquina_accesorio"
-              name="Accesorios por Modelo"
-              parent="menu_accesorios_root"
-              action="action_modelo_maquina_accesorio"
-              sequence="40"
-              groups="base.group_system"/>
-
-    <menuitem id="menu_accesorios_sep1"
-              name="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              parent="menu_accesorios_root"
-              sequence="50"/>
-
-    <menuitem id="menu_reparacion_accesorio_evaluacion"
-              name="Evaluaciones de Accesorios"
-              parent="menu_accesorios_root"
-              action="action_reparacion_accesorio_evaluacion"
-              sequence="60"/>
-
-    <menuitem id="menu_reparacion_componente_evaluacion"
-              name="Evaluaciones de Componentes"
-              parent="menu_accesorios_root"
-              action="action_reparacion_componente_evaluacion"
-              sequence="70"/>
-
-    <menuitem id="menu_checklist"
-              name="Checklist Componentes"
-              parent="menu_accesorios_root"
-              action="action_reparacion_comp_eval_v18"
-              sequence="80"/>
-
-    <menuitem id="menu_ticket_componente_evaluacion"
-              name="Evaluaciones Componentes Tickets"
-              parent="menu_accesorios_root"
-              action="action_ticket_componente_evaluacion"
-              sequence="90"
-              groups="base.group_system"/>
-
-    <menuitem id="menu_ticket_accesorio_evaluacion"
-              name="Evaluaciones Accesorios Tickets"
-              parent="menu_accesorios_root"
-              action="action_ticket_accesorio_evaluacion"
-              sequence="100"
-              groups="base.group_system"/>
-
-    <menuitem id="menu_ticket_componente_intervencion"
-              name="Intervenciones Tickets"
-              parent="menu_accesorios_root"
-              action="action_ticket_componente_intervencion"
-              sequence="110"
-              groups="base.group_system"/>
-
-   <!-- ── Planificador de Mantenimientos ─────────────────────────────── -->
-<menuitem id="menu_mantenimiento_root"
-          name="Mantenimientos"
-          parent="menu_andes_root"
-          sequence="60"/>
-
-<menuitem id="menu_mantenimiento_zonas"
-          name="Zonas"
-          parent="menu_mantenimiento_root"
-          action="action_mantenimiento_zona"
-          sequence="10"/>
-
-<menuitem id="menu_mantenimiento_distritos"
-          name="Distritos"
-          parent="menu_mantenimiento_root"
-          action="action_mantenimiento_zona_distrito"
-          sequence="20"/>
-
-    <menuitem id="menu_mantenimiento_tecnicos"
-          name="Perfiles técnicos"
-          parent="menu_mantenimiento_root"
-          action="action_mantenimiento_tecnico_perfil"
-          sequence="30"/>
-
-<menuitem id="menu_mantenimiento_disponibilidad"
-          name="Disponibilidad técnica"
-          parent="menu_mantenimiento_root"
-          action="action_mantenimiento_tecnico_disponibilidad"
-          sequence="40"/>
-
-<menuitem id="menu_mantenimiento_ausencias"
-          name="Ausencias y permisos"
-          parent="menu_mantenimiento_root"
-          action="action_mantenimiento_tecnico_ausencia"
-          sequence="50"/>
-
-
-  <menuitem id="menu_mantenimiento_planificador"
-          name="Planificador inteligente"
-          parent="menu_mantenimiento_root"
-          action="action_mantenimiento_planificador"
-          sequence="60"/>
-
-<menuitem id="menu_mantenimiento_lineas"
-          name="Líneas de planificación"
-          parent="menu_mantenimiento_root"
-          action="action_mantenimiento_planificador_linea"
-          sequence="70"/>
-
+    <!-- ── Planificador de Mantenimientos ─────────────────────────────── -->
+    <record id="action_contador_automatico_pending" model="ir.actions.act_window">
+      <field name="name">Contadores Pendientes</field>
+      <field name="res_model">contador.automatico</field>
+      <field name="view_mode">list,form</field>
+      <field name="domain">[('estado','=','pendiente')]</field>
+      <field name="context">{'search_default_pendientes': 1}</field>
+    </record>
+    <record id="action_contador_automatico_manual" model="ir.actions.act_window">
+      <field name="name">Contadores para Revisión Manual</field>
+      <field name="res_model">contador.automatico</field>
+      <field name="view_mode">list,form</field>
+      <field name="domain">[('estado','=','manual')]</field>
+      <field name="context">{'search_default_manuales': 1}</field>
+    </record>
+    <record id="action_contador_automatico_error" model="ir.actions.act_window">
+      <field name="name">Errores de Contadores</field>
+      <field name="res_model">contador.automatico</field>
+      <field name="view_mode">list,form</field>
+      <field name="domain">[('estado','=','error')]</field>
+      <field name="context">{'search_default_errores': 1}</field>
+    </record>
+    <record id="action_patron_contador_activos" model="ir.actions.act_window">
+      <field name="name">Patrones Activos</field>
+      <field name="res_model">patron.contador</field>
+      <field name="view_mode">list,form</field>
+      <field name="domain">[('activo','=',True)]</field>
+      <field name="context">{'search_default_activos': 1}</field>
+    </record>
+    <record id="action_patron_contador_aprendizaje" model="ir.actions.act_window">
+      <field name="name">Patrones en Aprendizaje</field>
+      <field name="res_model">patron.contador</field>
+      <field name="view_mode">list,form</field>
+      <field name="domain">[('auto_generado','=',True),('validado_manualmente','=',False)]</field>
+      <field name="context">{'search_default_auto_generados': 1}</field>
+    </record>
+    <record id="action_patron_contador_problematicos" model="ir.actions.act_window">
+      <field name="name">Patrones Problemáticos</field>
+      <field name="res_model">patron.contador</field>
+      <field name="view_mode">list,form</field>
+      <field name="domain">[('estado_patron','=','problematico')]</field>
+      <field name="context">{'search_default_problematicos': 1}</field>
+    </record>
+    <record id="action_sat_automation_event" model="ir.actions.act_window">
+      <field name="name">Eventos de Automatización</field>
+      <field name="res_model">sat.automation.event</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_sat_automation_event_review" model="ir.actions.act_window">
+      <field name="name">Revisión Manual</field>
+      <field name="res_model">sat.automation.event</field>
+      <field name="view_mode">list,form</field>
+      <field name="domain">[('state','=','review')]</field>
+    </record>
+    <record id="action_sat_automation_pattern_learning" model="ir.actions.act_window">
+      <field name="name">Aprendizaje de Patrones</field>
+      <field name="res_model">sat.automation.pattern.learning</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_sat_automation_audit" model="ir.actions.act_window">
+      <field name="name">Auditoría de Automatización</field>
+      <field name="res_model">sat.automation.audit</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_sat_automation_config" model="ir.actions.act_window">
+      <field name="name">Configuración de Automatización</field>
+      <field name="res_model">sat.automation.config</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_sat_automation_rule" model="ir.actions.act_window">
+      <field name="name">Reglas de Automatización</field>
+      <field name="res_model">sat.automation.rule</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_sat_automation_mail_filter" model="ir.actions.act_window">
+      <field name="name">Filtros de Correo</field>
+      <field name="res_model">sat.automation.mail.filter</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_sat_ai_provider" model="ir.actions.act_window">
+      <field name="name">Proveedores de IA</field>
+      <field name="res_model">sat.ai.provider</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_sat_ai_prompt" model="ir.actions.act_window">
+      <field name="name">Prompts de IA</field>
+      <field name="res_model">sat.ai.prompt</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_sat_ai_usage" model="ir.actions.act_window">
+      <field name="name">Consumo de IA</field>
+      <field name="res_model">sat.ai.usage</field>
+      <field name="view_mode">list,form</field>
+    </record>
+    <menuitem id="sat_menu_root" name="Sistema de taller" sequence="1" web_icon="sat,static/description/icon.png"/>
+    <menuitem id="sat_dashboard_menu" name="Dashboard" sequence="1" parent="sat_menu_root" action="sat_dashboard_action"/>
+    <menuitem id="menu_corapsac_root" name="Corapsac" sequence="10" parent="sat_menu_root"/>
+    <menuitem id="menu_andes_root" name="Andes" sequence="20" parent="sat_menu_root"/>
+    <menuitem id="menu_toner_root" name="Tóner" sequence="30" parent="sat_menu_root"/>
+    <menuitem id="menu_contadores_root" name="Contadores" sequence="40" parent="sat_menu_root"/>
+    <menuitem id="menu_automation_root" name="Automatización" sequence="50" parent="sat_menu_root" groups="base.group_user"/>
+    <menuitem id="menu_printtracker_root" name="PrintTracker Pro" sequence="60" parent="sat_menu_root"/>
+    <menuitem id="menu_evaluaciones_root" name="Evaluaciones" sequence="70" parent="sat_menu_root"/>
+    <menuitem id="menu_reporte_estado_maquinas_main" name="Reportes" sequence="80" parent="sat_menu_root"/>
+    <menuitem id="menu_mdm_root" name="Control MDM" sequence="90" parent="sat_menu_root"/>
+    <menuitem id="sat.ajustes" name="Configuración" sequence="200" parent="sat_menu_root"/>
+    <menuitem id="sat.stock_maquinas" name="Máquinas" sequence="10" parent="menu_corapsac_root" action="sat.action_window"/>
+    <menuitem id="sat.reparaciones" name="Reparaciones" sequence="20" parent="menu_corapsac_root" action="sat.action_reparaciones_window"/>
+    <menuitem id="menu_corapsac_partes_root" name="Solicitudes de Partes" sequence="30" parent="menu_corapsac_root"/>
+    <menuitem id="menu_copier_parts" name="Reparaciones" sequence="10" parent="menu_corapsac_partes_root" action="action_copier_parts_request"/>
+    <menuitem id="menu_solicitud_parte_tecnico" name="Técnico" sequence="20" parent="menu_corapsac_partes_root" action="action_solicitud_parte_tecnico"/>
+    <menuitem id="sat.menu_incidencia" name="Reclamos y Garantías" sequence="40" parent="menu_corapsac_root" action="action_incidencias"/>
+    <menuitem id="menu_inspeccion_resultado" name="Inspecciones" sequence="50" parent="menu_corapsac_root" action="action_inspeccion_resultado"/>
+    <menuitem id="sat.menu_fallas" name="Fallas" sequence="60" parent="menu_corapsac_root" action="sat.action_falla_window"/>
+    <menuitem id="menu_corapsac_informes_root" name="Informes" sequence="70" parent="menu_corapsac_root"/>
+    <menuitem id="sat.menu_informes" name="Informes proveedor" sequence="10" parent="menu_corapsac_informes_root" action="sat.action_informe_window"/>
+    <menuitem id="menu_informe_regla" name="Reglas de Informe" sequence="20" parent="menu_corapsac_informes_root" action="action_informe_regla"/>
+    <menuitem id="menu_reparacion_foto_action" name="Fotos de Reparaciones" sequence="30" parent="menu_corapsac_informes_root" action="action_reparacion_foto"/>
+    <menuitem id="menu_corapsac_componentes_root" name="Componentes" sequence="80" parent="menu_corapsac_root"/>
+    <menuitem id="menu_componente_tipo" name="Tipos de Componente" sequence="10" parent="menu_corapsac_componentes_root" action="action_componente_tipo"/>
+    <menuitem id="menu_componente_estado" name="Estados de Componente" sequence="20" parent="menu_corapsac_componentes_root" action="action_componente_estado"/>
+    <menuitem id="menu_modelo_maquina_componente" name="Componentes por Modelo" sequence="30" parent="menu_corapsac_componentes_root" action="action_modelo_maquina_componente"/>
+    <menuitem id="menu_componente_subparte" name="Subpartes" sequence="40" parent="menu_corapsac_componentes_root" action="action_componente_subparte"/>
+    <menuitem id="menu_reparacion_subparte" name="Catálogo de Subpartes" sequence="50" parent="menu_corapsac_componentes_root" action="action_reparacion_subparte"/>
+    <menuitem id="menu_reparacion_intervencion" name="Intervenciones" sequence="60" parent="menu_corapsac_componentes_root" action="action_reparacion_intervencion"/>
+    <menuitem id="menu_checklist_map" name="Mapa Checklist → Componente" sequence="70" parent="menu_corapsac_componentes_root" action="action_checklist_map"/>
+    <menuitem id="menu_accesorios_root" name="Accesorios" sequence="90" parent="menu_corapsac_root"/>
+    <menuitem id="menu_accesorio_tipos" name="Tipos" sequence="10" parent="menu_accesorios_root" action="action_accesorio_tipo"/>
+    <menuitem id="menu_accesorio_estados" name="Estados" sequence="20" parent="menu_accesorios_root" action="action_accesorio_estado"/>
+    <menuitem id="menu_accesorio_subpartes" name="Subpartes" sequence="30" parent="menu_accesorios_root" action="action_accesorio_subparte"/>
+    <menuitem id="menu_modelo_maquina_accesorio" name="Accesorios por Modelo" sequence="40" parent="menu_accesorios_root" action="action_modelo_maquina_accesorio" groups="base.group_system"/>
+    <menuitem id="menu_accesorios_sep1" name="Evaluaciones" sequence="50" parent="menu_accesorios_root"/>
+    <menuitem id="menu_reparacion_accesorio_evaluacion" name="Evaluaciones de Accesorios" sequence="10" parent="menu_accesorios_sep1" action="action_reparacion_accesorio_evaluacion"/>
+    <menuitem id="menu_reparacion_componente_evaluacion" name="Evaluaciones de Componentes" sequence="20" parent="menu_accesorios_sep1" action="action_reparacion_componente_evaluacion"/>
+    <menuitem id="menu_checklist" name="Checklist Componentes" sequence="30" parent="menu_accesorios_sep1" action="action_reparacion_comp_eval_v18"/>
+    <menuitem id="sat.alquiler" name="Máquinas" sequence="10" parent="menu_andes_root" action="sat.action_alquiler_window"/>
+    <menuitem id="menu_ticket_alquiler" name="Tickets" sequence="20" parent="menu_andes_root" action="action_ticket_alquiler_soporte"/>
+    <menuitem id="sat.repuestos" name="Repuestos" sequence="30" parent="menu_andes_root" action="sat.action_repuestos_window"/>
+    <menuitem id="menu_solicitud_partes" name="Solicitudes de Partes" sequence="40" parent="menu_andes_root" action="action_solicitud_partes"/>
+    <menuitem id="menu_andes_repuestos_root" name="Gestión de Repuestos" sequence="50" parent="menu_andes_root"/>
+    <menuitem id="menu_ticket_repuesto_pedido" name="Pedidos de Repuestos" sequence="10" parent="menu_andes_repuestos_root" action="action_ticket_repuesto_pedido"/>
+    <menuitem id="menu_ticket_repuesto_historial" name="Historial de Repuestos" sequence="20" parent="menu_andes_repuestos_root" action="action_ticket_repuesto_historial"/>
+    <menuitem id="menu_andes_eval_tecnica_root" name="Evaluaciones Técnicas" sequence="60" parent="menu_andes_root"/>
+    <menuitem id="menu_ticket_componente_evaluacion" name="Componentes de Tickets" sequence="10" parent="menu_andes_eval_tecnica_root" action="action_ticket_componente_evaluacion" groups="base.group_system"/>
+    <menuitem id="menu_ticket_accesorio_evaluacion" name="Accesorios de Tickets" sequence="20" parent="menu_andes_eval_tecnica_root" action="action_ticket_accesorio_evaluacion" groups="base.group_system"/>
+    <menuitem id="menu_ticket_componente_intervencion" name="Intervenciones de Tickets" sequence="30" parent="menu_andes_eval_tecnica_root" action="action_ticket_componente_intervencion" groups="base.group_system"/>
+    <menuitem id="menu_mantenimiento_root" name="Mantenimientos" sequence="70" parent="menu_andes_root"/>
+    <menuitem id="menu_mantenimiento_zonas" name="Zonas" sequence="10" parent="menu_mantenimiento_root" action="action_mantenimiento_zona"/>
+    <menuitem id="menu_mantenimiento_distritos" name="Distritos" sequence="20" parent="menu_mantenimiento_root" action="action_mantenimiento_zona_distrito"/>
+    <menuitem id="menu_mantenimiento_tecnicos" name="Perfiles técnicos" sequence="30" parent="menu_mantenimiento_root" action="action_mantenimiento_tecnico_perfil"/>
+    <menuitem id="menu_mantenimiento_disponibilidad" name="Disponibilidad técnica" sequence="40" parent="menu_mantenimiento_root" action="action_mantenimiento_tecnico_disponibilidad"/>
+    <menuitem id="menu_mantenimiento_ausencias" name="Ausencias y permisos" sequence="50" parent="menu_mantenimiento_root" action="action_mantenimiento_tecnico_ausencia"/>
+    <menuitem id="menu_mantenimiento_planificador" name="Planificador inteligente" sequence="60" parent="menu_mantenimiento_root" action="action_mantenimiento_planificador"/>
+    <menuitem id="menu_mantenimiento_lineas" name="Líneas de planificación" sequence="70" parent="menu_mantenimiento_root" action="action_mantenimiento_planificador_linea"/>
+    <menuitem id="menu_toner_counter_submission" name="Gestión de Tóner" sequence="10" parent="menu_toner_root" action="action_toner_counter_submission"/>
+    <menuitem id="menu_toner_monitoring_root" name="Monitoreo" sequence="20" parent="menu_toner_root"/>
+    <menuitem id="menu_toner_monitoring_event" name="Eventos de Tóner" sequence="10" parent="menu_toner_monitoring_root" action="action_toner_monitoring_event"/>
+    <menuitem id="menu_toner_installation_history" name="Historial de Instalaciones" sequence="20" parent="menu_toner_monitoring_root" action="action_toner_installation_history"/>
+    <menuitem id="menu_toner_stock_movement" name="Kardex de Stock" sequence="30" parent="menu_toner_monitoring_root" action="action_toner_stock_movement"/>
+    <menuitem id="menu_toner_config_root" name="Configuración" sequence="90" parent="menu_toner_root"/>
+    <menuitem id="menu_toner_brand" name="Marcas de Tóner" sequence="10" parent="menu_toner_config_root" action="action_toner_brand"/>
+    <menuitem id="menu_contador_automatico_root" name="Contadores Automáticos" sequence="10" parent="menu_contadores_root" action="action_contador_automatico"/>
+    <menuitem id="menu_contadores_revision_root" name="Revisión" sequence="20" parent="menu_contadores_root"/>
+    <menuitem id="menu_contadores_pending" name="Pendientes" sequence="10" parent="menu_contadores_revision_root" action="action_contador_automatico_pending"/>
+    <menuitem id="menu_contadores_manual" name="Revisión Manual" sequence="20" parent="menu_contadores_revision_root" action="action_contador_automatico_manual"/>
+    <menuitem id="menu_contadores_error" name="Errores" sequence="30" parent="menu_contadores_revision_root" action="action_contador_automatico_error"/>
+    <menuitem id="menu_patrones_root" name="Patrones" sequence="30" parent="menu_contadores_root"/>
+    <menuitem id="menu_patron_contador" name="Todos los Patrones" sequence="10" parent="menu_patrones_root" action="action_patron_contador"/>
+    <menuitem id="menu_patron_contador_activos" name="Activos" sequence="20" parent="menu_patrones_root" action="action_patron_contador_activos"/>
+    <menuitem id="menu_patron_contador_learning" name="En Aprendizaje" sequence="30" parent="menu_patrones_root" action="action_patron_contador_aprendizaje"/>
+    <menuitem id="menu_patron_contador_problematicos" name="Problemáticos" sequence="40" parent="menu_patrones_root" action="action_patron_contador_problematicos"/>
+    <menuitem id="menu_automation_events" name="Eventos" sequence="10" parent="menu_automation_root" action="action_sat_automation_event" groups="base.group_user"/>
+    <menuitem id="menu_automation_review" name="Revisión Manual" sequence="20" parent="menu_automation_root" action="action_sat_automation_event_review" groups="base.group_user"/>
+    <menuitem id="menu_automation_learning" name="Aprendizaje" sequence="30" parent="menu_automation_root" action="action_sat_automation_pattern_learning" groups="base.group_user"/>
+    <menuitem id="menu_automation_audit" name="Auditoría" sequence="40" parent="menu_automation_root" action="action_sat_automation_audit" groups="base.group_user"/>
+    <menuitem id="menu_automation_ai_usage" name="Consumo IA" sequence="50" parent="menu_automation_root" action="action_sat_ai_usage" groups="base.group_user"/>
+    <menuitem id="menu_printtracker_alerts" name="Alertas" sequence="10" parent="menu_printtracker_root" action="action_printtracker_alert"/>
+    <menuitem id="menu_printtracker_daily_readings" name="Lecturas Diarias" sequence="20" parent="menu_printtracker_root" action="action_printtracker_daily_reading"/>
+    <menuitem id="menu_printtracker_sep1" name="Datos" sequence="30" parent="menu_printtracker_root"/>
+    <menuitem id="menu_printtracker_meters" name="Medidores" sequence="10" parent="menu_printtracker_sep1" action="action_printtracker_meter"/>
+    <menuitem id="menu_printtracker_supplies" name="Suministros" sequence="20" parent="menu_printtracker_sep1" action="action_printtracker_supply"/>
+    <menuitem id="menu_printtracker_entities" name="Entidades" sequence="30" parent="menu_printtracker_sep1" action="action_printtracker_entity"/>
+    <menuitem id="menu_printtracker_sep2" name="Herramientas" sequence="40" parent="menu_printtracker_root"/>
+    <menuitem id="menu_printtracker_consolidator" name="Ejecutar Consolidación" sequence="10" parent="menu_printtracker_sep2" action="action_printtracker_consolidator"/>
+    <menuitem id="menu_printtracker_alert_manager" name="Revisar Alertas" sequence="20" parent="menu_printtracker_sep2" action="action_printtracker_alert_manager"/>
+    <menuitem id="menu_printtracker_config" name="Configuración API" sequence="90" parent="menu_printtracker_root" action="action_printtracker_config"/>
+    <menuitem id="menu_evaluacion_personal" name="Evaluación de Personal" sequence="10" parent="menu_evaluaciones_root" action="action_evaluacion_personal"/>
+    <menuitem id="menu_service_evaluation" name="Evaluaciones de Servicio" sequence="20" parent="menu_evaluaciones_root" action="action_client_service_evaluation"/>
+    <menuitem id="menu_prueba_maquina" name="Pruebas de Máquina" sequence="30" parent="menu_evaluaciones_root" action="action_prueba_maquina"/>
+    <menuitem id="menu_reportes_estado_root" name="Estado de Máquinas" sequence="10" parent="menu_reporte_estado_maquinas_main"/>
+    <menuitem id="menu_reporte_estado_maquinas_ver" name="Ver Reportes" sequence="10" parent="menu_reportes_estado_root" action="action_reporte_estado_maquinas"/>
+    <menuitem id="menu_reporte_estado_maquinas_generar" name="Generar Reporte" sequence="20" parent="menu_reportes_estado_root" action="action_reporte_estado_maquinas_wizard"/>
+    <menuitem id="menu_reporte_estado_maquinas_semana" name="Semana Actual" sequence="30" parent="menu_reportes_estado_root" action="action_reporte_estado_maquinas_semana_actual"/>
+    <menuitem id="menu_reporte_estado_maquinas_separator" name="Estados" sequence="40" parent="menu_reportes_estado_root"/>
+    <menuitem id="menu_reporte_estado_maquinas_sin_revisar" name="Sin Revisar" sequence="10" parent="menu_reporte_estado_maquinas_separator" action="action_reporte_estado_maquinas_sin_revisar"/>
+    <menuitem id="menu_reporte_estado_maquinas_problemas" name="Con Problemas" sequence="20" parent="menu_reporte_estado_maquinas_separator" action="action_reporte_estado_maquinas_con_problemas"/>
+    <menuitem id="menu_reporte_estado_maquinas_partes" name="De Partes" sequence="30" parent="menu_reporte_estado_maquinas_separator" action="action_reporte_estado_maquinas_partes"/>
+    <menuitem id="menu_reportes_servicio_root" name="Servicio Técnico" sequence="20" parent="menu_reporte_estado_maquinas_main"/>
+    <menuitem id="menu_equipment_visit_reports" name="Informes de Visitas" sequence="10" parent="menu_reportes_servicio_root" action="action_equipment_visit_report"/>
+    <menuitem id="menu_equipment_technician_reports" name="Desempeño de Técnicos" sequence="20" parent="menu_reportes_servicio_root" action="action_equipment_technician_performance_report"/>
+    <menuitem id="menu_equipment_visit_report_settings" name="Configuración de Informes" sequence="90" parent="menu_reportes_servicio_root" action="action_equipment_visit_report_settings"/>
+    <menuitem id="menu_mdm_devices" name="Dispositivos MDM" sequence="10" parent="menu_mdm_root" action="action_mdm_device"/>
+    <menuitem id="menu_mdm_command_log" name="Historial de Comandos" sequence="20" parent="menu_mdm_root" action="action_mdm_command_log"/>
+    <menuitem id="menu_tracking_diagnostico" name="Diagnóstico GPS" sequence="30" parent="menu_mdm_root" action="action_tracking_diagnostico"/>
+    <menuitem id="menu_config_equipos_root" name="Equipos" sequence="10" parent="sat.ajustes"/>
+    <menuitem id="sat.menu_marca" name="Marcas" sequence="10" parent="menu_config_equipos_root" action="sat.action_marca_window"/>
+    <menuitem id="menu_modelo_maquina_familia" name="Familias de modelos" sequence="20" parent="menu_config_equipos_root" action="action_modelo_maquina_familia"/>
+    <menuitem id="sat.menu_modelo" name="Modelos" sequence="30" parent="menu_config_equipos_root" action="sat.action_modelo_window"/>
+    <menuitem id="sat.menu_tipo" name="Tipos de máquina" sequence="40" parent="menu_config_equipos_root" action="sat.action_tipo_window"/>
+    <menuitem id="menu_config_automation_root" name="Automatización" sequence="20" parent="sat.ajustes" groups="base.group_system"/>
+    <menuitem id="menu_config_automation_general" name="Configuración General" sequence="10" parent="menu_config_automation_root" action="action_sat_automation_config" groups="base.group_system"/>
+    <menuitem id="menu_config_automation_rules" name="Reglas" sequence="20" parent="menu_config_automation_root" action="action_sat_automation_rule" groups="base.group_system"/>
+    <menuitem id="menu_config_automation_filters" name="Filtros de Correo" sequence="30" parent="menu_config_automation_root" action="action_sat_automation_mail_filter" groups="base.group_system"/>
+    <menuitem id="menu_config_ai_providers" name="Proveedores IA" sequence="40" parent="menu_config_automation_root" action="action_sat_ai_provider" groups="base.group_system"/>
+    <menuitem id="menu_config_ai_prompts" name="Prompts IA" sequence="50" parent="menu_config_automation_root" action="action_sat_ai_prompt" groups="base.group_system"/>
+    <menuitem id="menu_config_ai_usage" name="Consumo IA" sequence="60" parent="menu_config_automation_root" action="action_sat_ai_usage" groups="base.group_system"/>
+    <menuitem id="menu_config_integrations_root" name="Integraciones" sequence="30" parent="sat.ajustes"/>
+    <menuitem id="menu_gemini_config" name="Gemini API (Informes)" sequence="10" parent="menu_config_integrations_root" action="action_gemini_configuracion"/>
+    <menuitem id="menu_mdm_config" name="Headwind MDM" sequence="20" parent="menu_config_integrations_root" action="action_mdm_config"/>
+    <menuitem id="menu_gps_tracking_separator" name="GPS Tracking" sequence="30" parent="menu_config_integrations_root"/>
+    <menuitem id="menu_dispositivos_gps" name="Dispositivos GPS Técnicos" sequence="10" parent="menu_gps_tracking_separator" action="action_tecnico_dispositivo_gps" groups="base.group_system"/>
+    <menuitem id="menu_config_tools_root" name="Herramientas" sequence="40" parent="sat.ajustes"/>
+    <menuitem id="menu_excel_import_action" name="Importar desde Excel" sequence="10" parent="menu_config_tools_root" action="action_excel_import_model"/>
+    <menuitem id="menu_universal_excel_import" name="Importador Universal" sequence="20" parent="menu_config_tools_root" action="action_universal_excel_import"/>
+    <menuitem id="menu_sat_import_line" name="Carga rápida" sequence="30" parent="menu_config_tools_root" action="action_sat_import_line"/>
   </data>
 </odoo>

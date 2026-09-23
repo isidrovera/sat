@@ -51,6 +51,49 @@ class PatronContador(models.Model):
    
     validado_manualmente = fields.Boolean('Validado Manualmente', default=False, 
                                          help="Si el patrón fue validado por un usuario")
+
+
+    # CONTROL DE APRENDIZAJE / SHADOW MODE
+    # Los patrones existentes conservan comportamiento productivo por defecto.
+    # Los nuevos patrones auto-generados deben crearse explícitamente como candidato.
+    estado_aprendizaje = fields.Selection([
+        ('candidato', 'Candidato'),
+        ('prueba', 'En prueba'),
+        ('validado', 'Validado'),
+        ('activo', 'Activo'),
+        ('rechazado', 'Rechazado'),
+        ('obsoleto', 'Obsoleto'),
+    ], string='Estado de aprendizaje', default='activo', required=True, index=True,
+       help='Estado independiente del rendimiento histórico. Los candidatos no participan en producción.')
+
+    pruebas_sombra = fields.Integer('Pruebas en sombra', default=0, readonly=True)
+    aciertos_sombra = fields.Integer('Aciertos en sombra', default=0, readonly=True)
+    fallos_sombra = fields.Integer('Fallos en sombra', default=0, readonly=True)
+    ultima_prueba_sombra = fields.Datetime('Última prueba en sombra', readonly=True)
+    tasa_sombra = fields.Float('Tasa de acierto sombra (%)', compute='_compute_tasa_sombra', store=True)
+    evento_origen_id = fields.Many2one(
+        'contador.automatico', string='Correo que originó el patrón',
+        ondelete='set null', copy=False, index=True,
+    )
+
+    @api.depends('pruebas_sombra', 'aciertos_sombra')
+    def _compute_tasa_sombra(self):
+        for patron in self:
+            patron.tasa_sombra = (
+                (patron.aciertos_sombra / patron.pruebas_sombra) * 100.0
+                if patron.pruebas_sombra else 0.0
+            )
+
+    @api.constrains('patron_regex')
+    def _check_patron_regex(self):
+        for patron in self:
+            try:
+                re.compile(patron.patron_regex or '')
+            except re.error as exc:
+                from odoo.exceptions import ValidationError
+                raise ValidationError(
+                    f'La expresión regular del patrón "{patron.name}" no es válida: {exc}'
+                )
     
     # CAMPOS CALCULADOS
     tasa_exito = fields.Float('Tasa de Éxito (%)', compute='_compute_tasa_exito', store=True,
@@ -301,65 +344,101 @@ class PatronContador(models.Model):
    
 
     @api.model
+    @api.model
     def buscar_por_tipo(self, tipo, texto):
         """
-        Busca patrones de un tipo específico en el texto.
-        Para 'serie', exige al menos una letra en el resultado.
+        Busca únicamente patrones productivos. Los candidatos/pruebas no pueden
+        bloquear ni alterar el procesamiento actual.
+
+        Si varios patrones detectan valores, se favorece coincidencia entre
+        patrones y luego rendimiento/confianza/prioridad.
         """
-        patrones = self.search(
-            [('tipo', '=', tipo), ('activo', '=', True)],
-            order='orden'
-        )
+        patrones = self.search([
+            ('tipo', '=', tipo),
+            ('activo', '=', True),
+            ('estado_aprendizaje', 'in', ['validado', 'activo']),
+        ], order='orden, tasa_exito desc, confianza_patron desc, id')
+
+        hallazgos = []
         for patron in patrones:
             try:
-                for match in re.finditer(patron.patron_regex, texto, re.IGNORECASE):
+                valor_valido = False
+                for match in re.finditer(patron.patron_regex, texto or '', re.IGNORECASE):
                     if not match.groups():
                         continue
-                    valor = match.group(1).strip()
-                    if not valor:
+                    raw = (match.group(1) or '').strip()
+                    if not raw:
                         continue
 
                     if tipo == 'serie':
-                        val = valor.upper()
-                        # longitud >=5, solo A–Z y 0–9, y al menos UNA letra
-                        if (len(val) >= 5
-                                and re.match(r'^[A-Z0-9]+$', val)
-                                and re.search(r'[A-Z]', val)):
-                            patron.marcar_deteccion_exitosa()
-                            return val
-                        # CAMBIO AQUÍ - reemplazar marcar_deteccion_fallida()
-                        patron.sudo().write({
-                            'casos_fallidos': patron.casos_fallidos + 1,
-                            'veces_usado': patron.veces_usado + 1
-                        })
+                        val = raw.upper()
+                        if (
+                            len(val) >= 5
+                            and re.match(r'^[A-Z0-9]+$', val)
+                            and re.search(r'[A-Z]', val)
+                        ):
+                            valor_valido = val
+                            break
                     else:
-                        # contador: convertimos a entero y >0
-                        numero = int(re.sub(r'[^0-9]', '', valor) or 0)
+                        numero = int(re.sub(r'[^0-9]', '', raw) or 0)
                         if numero > 0:
-                            patron.marcar_deteccion_exitosa()
-                            return numero
-                        # CAMBIO AQUÍ - reemplazar marcar_deteccion_fallida()
-                        patron.sudo().write({
-                            'casos_fallidos': patron.casos_fallidos + 1,
-                            'veces_usado': patron.veces_usado + 1
-                        })
-            except re.error:
-                _logger.warning(f"Error en patrón {patron.name}: {patron.patron_regex}")
-                # CAMBIO AQUÍ - reemplazar marcar_deteccion_fallida()
-                patron.sudo().write({
-                    'casos_fallidos': patron.casos_fallidos + 1,
-                    'veces_usado': patron.veces_usado + 1
-                })
-        return None
+                            valor_valido = numero
+                            break
+
+                if valor_valido is False:
+                    continue
+
+                score = (
+                    (1000 if patron.validado_manualmente else 0)
+                    + float(patron.tasa_exito or 0.0) * 3
+                    + float(patron.confianza_patron or 0.0) * 2
+                    + max(0, 100 - int(patron.orden or 10))
+                )
+                hallazgos.append((patron, valor_valido, score))
+
+            except re.error as exc:
+                _logger.warning(
+                    '[PATRON][BUSQUEDA][REGEX_ERROR] id=%s nombre=%s error=%s regex=%s',
+                    patron.id, patron.name, exc, patron.patron_regex,
+                )
+            except Exception:
+                _logger.exception(
+                    '[PATRON][BUSQUEDA][ERROR] id=%s nombre=%s',
+                    patron.id, patron.name,
+                )
+
+        if not hallazgos:
+            return None
+
+        # Bonificación si varios patrones independientes coinciden en el valor.
+        frecuencias = {}
+        for _, valor, _ in hallazgos:
+            key = str(valor).upper() if tipo == 'serie' else int(valor)
+            frecuencias[key] = frecuencias.get(key, 0) + 1
+
+        hallazgos.sort(
+            key=lambda item: (
+                frecuencias.get(str(item[1]).upper() if tipo == 'serie' else int(item[1]), 0),
+                item[2],
+            ),
+            reverse=True,
+        )
+
+        patron, valor, score = hallazgos[0]
+        patron.marcar_deteccion_exitosa()
+        _logger.info(
+            '[PATRON][BUSQUEDA][OK] tipo=%s patron=%s valor=%s score=%.2f apoyo=%s',
+            tipo, patron.id, valor, score,
+            frecuencias.get(str(valor).upper() if tipo == 'serie' else int(valor), 1),
+        )
+        return valor
 
 
 
     def validar_patron_manualmente(self):
-        """
-        NUEVO: Valida manualmente un patrón auto-generado
-        """
+        """Valida y activa manualmente un patrón auto-generado."""
         self.ensure_one()
-        
+
         if not self.auto_generado:
             return {
                 'type': 'ir.actions.client',
@@ -369,17 +448,23 @@ class PatronContador(models.Model):
                     'type': 'warning'
                 }
             }
-        
+
         self.write({
             'validado_manualmente': True,
-            'confianza_patron': min(100.0, self.confianza_patron + 20.0)  # Aumentar confianza
+            'estado_aprendizaje': 'activo',
+            'activo': True,
+            'confianza_patron': min(100.0, max(self.confianza_patron, 80.0) + 20.0),
         })
-        
+        _logger.info(
+            '[PATRON][VALIDACION_MANUAL] patron=%s usuario=%s',
+            self.id, self.env.user.id,
+        )
+
         return {
             'type': 'ir.actions.client',
             'tag': 'display_notification',
             'params': {
-                'message': f'Patrón "{self.name}" validado manualmente',
+                'message': f'Patrón "{self.name}" validado y activado',
                 'type': 'success'
             }
         }
@@ -430,6 +515,177 @@ class PatronContador(models.Model):
             _logger.info(f"🗑️ Patrón no usado eliminado: {patron.name}")
         
         return patrones_desactivados
+
+
+
+    @api.model
+    def crear_candidato(self, patron_data, evento_origen=False):
+        """Crea un patrón candidato seguro sin incorporarlo a producción."""
+        data = dict(patron_data or {})
+        regex = (data.get('patron_regex') or '').strip()
+        tipo = data.get('tipo')
+
+        if not regex or not tipo:
+            _logger.warning('[PATRON][CANDIDATO] Datos incompletos: %s', data)
+            return self.browse()
+
+        if self._es_patron_demasiado_generico(regex, tipo):
+            _logger.warning(
+                '[PATRON][CANDIDATO][RECHAZADO] tipo=%s regex=%s motivo=demasiado_generico',
+                tipo, regex,
+            )
+            return self.browse()
+
+        existing = self.search([
+            ('tipo', '=', tipo),
+            ('patron_regex', '=', regex),
+            ('estado_aprendizaje', 'not in', ['rechazado', 'obsoleto']),
+        ], limit=1)
+        if existing:
+            _logger.info(
+                '[PATRON][CANDIDATO][EXISTE] id=%s nombre=%s tipo=%s',
+                existing.id, existing.name, tipo,
+            )
+            return existing
+
+        data.update({
+            'auto_generado': True,
+            'activo': False,
+            'estado_aprendizaje': 'candidato',
+            'orden': max(int(data.get('orden') or 50), 50),
+        })
+        if evento_origen:
+            data['evento_origen_id'] = evento_origen.id
+
+        patron = self.create(data)
+        _logger.info(
+            '[PATRON][CANDIDATO][CREADO] id=%s nombre=%s tipo=%s regex=%s',
+            patron.id, patron.name, patron.tipo, patron.patron_regex,
+        )
+        return patron
+
+    @api.model
+    def _es_patron_demasiado_generico(self, regex, tipo):
+        normalizado = re.sub(r'\s+', '', regex or '')
+        peligrosos = {
+            re.sub(r'\s+', '', r'(\d{4,9})'),
+            re.sub(r'\s+', '', r'(\d{1,9})'),
+            re.sub(r'\s+', '', r'(\d+)'),
+            re.sub(r'\s+', '', r'\b([A-Z0-9]{5,15})\b'),
+            re.sub(r'\s+', '', r'([A-Z0-9]{5,15})'),
+        }
+        if normalizado in peligrosos:
+            return True
+
+        # Debe existir contexto literal además del grupo capturado.
+        sin_regex = re.sub(r'\\.|\[[^\]]*\]|\([^\)]*\)|[\^$.*+?{}|]', '', regex or '')
+        letras = re.sub(r'[^A-Za-zÁÉÍÓÚáéíóúÑñ]', '', sin_regex)
+        if tipo == 'serie' and len(letras) < 3:
+            return True
+        if tipo != 'serie' and len(letras) < 2:
+            return True
+        return False
+
+    @api.model
+    def probar_candidatos_shadow(self, tipo, texto, valor_referencia, evento=False):
+        """
+        Prueba patrones candidatos sin permitir que afecten la detección productiva.
+        Si demuestran rendimiento suficiente, pueden promoverse automáticamente.
+        """
+        if valor_referencia in (None, False, ''):
+            return True
+
+        candidatos = self.search([
+            ('tipo', '=', tipo),
+            ('auto_generado', '=', True),
+            ('estado_aprendizaje', 'in', ['candidato', 'prueba']),
+        ], order='create_date asc, id asc')
+
+        min_tests = 5
+        min_rate = 95.0
+        reject_failures = 5
+        try:
+            if 'sat.automation.config' in self.env:
+                cfg = self.env['sat.automation.config'].get_config()
+                if not cfg.learning_enabled or not cfg.learning_shadow_mode:
+                    return True
+                min_tests = cfg.learning_min_tests or min_tests
+                min_rate = cfg.learning_min_success_rate or min_rate
+                reject_failures = cfg.learning_reject_after_failures or reject_failures
+        except Exception:
+            _logger.exception('[PATRON][SHADOW] No se pudo leer configuración; usando valores seguros')
+
+        for patron in candidatos:
+            try:
+                matches = list(re.finditer(patron.patron_regex, texto or '', re.IGNORECASE))
+                extraido = False
+                for match in matches:
+                    if not match.groups():
+                        continue
+                    raw = (match.group(1) or '').strip()
+                    if not raw:
+                        continue
+                    if tipo == 'serie':
+                        candidate = raw.upper()
+                        if re.match(r'^[A-Z0-9]+$', candidate) and re.search(r'[A-Z]', candidate):
+                            extraido = candidate
+                            break
+                    else:
+                        number = int(re.sub(r'[^0-9]', '', raw) or 0)
+                        if number > 0:
+                            extraido = number
+                            break
+
+                esperado = str(valor_referencia).strip().upper() if tipo == 'serie' else int(valor_referencia or 0)
+                acierto = extraido is not False and extraido == esperado
+
+                vals = {
+                    'pruebas_sombra': patron.pruebas_sombra + 1,
+                    'ultima_prueba_sombra': fields.Datetime.now(),
+                    'estado_aprendizaje': 'prueba' if patron.estado_aprendizaje == 'candidato' else patron.estado_aprendizaje,
+                }
+                if acierto:
+                    vals['aciertos_sombra'] = patron.aciertos_sombra + 1
+                elif extraido is not False:
+                    vals['fallos_sombra'] = patron.fallos_sombra + 1
+
+                patron.sudo().write(vals)
+
+                pruebas = patron.pruebas_sombra
+                aciertos = patron.aciertos_sombra
+                fallos = patron.fallos_sombra
+                tasa = (aciertos / pruebas * 100.0) if pruebas else 0.0
+
+                _logger.info(
+                    '[PATRON][SHADOW] patron=%s tipo=%s esperado=%s extraido=%s acierto=%s pruebas=%s tasa=%.2f',
+                    patron.id, tipo, esperado, extraido, acierto, pruebas, tasa,
+                )
+
+                if fallos >= reject_failures and tasa < min_rate:
+                    patron.sudo().write({
+                        'estado_aprendizaje': 'rechazado',
+                        'activo': False,
+                    })
+                    _logger.warning(
+                        '[PATRON][SHADOW][RECHAZADO] patron=%s fallos=%s tasa=%.2f',
+                        patron.id, fallos, tasa,
+                    )
+                elif pruebas >= min_tests and tasa >= min_rate:
+                    patron.sudo().write({
+                        'estado_aprendizaje': 'activo',
+                        'activo': True,
+                        'confianza_patron': max(patron.confianza_patron or 0.0, tasa),
+                    })
+                    _logger.info(
+                        '[PATRON][SHADOW][PROMOVIDO] patron=%s pruebas=%s tasa=%.2f',
+                        patron.id, pruebas, tasa,
+                    )
+            except Exception:
+                _logger.exception(
+                    '[PATRON][SHADOW][ERROR] patron=%s evento=%s',
+                    patron.id, evento.id if evento else None,
+                )
+        return True
 
     @api.model
     def obtener_estadisticas_patrones(self):

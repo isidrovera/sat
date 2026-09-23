@@ -1,0 +1,335 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <!-- ============================================================ -->
+    <!-- CONFIGURACIÓN GENERAL                                       -->
+    <!-- ============================================================ -->
+
+    <record id="sat_automation_config_default" model="sat.automation.config">
+        <field name="name">Automatización SAT</field>
+        <field name="active">True</field>
+
+        <field name="processing_enabled">True</field>
+
+        <field name="ai_mode">fallback</field>
+        <field name="ai_failure_policy">continue</field>
+
+        <field name="min_pattern_confidence">90</field>
+        <field name="min_ai_confidence">85</field>
+
+        <field name="learning_enabled">True</field>
+        <field name="learning_shadow_mode">True</field>
+        <field name="learning_auto_promote">True</field>
+
+        <field name="learning_min_tests">5</field>
+        <field name="learning_min_success_rate">95</field>
+        <field name="learning_reject_after_failures">5</field>
+
+        <field name="stuck_processing_hours">2</field>
+    </record>
+
+
+    <!-- ============================================================ -->
+    <!-- CONTADORES                                                   -->
+    <!-- ============================================================ -->
+
+    <record id="sat_automation_rule_meter_reading"
+            model="sat.automation.rule">
+
+        <field name="name">Contadores - Aplicar lectura</field>
+        <field name="sequence">10</field>
+
+        <field name="source">all</field>
+        <field name="event_type">meter_reading</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">alquiler</field>
+        <field name="target_method">automation_apply_meter_event</field>
+
+        <field name="action_type">register_meter</field>
+
+        <field name="duplicate_window_hours">1</field>
+        <field name="stop_after_match">True</field>
+
+    </record>
+
+
+    <!-- ============================================================ -->
+    <!-- SOLICITUD EXPLÍCITA DE TÓNER                                 -->
+    <!-- ============================================================ -->
+
+    <record id="sat_automation_rule_toner_request"
+            model="sat.automation.rule">
+
+        <field name="name">Tóner - Solicitud explícita</field>
+        <field name="sequence">20</field>
+
+        <field name="source">all</field>
+        <field name="event_type">toner_request</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">toner.counter.submission</field>
+        <field name="target_method">automation_create_toner_request</field>
+
+        <field name="action_type">create_toner_request</field>
+
+        <field name="duplicate_window_hours">24</field>
+        <field name="stop_after_match">True</field>
+
+    </record>
+
+
+    <!-- ============================================================ -->
+    <!-- MONITOREO DE TÓNER                                          -->
+    <!-- ============================================================ -->
+
+    <record id="sat_automation_rule_toner_low"
+            model="sat.automation.rule">
+
+        <field name="name">Tóner - Nivel bajo</field>
+        <field name="sequence">30</field>
+
+        <field name="source">all</field>
+        <field name="event_type">toner_low</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">toner.monitoring.event</field>
+        <field name="target_method">automation_process_toner_event</field>
+
+        <field name="action_type">create_toner_request</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_toner_critical"
+            model="sat.automation.rule">
+
+        <field name="name">Tóner - Nivel crítico</field>
+        <field name="sequence">31</field>
+
+        <field name="source">all</field>
+        <field name="event_type">toner_critical</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">toner.monitoring.event</field>
+        <field name="target_method">automation_process_toner_event</field>
+
+        <field name="action_type">create_toner_request</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_toner_empty"
+            model="sat.automation.rule">
+
+        <field name="name">Tóner - Agotado</field>
+        <field name="sequence">32</field>
+
+        <field name="source">all</field>
+        <field name="event_type">toner_empty</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">toner.monitoring.event</field>
+        <field name="target_method">automation_process_toner_event</field>
+
+        <field name="action_type">create_toner_request</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_toner_replaced"
+            model="sat.automation.rule">
+
+        <field name="name">Tóner - Reemplazado</field>
+        <field name="sequence">33</field>
+
+        <field name="source">all</field>
+        <field name="event_type">toner_replaced</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">toner.monitoring.event</field>
+        <field name="target_method">automation_process_toner_event</field>
+
+        <field name="action_type">update_record</field>
+
+        <field name="duplicate_window_hours">4</field>
+
+    </record>
+
+
+    <!-- ============================================================ -->
+    <!-- TICKETS                                                      -->
+    <!-- ============================================================ -->
+
+    <record id="sat_automation_rule_ticket_technical"
+            model="sat.automation.rule">
+
+        <field name="name">Ticket - Incidencia técnica</field>
+        <field name="sequence">40</field>
+
+        <field name="source">all</field>
+        <field name="event_type">technical_issue</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">ticket.alquiler</field>
+        <field name="target_method">automation_create_ticket</field>
+
+        <field name="action_type">create_ticket</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_ticket_paper_jam"
+            model="sat.automation.rule">
+
+        <field name="name">Ticket - Atasco de papel</field>
+        <field name="sequence">41</field>
+
+        <field name="source">all</field>
+        <field name="event_type">paper_jam</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">ticket.alquiler</field>
+        <field name="target_method">automation_create_ticket</field>
+
+        <field name="action_type">create_ticket</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_ticket_device_error"
+            model="sat.automation.rule">
+
+        <field name="name">Ticket - Error del equipo</field>
+        <field name="sequence">42</field>
+
+        <field name="source">all</field>
+        <field name="event_type">device_error</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">ticket.alquiler</field>
+        <field name="target_method">automation_create_ticket</field>
+
+        <field name="action_type">create_ticket</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_ticket_connectivity"
+            model="sat.automation.rule">
+
+        <field name="name">Ticket - Problema de conectividad</field>
+        <field name="sequence">43</field>
+
+        <field name="source">all</field>
+        <field name="event_type">connectivity_issue</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">ticket.alquiler</field>
+        <field name="target_method">automation_create_ticket</field>
+
+        <field name="action_type">create_ticket</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_ticket_offline"
+            model="sat.automation.rule">
+
+        <field name="name">Ticket - Equipo sin conexión</field>
+        <field name="sequence">44</field>
+
+        <field name="source">all</field>
+        <field name="event_type">equipment_offline</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">ticket.alquiler</field>
+        <field name="target_method">automation_create_ticket</field>
+
+        <field name="action_type">create_ticket</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_ticket_maintenance"
+            model="sat.automation.rule">
+
+        <field name="name">Ticket - Mantenimiento</field>
+        <field name="sequence">45</field>
+
+        <field name="source">all</field>
+        <field name="event_type">maintenance</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">ticket.alquiler</field>
+        <field name="target_method">automation_create_ticket</field>
+
+        <field name="action_type">create_ticket</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+
+    <record id="sat_automation_rule_ticket_customer_request"
+            model="sat.automation.rule">
+
+        <field name="name">Ticket - Solicitud del cliente</field>
+        <field name="sequence">46</field>
+
+        <field name="source">all</field>
+        <field name="event_type">customer_request</field>
+
+        <field name="require_equipment">True</field>
+
+        <field name="action_mode">model_method</field>
+        <field name="target_model">ticket.alquiler</field>
+        <field name="target_method">automation_create_ticket</field>
+
+        <field name="action_type">create_ticket</field>
+
+        <field name="duplicate_window_hours">24</field>
+
+    </record>
+
+</odoo>

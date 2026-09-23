@@ -239,7 +239,9 @@ class ReparacionFoto(models.Model):
             if extra_params:
                 params.update(extra_params)
 
-            _logger.info("[PCLOUD_URL] Enviando solicitud: %s con params: %s", url, params)
+            safe_params = dict(params)
+            safe_params['access_token'] = '***'
+            _logger.info("[PCLOUD_URL] Enviando solicitud: %s con params: %s", url, safe_params)
             response = requests.get(url, params=params)
             result = response.json()
             _logger.info("[PCLOUD_URL] Respuesta: %s", result)
@@ -1201,92 +1203,303 @@ class ReparacionFoto(models.Model):
             _logger.exception(f"[ZIP] Error al crear ZIP: {e}")
             return False
 
-    def _upload_to_pcloud(self, archivo_binario, filename, folder_id, pcloud_config):
-        """Sube un archivo a pCloud"""
-        _logger.info("[UPLOAD_PCLOUD] Iniciando subida de archivo %s a folder_id %s", filename, folder_id)
-        
+    def _find_pcloud_file(self, filename, folder_id, pcloud_config, expected_size=None, timeout=20):
+        """Busca un archivo exacto en la carpeta de pCloud.
+
+        Se usa únicamente para recuperar una subida cuyo resultado quedó incierto
+        por un timeout, SSL EOF o corte de conexión. De esta forma evitamos volver
+        a subir el mismo archivo y generar duplicados con renameifexists=1.
+        """
+        if not filename or not folder_id or not pcloud_config or not pcloud_config.access_token:
+            return False
+
         try:
-            url = f"{pcloud_config.hostname}/uploadfile"
-            
-            # Preparar los parámetros
+            url = f"{pcloud_config.hostname}/listfolder"
             params = {
+                'access_token': pcloud_config.access_token,
                 'folderid': folder_id,
-                'nopartial': 1,  # No guardar archivos parciales
-                'renameifexists': 1,  # Renombrar si existe
             }
-            
-            # Preparar el archivo
-            files = {
-                'file': (filename, archivo_binario, 'application/octet-stream')
-            }
-            
-            # Agregar el token de acceso
-            params['access_token'] = pcloud_config.access_token
-            
-            _logger.info("[UPLOAD_PCLOUD] Enviando solicitud a %s con params: %s", url, params)
-            
-            # Realizar la solicitud POST
-            response = requests.post(url, 
-                                params=params,
-                                files=files,
-                                timeout=30)  # 30 segundos de timeout
-            
-            _logger.info("[UPLOAD_PCLOUD] Código de respuesta: %s", response.status_code)
-            
+
+            response = requests.get(url, params=params, timeout=(10, timeout))
             if response.status_code != 200:
-                _logger.error("[UPLOAD_PCLOUD] Error en la solicitud: %s", response.text)
+                _logger.warning(
+                    "[UPLOAD_PCLOUD] Verificación listfolder HTTP %s para %s",
+                    response.status_code,
+                    filename,
+                )
                 return False
-                
-            result = response.json()
-            _logger.info("[UPLOAD_PCLOUD] Respuesta: %s", result)
-            
-            if result.get('result') == 0 and result.get('metadata'):
-                metadata = result['metadata'][0]
-                file_id = metadata.get('fileid')
-                
-                if not file_id:
-                    _logger.error("[UPLOAD_PCLOUD] No se encontró file_id en la respuesta")
-                    return False
-                    
-                _logger.info("[UPLOAD_PCLOUD] Archivo subido exitosamente con ID: %s", file_id)
-                
-                # Obtener la URL pública del archivo
-                public_link = self._create_public_link(file_id, pcloud_config)
-                thumb_url = self._get_thumb_url(file_id, pcloud_config)
-                
-                # Obtener la URL de descarga
-                download_url = self._get_file_url(file_id, pcloud_config)
-                
-                if not download_url:
-                    _logger.error("[UPLOAD_PCLOUD] No se pudo obtener la URL de descarga")
-                    return False
-                    
-                return {
-                    'file_id': file_id,
-                    'url': download_url,
-                    'public_link': public_link,
-                    'thumb_url': thumb_url,
-                    'size': metadata.get('size'),
-                    'content_type': metadata.get('contenttype'),
-                    'created': metadata.get('created'),
-                    'modified': metadata.get('modified'),
-                    'thumb': metadata.get('thumb', False)
+
+            data = response.json() if response.content else {}
+            if data.get('result') != 0:
+                _logger.warning(
+                    "[UPLOAD_PCLOUD] Verificación listfolder result=%s error=%s",
+                    data.get('result'),
+                    data.get('error'),
+                )
+                return False
+
+            contents = data.get('metadata', {}).get('contents', []) or []
+            for item in contents:
+                if item.get('isfolder'):
+                    continue
+                if item.get('name') != filename:
+                    continue
+
+                if expected_size is not None:
+                    try:
+                        remote_size = int(item.get('size') or 0)
+                        if remote_size != int(expected_size):
+                            continue
+                    except (TypeError, ValueError):
+                        continue
+
+                if item.get('fileid'):
+                    _logger.warning(
+                        "[UPLOAD_PCLOUD] Archivo encontrado tras fallo de red: %s | file_id=%s | size=%s",
+                        filename,
+                        item.get('fileid'),
+                        item.get('size'),
+                    )
+                    return item
+
+            return False
+
+        except requests.exceptions.RequestException as exc:
+            _logger.warning(
+                "[UPLOAD_PCLOUD] No se pudo verificar archivo %s después del fallo: %s",
+                filename,
+                exc,
+            )
+            return False
+        except Exception as exc:
+            _logger.warning(
+                "[UPLOAD_PCLOUD] Error verificando archivo %s: %s",
+                filename,
+                exc,
+            )
+            return False
+
+    def _pcloud_upload_result(self, metadata, pcloud_config):
+        """Normaliza la respuesta de una subida ya confirmada en pCloud.
+
+        Las URLs son complementarias: si alguna llamada de pCloud falla después de
+        haber subido el archivo, conservamos el file_id y no repetimos la subida.
+        """
+        metadata = metadata or {}
+        file_id = metadata.get('fileid')
+        if not file_id:
+            return False
+
+        public_link = False
+        thumb_url = False
+        download_url = False
+
+        try:
+            public_link = self._create_public_link(file_id, pcloud_config)
+        except Exception as exc:
+            _logger.warning("[UPLOAD_PCLOUD] No se pudo crear public_link file_id=%s: %s", file_id, exc)
+
+        try:
+            thumb_url = self._get_thumb_url(file_id, pcloud_config)
+        except Exception as exc:
+            _logger.warning("[UPLOAD_PCLOUD] No se pudo obtener thumb_url file_id=%s: %s", file_id, exc)
+
+        try:
+            download_url = self._get_file_url(file_id, pcloud_config)
+        except Exception as exc:
+            _logger.warning("[UPLOAD_PCLOUD] No se pudo obtener download_url file_id=%s: %s", file_id, exc)
+
+        if not download_url:
+            _logger.warning(
+                "[UPLOAD_PCLOUD] Archivo ya está en pCloud (file_id=%s), pero no se pudo generar URL de descarga ahora",
+                file_id,
+            )
+
+        return {
+            'file_id': file_id,
+            'url': download_url or False,
+            'public_link': public_link or False,
+            'thumb_url': thumb_url or False,
+            'size': metadata.get('size'),
+            'content_type': metadata.get('contenttype') or 'application/octet-stream',
+            'created': metadata.get('created'),
+            'modified': metadata.get('modified'),
+            'thumb': metadata.get('thumb', False),
+        }
+
+    def _upload_to_pcloud(self, archivo_binario, filename, folder_id, pcloud_config):
+        """Sube un archivo a pCloud con recuperación ante fallos temporales.
+
+        Maneja SSL EOF, timeout y cortes de conexión. Después de un fallo ambiguo
+        comprueba si pCloud alcanzó a guardar el archivo antes de reintentar.
+        """
+        _logger.info(
+            "[UPLOAD_PCLOUD] Iniciando subida | archivo=%s | folder_id=%s | size=%s",
+            filename,
+            folder_id,
+            len(archivo_binario or b''),
+        )
+
+        if not archivo_binario:
+            _logger.error("[UPLOAD_PCLOUD] Archivo vacío: %s", filename)
+            return False
+
+        if not pcloud_config or not pcloud_config.access_token or not pcloud_config.hostname:
+            _logger.error("[UPLOAD_PCLOUD] Configuración pCloud incompleta")
+            return False
+
+        url = f"{pcloud_config.hostname}/uploadfile"
+        expected_size = len(archivo_binario)
+        max_attempts = 3
+
+        params = {
+            'folderid': folder_id,
+            'nopartial': 1,
+            'renameifexists': 1,
+            'access_token': pcloud_config.access_token,
+        }
+
+        # Nunca registrar el token real.
+        safe_params = dict(params)
+        safe_params['access_token'] = '***'
+
+        retryable_errors = (
+            requests.exceptions.SSLError,
+            requests.exceptions.ConnectTimeout,
+            requests.exceptions.ReadTimeout,
+            requests.exceptions.ConnectionError,
+        )
+
+        for attempt in range(1, max_attempts + 1):
+            try:
+                _logger.info(
+                    "[UPLOAD_PCLOUD] Intento %s/%s | url=%s | params=%s",
+                    attempt,
+                    max_attempts,
+                    url,
+                    safe_params,
+                )
+
+                files = {
+                    'file': (filename, io.BytesIO(archivo_binario), 'application/octet-stream')
                 }
-                
-            else:
-                error_msg = result.get('error', 'Error desconocido')
-                _logger.error("[UPLOAD_PCLOUD] Error en respuesta: %s", error_msg)
+
+                response = requests.post(
+                    url,
+                    params=params,
+                    files=files,
+                    timeout=(15, 180),
+                )
+
+                _logger.info(
+                    "[UPLOAD_PCLOUD] HTTP %s | intento=%s/%s | archivo=%s",
+                    response.status_code,
+                    attempt,
+                    max_attempts,
+                    filename,
+                )
+
+                if response.status_code != 200:
+                    # En 5xx la operación puede haber quedado incierta.
+                    if response.status_code >= 500:
+                        recovered = self._find_pcloud_file(
+                            filename,
+                            folder_id,
+                            pcloud_config,
+                            expected_size=expected_size,
+                        )
+                        if recovered:
+                            return self._pcloud_upload_result(recovered, pcloud_config)
+
+                        if attempt < max_attempts:
+                            time.sleep(attempt * 1.5)
+                            continue
+
+                    _logger.error(
+                        "[UPLOAD_PCLOUD] Error HTTP %s: %s",
+                        response.status_code,
+                        (response.text or '')[:500],
+                    )
+                    return False
+
+                try:
+                    result = response.json() if response.content else {}
+                except ValueError:
+                    _logger.error(
+                        "[UPLOAD_PCLOUD] pCloud devolvió una respuesta no JSON: %s",
+                        (response.text or '')[:500],
+                    )
+                    return False
+
+                if result.get('result') == 0 and result.get('metadata'):
+                    metadata = result['metadata'][0]
+                    file_id = metadata.get('fileid')
+                    if not file_id:
+                        _logger.error("[UPLOAD_PCLOUD] Respuesta exitosa sin file_id")
+                        return False
+
+                    _logger.info(
+                        "[UPLOAD_PCLOUD] Archivo subido correctamente | file_id=%s | size=%s",
+                        file_id,
+                        metadata.get('size'),
+                    )
+                    return self._pcloud_upload_result(metadata, pcloud_config)
+
+                _logger.error(
+                    "[UPLOAD_PCLOUD] Error pCloud | result=%s | error=%s",
+                    result.get('result'),
+                    result.get('error', 'Error desconocido'),
+                )
                 return False
-                
-        except requests.exceptions.Timeout:
-            _logger.error("[UPLOAD_PCLOUD] Timeout durante la subida del archivo")
-            return False
-        except requests.exceptions.RequestException as e:
-            _logger.exception("[UPLOAD_PCLOUD] Error en la solicitud: %s", str(e))
-            return False
-        except Exception as e:
-            _logger.exception("[UPLOAD_PCLOUD] Error general: %s", str(e))
-            return False
+
+            except retryable_errors as exc:
+                _logger.warning(
+                    "[UPLOAD_PCLOUD] Fallo temporal %s | intento=%s/%s | archivo=%s | error=%s",
+                    exc.__class__.__name__,
+                    attempt,
+                    max_attempts,
+                    filename,
+                    exc,
+                )
+
+                # ReadTimeout/SSL EOF/ConnectionError pueden ocurrir después de que
+                # pCloud ya guardó el archivo. Verificamos antes de reintentar.
+                recovered = self._find_pcloud_file(
+                    filename,
+                    folder_id,
+                    pcloud_config,
+                    expected_size=expected_size,
+                )
+                if recovered:
+                    return self._pcloud_upload_result(recovered, pcloud_config)
+
+                if attempt < max_attempts:
+                    time.sleep(attempt * 1.5)
+                    continue
+
+                _logger.error(
+                    "[UPLOAD_PCLOUD] Se agotaron los reintentos para %s",
+                    filename,
+                )
+                return False
+
+            except requests.exceptions.RequestException as exc:
+                _logger.exception(
+                    "[UPLOAD_PCLOUD] Error HTTP no recuperable para %s: %s",
+                    filename,
+                    exc,
+                )
+                return False
+
+            except Exception as exc:
+                _logger.exception(
+                    "[UPLOAD_PCLOUD] Error inesperado para %s: %s",
+                    filename,
+                    exc,
+                )
+                return False
+
+        return False
 
 
 

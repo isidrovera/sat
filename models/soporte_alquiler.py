@@ -155,6 +155,54 @@ class TicketAlquiler(models.Model):
     description = fields.Text(tracking=True)
     informe_id = fields.Html(string='Notas de reparación')
 
+    # ============================================================
+    # AUTOMATIZACIÓN SAT — INTEGRACIÓN NO INVASIVA
+    # ============================================================
+    # Estos campos NO reemplazan el flujo actual del ticket.
+    # Sirven únicamente para trazabilidad, idempotencia y correlación
+    # con sat.automation.event.
+    automation_event_id = fields.Many2one(
+        'sat.automation.event',
+        string='Evento de automatización origen',
+        readonly=True,
+        copy=False,
+        index=True,
+        ondelete='set null',
+        tracking=True,
+    )
+    automation_source = fields.Char(
+        string='Origen automático',
+        readonly=True,
+        copy=False,
+        index=True,
+        tracking=True,
+    )
+    automation_event_type = fields.Char(
+        string='Tipo de evento automático',
+        readonly=True,
+        copy=False,
+        index=True,
+        tracking=True,
+    )
+    automation_last_event_at = fields.Datetime(
+        string='Último evento automático',
+        readonly=True,
+        copy=False,
+        index=True,
+    )
+    automation_last_event_uuid = fields.Char(
+        string='Último UUID de automatización',
+        readonly=True,
+        copy=False,
+        index=True,
+    )
+    automation_event_count = fields.Integer(
+        string='Eventos automáticos relacionados',
+        default=0,
+        readonly=True,
+        copy=False,
+    )
+
     estado = fields.Selection([
         ('nuevo', 'Nuevo'),
         ('proceso', 'Asignado'),
@@ -2072,6 +2120,619 @@ class TicketAlquiler(models.Model):
                 else:
                     selection_labels[field_name] = 'NA'
         return selection_labels
+
+    # ============================================================
+    # AUTOMATIZACIÓN SAT — PUENTE CON sat.automation.event
+    # ============================================================
+
+    @api.model
+    def automation_create_ticket(self, event):
+        """
+        Crea o relaciona un ticket desde sat.automation.event.
+
+        PRINCIPIOS:
+        - No reemplaza create(); usa el CRUD normal de ticket.alquiler.
+        - No asigna técnico ni agenda automáticamente.
+        - Evita duplicar tickets abiertos del mismo equipo/tipo de evento.
+        - Si encuentra un ticket relacionado, agrega evidencia al chatter.
+        - Conserva el evento original y registra logs detallados.
+        - La IA solamente interpreta/clasifica; este método aplica reglas Odoo.
+        """
+        if not event or not event.exists():
+            raise ValidationError(
+                _("No se recibió un evento de automatización válido.")
+            )
+
+        event.ensure_one()
+
+        _logger.info(
+            "[SAT AUTOMATION][TICKET][START] event_id=%s uuid=%s "
+            "source=%s type=%s equipment_id=%s serial=%s",
+            event.id,
+            event.event_uuid,
+            event.source,
+            event.event_type,
+            event.equipment_id.id if event.equipment_id else False,
+            event.serial_number,
+        )
+
+        allowed_event_types = {
+            'technical_issue',
+            'paper_jam',
+            'device_error',
+            'connectivity_issue',
+            'maintenance',
+            'equipment_offline',
+            'customer_request',
+        }
+
+        if event.event_type not in allowed_event_types:
+            message = _(
+                "El evento %(event)s no corresponde a una incidencia "
+                "que deba crear un ticket técnico."
+            ) % {'event': event.event_type or 'unknown'}
+
+            _logger.warning(
+                "[SAT AUTOMATION][TICKET][SKIP_TYPE] event_id=%s type=%s",
+                event.id,
+                event.event_type,
+            )
+
+            return {
+                'description': message,
+            }
+
+        # --------------------------------------------------------
+        # 1. Idempotencia absoluta por acción ya enlazada
+        # --------------------------------------------------------
+        if (
+            event.action_model == 'ticket.alquiler'
+            and event.action_record_id
+        ):
+            linked_ticket = self.browse(
+                event.action_record_id
+            ).exists()
+
+            if linked_ticket:
+                _logger.info(
+                    "[SAT AUTOMATION][TICKET][IDEMPOTENT_ACTION] "
+                    "event_id=%s ticket_id=%s",
+                    event.id,
+                    linked_ticket.id,
+                )
+
+                return {
+                    'model': 'ticket.alquiler',
+                    'record_id': linked_ticket.id,
+                    'description': _(
+                        "El evento ya estaba relacionado con el ticket %s."
+                    ) % linked_ticket.name,
+                }
+
+        # --------------------------------------------------------
+        # 2. Resolver equipo usando el motor central
+        # --------------------------------------------------------
+        if not event.equipment_id:
+            try:
+                event.resolve_equipment()
+            except Exception:
+                _logger.exception(
+                    "[SAT AUTOMATION][TICKET][RESOLVE_EQUIPMENT_ERROR] "
+                    "event_id=%s serial=%s",
+                    event.id,
+                    event.serial_number,
+                )
+
+        equipment = event.equipment_id.exists() if event.equipment_id else False
+
+        if not equipment:
+            _logger.warning(
+                "[SAT AUTOMATION][TICKET][NO_EQUIPMENT] "
+                "event_id=%s serial=%s",
+                event.id,
+                event.serial_number,
+            )
+            raise ValidationError(
+                _(
+                    "No se puede crear el ticket porque no se pudo "
+                    "identificar el equipo."
+                )
+            )
+
+        # --------------------------------------------------------
+        # 3. Idempotencia por automation_event_id
+        # --------------------------------------------------------
+        existing_by_event = self.search(
+            [('automation_event_id', '=', event.id)],
+            limit=1,
+        )
+
+        if existing_by_event:
+            _logger.info(
+                "[SAT AUTOMATION][TICKET][IDEMPOTENT_EVENT] "
+                "event_id=%s ticket_id=%s",
+                event.id,
+                existing_by_event.id,
+            )
+
+            return {
+                'model': 'ticket.alquiler',
+                'record_id': existing_by_event.id,
+                'description': _(
+                    "El evento ya había creado el ticket %s."
+                ) % existing_by_event.name,
+            }
+
+        # --------------------------------------------------------
+        # 4. Correlación con ticket abierto existente
+        # --------------------------------------------------------
+        related_ticket = self._automation_find_related_ticket(event)
+
+        if related_ticket:
+            self._automation_enrich_ticket(
+                related_ticket,
+                event,
+                relation_reason='same_equipment_event_type',
+            )
+
+            _logger.info(
+                "[SAT AUTOMATION][TICKET][RELATED] "
+                "event_id=%s ticket_id=%s ticket=%s",
+                event.id,
+                related_ticket.id,
+                related_ticket.name,
+            )
+
+            return {
+                'model': 'ticket.alquiler',
+                'record_id': related_ticket.id,
+                'description': _(
+                    "Evento relacionado con ticket abierto %s; "
+                    "se agregó la evidencia al chatter."
+                ) % related_ticket.name,
+            }
+
+        # --------------------------------------------------------
+        # 5. Cliente
+        # --------------------------------------------------------
+        partner = event.partner_id
+
+        if (
+            not partner
+            and 'cliente_id' in equipment._fields
+            and equipment.cliente_id
+        ):
+            partner = equipment.cliente_id
+
+        # --------------------------------------------------------
+        # 6. Contacto / remitente
+        # --------------------------------------------------------
+        contact = event.contact_id
+        reporter_name = False
+        reporter_phone = False
+        reporter_email = False
+
+        if contact:
+            reporter_name = contact.name or False
+            reporter_phone = (
+                contact.mobile
+                or contact.phone
+                or False
+            )
+            reporter_email = contact.email or False
+
+        if not reporter_name and event.sender:
+            reporter_name = self._automation_sender_display_name(
+                event.sender
+            )
+
+        if not reporter_email and event.sender:
+            reporter_email = self._automation_extract_email(
+                event.sender
+            )
+
+        # --------------------------------------------------------
+        # 7. Construir descripción técnica SIN inventar diagnóstico
+        # --------------------------------------------------------
+        description = self._automation_build_ticket_description(event)
+
+        # El tipo de servicio más conservador para una incidencia
+        # automática es "revision". No se fuerza correctivo hasta que
+        # la lógica/usuario determine el trabajo a realizar.
+        tipo_servicio = 'revision'
+
+        if event.event_type == 'maintenance':
+            tipo_servicio = 'mantenimiento_preventivo'
+
+        vals = {
+            'product_alquiler': equipment.id,
+            'partner_id': partner.id if partner else False,
+            'description': description,
+            'tipo_servicio_id': tipo_servicio,
+            'estado': 'nuevo',
+            'priority': '1',
+            'reporter_name': reporter_name or False,
+            'reporter_phone': reporter_phone or False,
+            'corre_id_r': reporter_email or False,
+            'automation_event_id': event.id,
+            'automation_source': event.source or False,
+            'automation_event_type': event.event_type or False,
+            'automation_last_event_at': (
+                event.event_datetime
+                or fields.Datetime.now()
+            ),
+            'automation_last_event_uuid': event.event_uuid or False,
+            'automation_event_count': 1,
+        }
+
+        # Datos del equipo que ya existen en alquiler.
+        # Solo se copian cuando el campo de destino está vacío/independiente.
+        if 'direccion' in equipment._fields and equipment.direccion:
+            vals['direccion_id_r'] = equipment.direccion
+
+        if 'contacto_id' in equipment._fields and equipment.contacto_id:
+            vals['contacto_id_r'] = equipment.contacto_id
+
+        if 'celular' in equipment._fields and equipment.celular:
+            vals['celular_id_r'] = equipment.celular
+
+        if (
+            not vals.get('corre_id_r')
+            and 'correo_' in equipment._fields
+            and equipment.correo_
+        ):
+            vals['corre_id_r'] = equipment.correo_
+
+        _logger.info(
+            "[SAT AUTOMATION][TICKET][CREATE] event_id=%s "
+            "equipment_id=%s partner_id=%s tipo_servicio=%s",
+            event.id,
+            equipment.id,
+            partner.id if partner else False,
+            tipo_servicio,
+        )
+
+        # IMPORTANTE:
+        # Se usa create() normal para conservar:
+        # - secuencia;
+        # - validaciones;
+        # - auto-carga de evaluaciones;
+        # - cualquier lógica actual/futura del modelo.
+        ticket = self.sudo().create(vals)
+
+        self._automation_post_event_chatter(
+            ticket,
+            event,
+            created=True,
+        )
+
+        try:
+            equipment.message_post(
+                body=_(
+                    "🤖 <b>Ticket técnico creado automáticamente</b><br/>"
+                    "<b>Ticket:</b> %(ticket)s<br/>"
+                    "<b>Evento:</b> %(event)s<br/>"
+                    "<b>Origen:</b> %(source)s"
+                ) % {
+                    'ticket': ticket.name,
+                    'event': event.event_type or 'unknown',
+                    'source': event.source or 'unknown',
+                },
+                message_type='notification',
+                subtype_xmlid='mail.mt_note',
+            )
+        except Exception:
+            # Chatter nunca debe impedir la creación del ticket.
+            _logger.exception(
+                "[SAT AUTOMATION][TICKET][EQUIPMENT_CHATTER_ERROR] "
+                "ticket_id=%s equipment_id=%s",
+                ticket.id,
+                equipment.id,
+            )
+
+        _logger.info(
+            "[SAT AUTOMATION][TICKET][CREATED] "
+            "event_id=%s ticket_id=%s ticket=%s",
+            event.id,
+            ticket.id,
+            ticket.name,
+        )
+
+        return {
+            'model': 'ticket.alquiler',
+            'record_id': ticket.id,
+            'description': _(
+                "Ticket %s creado automáticamente."
+            ) % ticket.name,
+        }
+
+    @api.model
+    def _automation_find_related_ticket(self, event):
+        """
+        Busca un ticket abierto realmente correlacionable.
+
+        No usa solamente "mismo equipo", porque un equipo puede tener
+        incidencias diferentes. La correlación automática exige:
+        - mismo equipo;
+        - ticket no finalizado;
+        - mismo automation_event_type;
+        - creado/actualizado dentro de una ventana reciente.
+
+        Los tickets legacy sin automation_event_type NO se unen
+        automáticamente para evitar falsos positivos.
+        """
+        if not event or not event.equipment_id:
+            return self.browse()
+
+        open_states = [
+            'nuevo',
+            'proceso',
+            'en_ruta',
+            'en_sitio',
+            'en_revision',
+        ]
+
+        cutoff = fields.Datetime.subtract(
+            event.event_datetime or fields.Datetime.now(),
+            hours=24,
+        )
+
+        domain = [
+            ('product_alquiler', '=', event.equipment_id.id),
+            ('estado', 'in', open_states),
+            ('automation_event_type', '=', event.event_type),
+            '|',
+            ('automation_last_event_at', '>=', cutoff),
+            '&',
+            ('automation_last_event_at', '=', False),
+            ('create_date', '>=', cutoff),
+        ]
+
+        ticket = self.search(
+            domain,
+            order='automation_last_event_at desc, create_date desc, id desc',
+            limit=1,
+        )
+
+        _logger.info(
+            "[SAT AUTOMATION][TICKET][SEARCH_RELATED] "
+            "event_id=%s equipment_id=%s type=%s cutoff=%s result=%s",
+            event.id,
+            event.equipment_id.id,
+            event.event_type,
+            cutoff,
+            ticket.id if ticket else False,
+        )
+
+        return ticket
+
+    @api.model
+    def _automation_enrich_ticket(
+        self,
+        ticket,
+        event,
+        relation_reason=None,
+    ):
+        """
+        Agrega una nueva evidencia a un ticket existente.
+
+        No reemplaza description ni informe_id.
+        La evidencia adicional queda en chatter para preservar
+        el historial original del ticket.
+        """
+        if not ticket or not ticket.exists():
+            return False
+
+        # Evitar contar dos veces exactamente el mismo UUID.
+        if (
+            event.event_uuid
+            and ticket.automation_last_event_uuid == event.event_uuid
+        ):
+            _logger.info(
+                "[SAT AUTOMATION][TICKET][ENRICH_SKIP_DUPLICATE] "
+                "ticket_id=%s event_uuid=%s",
+                ticket.id,
+                event.event_uuid,
+            )
+            return True
+
+        ticket.sudo().write({
+            'automation_last_event_at': (
+                event.event_datetime
+                or fields.Datetime.now()
+            ),
+            'automation_last_event_uuid': event.event_uuid or False,
+            'automation_event_count': (
+                int(ticket.automation_event_count or 0) + 1
+            ),
+        })
+
+        self._automation_post_event_chatter(
+            ticket,
+            event,
+            created=False,
+            relation_reason=relation_reason,
+        )
+
+        _logger.info(
+            "[SAT AUTOMATION][TICKET][ENRICHED] "
+            "ticket_id=%s event_id=%s count=%s",
+            ticket.id,
+            event.id,
+            ticket.automation_event_count,
+        )
+
+        return True
+
+    @api.model
+    def _automation_post_event_chatter(
+        self,
+        ticket,
+        event,
+        created=False,
+        relation_reason=None,
+    ):
+        """
+        Registra la evidencia del evento en chatter.
+        Fallar al escribir chatter NO debe revertir el ticket.
+        """
+        try:
+            parts = [
+                (
+                    "🤖 <b>Ticket creado desde automatización SAT</b>"
+                    if created
+                    else "🔗 <b>Nuevo evento automático relacionado</b>"
+                ),
+                "<b>Origen:</b> %s" % (event.source or '—'),
+                "<b>Tipo:</b> %s" % (event.event_type or '—'),
+                "<b>UUID:</b> %s" % (event.event_uuid or '—'),
+            ]
+
+            if event.subject:
+                parts.append(
+                    "<b>Asunto:</b> %s" % event.subject
+                )
+
+            if event.sender:
+                parts.append(
+                    "<b>Remitente:</b> %s" % event.sender
+                )
+
+            if event.issue_description:
+                parts.append(
+                    "<b>Incidencia:</b> %s"
+                    % event.issue_description
+                )
+
+            if event.error_code:
+                parts.append(
+                    "<b>Código:</b> %s"
+                    % event.error_code
+                )
+
+            if event.location_detected:
+                parts.append(
+                    "<b>Ubicación detectada:</b> %s"
+                    % event.location_detected
+                )
+
+            if relation_reason:
+                parts.append(
+                    "<b>Correlación:</b> %s"
+                    % relation_reason
+                )
+
+            ticket.message_post(
+                body="<br/>".join(parts),
+                message_type='notification',
+                subtype_xmlid='mail.mt_note',
+            )
+
+            return True
+
+        except Exception:
+            _logger.exception(
+                "[SAT AUTOMATION][TICKET][CHATTER_ERROR] "
+                "ticket_id=%s event_id=%s",
+                ticket.id if ticket else False,
+                event.id if event else False,
+            )
+            return False
+
+    @api.model
+    def _automation_build_ticket_description(self, event):
+        """
+        Construye una descripción legible usando únicamente datos
+        existentes en el evento. No inventa diagnóstico ni solución.
+        """
+        labels = {
+            'technical_issue': 'Incidencia técnica',
+            'paper_jam': 'Atasco de papel',
+            'device_error': 'Error del equipo',
+            'connectivity_issue': 'Problema de conectividad',
+            'maintenance': 'Mantenimiento',
+            'equipment_offline': 'Equipo sin conexión',
+            'customer_request': 'Solicitud del cliente',
+        }
+
+        lines = [
+            labels.get(
+                event.event_type,
+                event.event_type or 'Incidencia técnica',
+            )
+        ]
+
+        if event.issue_description:
+            lines.append(event.issue_description)
+
+        if event.error_code:
+            lines.append(
+                "Código de error: %s" % event.error_code
+            )
+
+        if event.location_detected:
+            lines.append(
+                "Ubicación detectada: %s"
+                % event.location_detected
+            )
+
+        if event.subject:
+            lines.append(
+                "Asunto original: %s" % event.subject
+            )
+
+        if event.sender:
+            lines.append(
+                "Reportado por: %s" % event.sender
+            )
+
+        lines.append(
+            "Origen automático: %s"
+            % (event.source or 'unknown')
+        )
+
+        lines.append(
+            "Evento SAT: %s"
+            % (event.event_uuid or event.id)
+        )
+
+        return "\n".join(
+            line for line in lines if line
+        )
+
+    @api.model
+    def _automation_extract_email(self, sender):
+        if not sender:
+            return False
+
+        value = str(sender).strip()
+
+        if '<' in value and '>' in value:
+            value = (
+                value.split('<', 1)[1]
+                .split('>', 1)[0]
+                .strip()
+            )
+
+        return value if '@' in value else False
+
+    @api.model
+    def _automation_sender_display_name(self, sender):
+        if not sender:
+            return False
+
+        value = str(sender).strip()
+
+        if '<' in value:
+            name = value.split('<', 1)[0].strip().strip('"')
+            if name:
+                return name
+
+        email = self._automation_extract_email(value)
+        if email:
+            return email.split('@', 1)[0]
+
+        return value
 
     def create_ticket_wizard(self):
         return {

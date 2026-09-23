@@ -41,6 +41,24 @@ class UnidadAlquiler(models.Model):
     contador_scan = fields.Integer(string="Contador Escáner", tracking=True)
     fecha_ultima_actualizacion = fields.Datetime(string="Fecha de última actualización")
 
+    # ============================================================
+    # AUTOMATIZACIÓN SAT — TRAZABILIDAD DE CONTADORES
+    # ============================================================
+    automation_last_meter_event_id = fields.Many2one(
+        'sat.automation.event',
+        string='Último evento automático de contador',
+        readonly=True,
+        copy=False,
+        index=True,
+        ondelete='set null',
+    )
+    automation_last_meter_event_uuid = fields.Char(
+        string='UUID último evento de contador',
+        readonly=True,
+        copy=False,
+        index=True,
+    )
+
     has_auto_counters = fields.Boolean(
         string='Tiene contadores automáticos',
         compute='_compute_has_auto_counters',
@@ -265,6 +283,257 @@ class UnidadAlquiler(models.Model):
             'type': 'ir.actions.act_window',
             'target': 'current',
 
+        }
+
+    @api.model
+    def automation_apply_meter_event(self, event):
+        """
+        Aplica un sat.automation.event de tipo meter_reading al equipo.
+
+        Reglas de seguridad:
+        - No acepta lecturas antiguas fuera de la ventana configurable.
+        - No acepta un evento anterior a fecha_ultima_actualizacion.
+        - No reduce contadores existentes automáticamente.
+        - No usa pt_last_sync como fecha del contador.
+        - Si existe una inconsistencia, envía el evento a revisión manual.
+        - El mismo evento central es idempotente.
+        """
+        if not event or not event.exists():
+            raise ValidationError("El evento de automatización no existe.")
+
+        event.ensure_one()
+
+        _logger.info(
+            "[SAT AUTOMATION][METER][START] event_id=%s uuid=%s "
+            "equipment_id=%s serial=%s bn=%s color=%s scan=%s date=%s",
+            event.id,
+            event.event_uuid,
+            event.equipment_id.id if event.equipment_id else False,
+            event.serial_number,
+            event.meter_bn,
+            event.meter_color,
+            event.meter_scan,
+            event.event_datetime,
+        )
+
+        if event.event_type != 'meter_reading':
+            raise ValidationError(
+                "El evento %s no es una lectura de contador."
+                % (event.event_type or 'unknown')
+            )
+
+        equipment = event.equipment_id
+
+        if not equipment and event.serial_number:
+            candidates = self.sudo().search(
+                [('serie', '=ilike', event.serial_number.strip())],
+                limit=2,
+            )
+            if len(candidates) == 1:
+                equipment = candidates
+
+        if not equipment:
+            event.mark_review(
+                "No se pudo identificar de forma única el equipo "
+                "para aplicar la lectura de contador."
+            )
+            return {
+                'description': (
+                    "Lectura enviada a revisión: equipo no identificado."
+                )
+            }
+
+        # Idempotencia por el último UUID aplicado al equipo.
+        if (
+            event.event_uuid
+            and equipment.automation_last_meter_event_uuid == event.event_uuid
+        ):
+            _logger.info(
+                "[SAT AUTOMATION][METER][IDEMPOTENT] "
+                "event_id=%s equipment_id=%s",
+                event.id,
+                equipment.id,
+            )
+            return {
+                'model': 'alquiler',
+                'record_id': equipment.id,
+                'description': (
+                    "La lectura ya había sido aplicada al equipo %s."
+                    % equipment.serie
+                ),
+            }
+
+        now = fields.Datetime.now()
+        event_dt = fields.Datetime.to_datetime(
+            event.event_datetime or now
+        )
+
+        ICP = self.env['ir.config_parameter'].sudo()
+        try:
+            max_age_days = int(
+                ICP.get_param(
+                    'sat.automation.meter_max_age_days',
+                    default='7',
+                )
+                or 7
+            )
+        except (TypeError, ValueError):
+            max_age_days = 7
+
+        if max_age_days < 1:
+            max_age_days = 1
+
+        cutoff = now - timedelta(days=max_age_days)
+
+        if event_dt < cutoff:
+            reason = (
+                "Lectura demasiado antigua: %s. "
+                "La ventana automática es de %s días."
+                % (event_dt, max_age_days)
+            )
+            _logger.warning(
+                "[SAT AUTOMATION][METER][OLD_READING] "
+                "event_id=%s equipment_id=%s event_date=%s cutoff=%s",
+                event.id,
+                equipment.id,
+                event_dt,
+                cutoff,
+            )
+            event.mark_review(reason)
+            return {'description': reason}
+
+        last_dt = False
+        if equipment.fecha_ultima_actualizacion:
+            try:
+                last_dt = fields.Datetime.to_datetime(
+                    equipment.fecha_ultima_actualizacion
+                )
+            except (TypeError, ValueError):
+                _logger.warning(
+                    "[SAT AUTOMATION][METER][BAD_LAST_DATE] "
+                    "equipment_id=%s value=%s",
+                    equipment.id,
+                    equipment.fecha_ultima_actualizacion,
+                )
+
+        if last_dt and event_dt < last_dt:
+            reason = (
+                "La lectura (%s) es anterior a la última actualización "
+                "del equipo (%s)."
+                % (event_dt, last_dt)
+            )
+            _logger.warning(
+                "[SAT AUTOMATION][METER][OUT_OF_ORDER] "
+                "event_id=%s equipment_id=%s event_date=%s last_date=%s",
+                event.id,
+                equipment.id,
+                event_dt,
+                last_dt,
+            )
+            event.mark_review(reason)
+            return {'description': reason}
+
+        incoming = {
+            'contador_bn': int(event.meter_bn or 0),
+            'contador_color': int(event.meter_color or 0),
+            'contador_scan': int(event.meter_scan or 0),
+        }
+
+        provided = {
+            field_name: value
+            for field_name, value in incoming.items()
+            if value > 0
+        }
+
+        if not provided:
+            reason = "El evento no contiene contadores positivos válidos."
+            event.mark_review(reason)
+            return {'description': reason}
+
+        decreases = []
+        vals = {}
+
+        for field_name, new_value in provided.items():
+            current_value = int(equipment[field_name] or 0)
+
+            if current_value > 0 and new_value < current_value:
+                decreases.append(
+                    "%s: %s → %s"
+                    % (field_name, current_value, new_value)
+                )
+                continue
+
+            if new_value != current_value:
+                vals[field_name] = new_value
+
+        if decreases:
+            reason = (
+                "Se detectaron contadores decrecientes. "
+                "No se actualizaron automáticamente: %s"
+                % "; ".join(decreases)
+            )
+            _logger.warning(
+                "[SAT AUTOMATION][METER][DECREASE] "
+                "event_id=%s equipment_id=%s details=%s",
+                event.id,
+                equipment.id,
+                decreases,
+            )
+            event.mark_review(reason)
+            return {'description': reason}
+
+        # Una lectura más reciente confirma la vigencia incluso cuando
+        # el valor no cambió.
+        vals['fecha_ultima_actualizacion'] = event_dt
+        vals['automation_last_meter_event_id'] = event.id
+        vals['automation_last_meter_event_uuid'] = event.event_uuid or False
+
+        equipment.sudo().write(vals)
+
+        try:
+            equipment.message_post(
+                body=(
+                    "📊 <b>Contadores actualizados por automatización SAT</b><br/>"
+                    "<b>Origen:</b> %s<br/>"
+                    "<b>Evento:</b> %s<br/>"
+                    "<b>B/N:</b> %s<br/>"
+                    "<b>Color:</b> %s<br/>"
+                    "<b>Scan:</b> %s<br/>"
+                    "<b>Fecha lectura:</b> %s"
+                ) % (
+                    event.source or '—',
+                    event.event_uuid or event.id,
+                    provided.get('contador_bn', '—'),
+                    provided.get('contador_color', '—'),
+                    provided.get('contador_scan', '—'),
+                    event_dt,
+                ),
+                message_type='notification',
+                subtype_xmlid='mail.mt_note',
+            )
+        except Exception:
+            _logger.exception(
+                "[SAT AUTOMATION][METER][CHATTER_ERROR] "
+                "event_id=%s equipment_id=%s",
+                event.id,
+                equipment.id,
+            )
+
+        _logger.info(
+            "[SAT AUTOMATION][METER][APPLIED] "
+            "event_id=%s equipment_id=%s vals=%s",
+            event.id,
+            equipment.id,
+            vals,
+        )
+
+        return {
+            'model': 'alquiler',
+            'record_id': equipment.id,
+            'description': (
+                "Contadores aplicados al equipo %s."
+                % equipment.serie
+            ),
         }
 
     def create_ticket(self):

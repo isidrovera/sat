@@ -208,39 +208,55 @@ class GalleryController(http.Controller):
             if not folder_id:
                 return self._json({'success': False, 'error': 'No se pudo obtener carpeta'}, status=500)
 
-            upload_url = f"{pconf.hostname}/uploadfile"
-
-            files_payload = {
-                'file': (file.filename, file.stream, file.mimetype)
-            }
-
-            data_payload = {
-                'access_token': pconf.access_token,
-                'folderid': folder_id,
-                'renameifexists': 1,
-                'nopartial': 1,
-            }
-
-            _logger.info("[PCL_UPLOAD_DIRECT] Subiendo %s a folder %s", file.filename, folder_id)
-
-            r = requests.post(upload_url, files=files_payload, data=data_payload, timeout=90)
-
-            j = r.json() if r.content else {}
-
-            if r.status_code != 200 or j.get('result') != 0:
-
-                _logger.error("[PCL_UPLOAD_DIRECT] Error pCloud: %s", j)
-
-                return self._json({'success': False, 'error': 'Error pCloud'}, status=502)
-
-            meta = (j.get('metadata') or [{}])[0]
-
-            file_id = meta.get('fileid')
-
-            if not file_id:
-                return self._json({'success': False, 'error': 'pCloud no devolvió fileid'}, status=502)
-
             Foto = request.env['reparaciones.foto'].sudo()
+
+            # Centralizamos la subida en el modelo para que la web y la app usen
+            # exactamente el mismo manejo de SSL EOF, timeout, reintentos y
+            # recuperación antiduplícados.
+            try:
+                file.stream.seek(0)
+            except Exception:
+                pass
+
+            archivo_binario = file.stream.read()
+            if not archivo_binario:
+                return self._json({
+                    'success': False,
+                    'code': 'EMPTY_FILE',
+                    'error': 'El archivo recibido está vacío',
+                }, status=400)
+
+            _logger.info(
+                "[PCL_UPLOAD_DIRECT] Subiendo %s a folder %s | size=%s",
+                file.filename,
+                folder_id,
+                len(archivo_binario),
+            )
+
+            upload_result = Foto._upload_to_pcloud(
+                archivo_binario,
+                file.filename,
+                folder_id,
+                pconf,
+            )
+
+            if not upload_result or not upload_result.get('file_id'):
+                _logger.error(
+                    "[PCL_UPLOAD_DIRECT] No se pudo confirmar subida a pCloud: %s",
+                    file.filename,
+                )
+                return self._json({
+                    'success': False,
+                    'code': 'PCLOUD_TEMPORARY_ERROR',
+                    'retryable': True,
+                    'error': 'No se pudo confirmar la subida a pCloud. Puede reintentarse.',
+                }, status=502)
+
+            file_id = upload_result['file_id']
+            meta = {
+                'size': upload_result.get('size') or len(archivo_binario),
+                'contenttype': upload_result.get('content_type') or file.mimetype or 'image/jpeg',
+            }
 
             # -------------------------
             # CREATE CON RETRY
@@ -280,25 +296,21 @@ class GalleryController(http.Controller):
                     time.sleep(0.2)
 
             # -------------------------
-            # GENERAR URLs
+            # GUARDAR URLs YA OBTENIDAS
             # -------------------------
             try:
-
-                file_url = rec._get_file_url(rec.file_id, pconf)
-                thumb_url = rec._get_thumb_url(rec.file_id, pconf)
-                public_link = rec._create_public_link(rec.file_id, pconf)
-
                 rec.write({
-                    'url_foto': file_url,
-                    'thumb_url': thumb_url,
-                    'public_link': public_link or False,
+                    'url_foto': upload_result.get('url') or False,
+                    'thumb_url': upload_result.get('thumb_url') or False,
+                    'public_link': upload_result.get('public_link') or False,
                 })
 
                 _logger.info("[PCL_UPLOAD_DIRECT] URLs guardadas para foto %s", rec.id)
 
             except Exception as e:
-
-                _logger.warning("[PCL_UPLOAD_DIRECT] No se pudieron generar URLs: %s", e)
+                # El file_id ya quedó confirmado. Un fallo al guardar URLs no debe
+                # provocar una segunda subida del mismo archivo.
+                _logger.warning("[PCL_UPLOAD_DIRECT] No se pudieron guardar URLs: %s", e)
 
             _logger.info(
                 "[PCL_UPLOAD_DIRECT] OK -> foto_id=%s file_id=%s seq=%s",

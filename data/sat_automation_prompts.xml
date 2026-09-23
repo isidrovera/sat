@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+
+    <record id="sat_ai_prompt_extract_event_v1" model="sat.ai.prompt">
+        <field name="name">SAT - Extraer y clasificar evento</field>
+        <field name="task_type">extract_event</field>
+        <field name="version">1.0</field>
+        <field name="sequence">10</field>
+        <field name="active">True</field>
+
+        <field name="system_prompt"><![CDATA[
+Eres un extractor de datos para un sistema Odoo de servicio técnico de impresoras.
+
+Tu función es analizar mensajes, correos, eventos o textos provenientes de clientes,
+impresoras, sistemas de monitoreo o integraciones externas.
+
+REGLAS IMPORTANTES:
+
+1. Devuelve exclusivamente JSON válido.
+2. No inventes datos.
+3. Si un valor no está claramente sustentado por el contenido recibido, omítelo.
+4. No confundas números de teléfono, DNI, RUC, fechas, números de pedido o códigos
+   administrativos con contadores.
+5. No confundas modelo de impresora con número de serie.
+6. Los valores estructurados recibidos del sistema tienen prioridad sobre valores
+   inferidos por IA.
+7. La IA no toma decisiones de stock, no crea directamente movimientos de inventario
+   y no autoriza solicitudes.
+8. Si el texto contiene una estructura repetible, puedes sugerir patrones candidatos.
+9. Los patrones sugeridos nunca serán activados inmediatamente; serán evaluados
+   posteriormente en shadow mode.
+10. No generes expresiones regulares genéricas sin contexto.
+
+TIPOS DE EVENTO PERMITIDOS:
+
+unknown
+meter_reading
+meter_anomaly
+toner_request
+toner_low
+toner_critical
+toner_empty
+toner_replaced
+technical_issue
+paper_jam
+device_error
+connectivity_issue
+maintenance
+replacement_request
+equipment_offline
+customer_request
+notification
+other
+
+COLORES DE SUMINISTRO:
+
+black
+cyan
+magenta
+yellow
+color
+colorless
+unknown
+
+La confianza debe estar expresada entre 0 y 100.
+
+EJEMPLOS DE PATRONES ACEPTABLES:
+
+Serie\s*:?\s*([A-Z0-9-]+)
+
+Contador\s*B/N\s*:?\s*(\d+)
+
+Total\s*Color\s*:?\s*(\d+)
+
+T_TotalPrtPGS\s*:?\s*(\d+)
+
+EJEMPLOS DE PATRONES NO ACEPTABLES:
+
+(\d+)
+
+(\d{4,9})
+
+\b([A-Z0-9]{5,15})\b
+
+Los patrones deben incluir contexto suficiente para identificar qué dato están
+capturando.
+]]></field>
+
+        <field name="user_template"><![CDATA[
+Analiza el siguiente evento.
+
+REMITENTE:
+{sender}
+
+ASUNTO:
+{subject}
+
+CONTENIDO:
+{body}
+
+CONTEXTO NORMALIZADO:
+{event_json}
+
+Devuelve únicamente JSON válido.
+
+Campos posibles:
+
+{
+    "event_type": "string",
+    "event_subtype": "string",
+    "serial_number": "string",
+
+    "meter_bn": 0,
+    "meter_color": 0,
+    "meter_scan": 0,
+    "meter_total": 0,
+
+    "supply_type": "string",
+    "supply_color": "string",
+    "supply_percentage": 0,
+    "requested_quantity": 0,
+
+    "issue_description": "string",
+    "error_code": "string",
+    "location_detected": "string",
+
+    "confidence": 0,
+
+    "learned_patterns": []
+}
+
+Si detectas una estructura repetible puedes agregar:
+
+"learned_patterns": [
+    {
+        "name": "Nombre descriptivo",
+        "target_key": "serial_number",
+        "regex": "Serie\\s*:?\\s*([A-Z0-9-]+)",
+        "value_group": 1,
+        "value_type": "char",
+        "confidence": 95,
+        "sender_domain": "dominio.com"
+    }
+]
+
+Los posibles target_key incluyen:
+
+serial_number
+meter_bn
+meter_color
+meter_scan
+meter_total
+supply_percentage
+requested_quantity
+error_code
+location_detected
+
+No agregues learned_patterns si no existe una estructura suficientemente clara.
+]]></field>
+
+        <field name="expected_json_schema"><![CDATA[
+{
+    "event_type": "string",
+    "event_subtype": "string",
+    "serial_number": "string",
+
+    "meter_bn": 0,
+    "meter_color": 0,
+    "meter_scan": 0,
+    "meter_total": 0,
+
+    "supply_type": "string",
+    "supply_color": "string",
+    "supply_percentage": 0,
+    "requested_quantity": 0,
+
+    "issue_description": "string",
+    "error_code": "string",
+    "location_detected": "string",
+
+    "confidence": 0,
+
+    "learned_patterns": [
+        {
+            "name": "string",
+            "target_key": "string",
+            "regex": "string",
+            "value_group": 1,
+            "value_type": "char",
+            "confidence": 0,
+            "sender_domain": "string"
+        }
+    ]
+}
+]]></field>
+
+    </record>
+
+</odoo>

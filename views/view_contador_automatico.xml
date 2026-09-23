@@ -64,7 +64,7 @@
                 <!-- Header con botones principales -->
                 <header>
                     <button name="procesar_correo_inteligente" 
-                            string="🧠 Procesar Inteligente" 
+                            string="▶ Procesar" 
                             type="object" 
                             class="btn-primary"
                             invisible="estado in ['procesado']"/>
@@ -93,10 +93,10 @@
                             🤖 Procesado Automáticamente
                         </span>
                         <span class="badge text-bg-info" invisible="not requiere_aprendizaje">
-                            🎓 Requiere Aprendizaje
+                            🧪 En aprendizaje
                         </span>
                         <span class="badge text-bg-warning" invisible="not aprendizaje_completado">
-                            ✅ Aprendizaje Completado
+                            ✅ Aprendizaje registrado
                         </span>
                     </div>
 
@@ -127,8 +127,8 @@
                             </group>
                         </page>
 
-                        <!-- Pestaña: Análisis Inteligente -->
-                        <page string="🧠 Análisis Inteligente" name="inteligente">
+                        <!-- Pestaña: Análisis del procesamiento -->
+                        <page string="🔎 Análisis" name="inteligente">
                             <group>
                                 <group string="Detección Automática">
                                     <field name="idioma_detectado" readonly="1"/>
@@ -207,8 +207,8 @@
                 <!-- Filtros sistema inteligente -->
                 <separator/>
                 <filter string="🤖 Procesado Automáticamente" name="automaticos" domain="[('procesado_automaticamente', '=', True)]"/>
-                <filter string="🎓 Requiere Aprendizaje" name="requiere_aprendizaje" domain="[('requiere_aprendizaje', '=', True)]"/>
-                <filter string="✅ Aprendizaje Completado" name="aprendizaje_completado" domain="[('aprendizaje_completado', '=', True)]"/>
+                <filter string="🧪 En aprendizaje" name="requiere_aprendizaje" domain="[('requiere_aprendizaje', '=', True)]"/>
+                <filter string="✅ Aprendizaje registrado" name="aprendizaje_completado" domain="[('aprendizaje_completado', '=', True)]"/>
                 
                 <!-- Filtros por marca/idioma -->
                 <separator/>

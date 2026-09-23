@@ -1,0 +1,585 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data>
+
+    <!-- ============================================================ -->
+    <!-- EVENTOS DE AUTOMATIZACIÓN                                    -->
+    <!-- ============================================================ -->
+    <record id="view_sat_automation_event_list" model="ir.ui.view">
+      <field name="name">sat.automation.event.list</field>
+      <field name="model">sat.automation.event</field>
+      <field name="arch" type="xml">
+        <list string="Eventos de Automatización"
+              decoration-success="state == 'done'"
+              decoration-warning="state == 'review'"
+              decoration-danger="state == 'error'"
+              decoration-muted="state in ('ignored','cancelled')">
+          <field name="event_datetime" string="Fecha"/>
+          <field name="source" string="Origen"/>
+          <field name="event_type" string="Tipo"/>
+          <field name="partner_id" string="Cliente" optional="show"/>
+          <field name="equipment_id" string="Equipo" optional="show"/>
+          <field name="serial_number" string="Serie" optional="show"/>
+          <field name="classification_method" string="Método" optional="show"/>
+          <field name="pattern_confidence" string="Conf. patrón" optional="hide"/>
+          <field name="ai_used" string="IA" optional="show"/>
+          <field name="ai_confidence" string="Conf. IA" optional="hide"/>
+          <field name="action_type" string="Acción" optional="show"/>
+          <field name="state" string="Estado"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_automation_event_form" model="ir.ui.view">
+      <field name="name">sat.automation.event.form</field>
+      <field name="model">sat.automation.event</field>
+      <field name="arch" type="xml">
+        <form string="Evento de Automatización">
+          <header>
+            <button name="action_retry" type="object" string="Reprocesar"
+                    class="btn-primary"
+                    invisible="state not in ('new','review','error')"/>
+            <button name="action_ignore" type="object" string="Ignorar"
+                    class="btn-secondary"
+                    invisible="state in ('done','ignored','cancelled')"/>
+            <button name="action_cancel" type="object" string="Cancelar"
+                    invisible="state in ('done','cancelled')"/>
+            <field name="state" widget="statusbar"
+                   statusbar_visible="new,classified,processing,review,done,error"/>
+          </header>
+          <sheet>
+            <div class="oe_title">
+              <h1><field name="name" readonly="1"/></h1>
+            </div>
+
+            <group>
+              <group string="Origen">
+                <field name="event_uuid" readonly="1"/>
+                <field name="source"/>
+                <field name="source_subtype"/>
+                <field name="event_datetime"/>
+                <field name="source_model" readonly="1"/>
+                <field name="source_record_id" readonly="1"/>
+              </group>
+              <group string="Clasificación">
+                <field name="event_type"/>
+                <field name="event_subtype"/>
+                <field name="classification_method" readonly="1"/>
+                <field name="requires_review" readonly="1"/>
+                <field name="review_reason" readonly="1" invisible="not requires_review"/>
+              </group>
+            </group>
+
+            <notebook>
+              <page string="Datos">
+                <group>
+                  <group string="Equipo / Cliente">
+                    <field name="partner_id"/>
+                    <field name="contact_id"/>
+                    <field name="equipment_id"/>
+                    <field name="serial_number"/>
+                  </group>
+                  <group string="Contadores">
+                    <field name="meter_bn"/>
+                    <field name="meter_color"/>
+                    <field name="meter_scan"/>
+                    <field name="meter_total"/>
+                  </group>
+                </group>
+                <group>
+                  <group string="Suministro">
+                    <field name="supply_type"/>
+                    <field name="supply_color"/>
+                    <field name="supply_percentage"/>
+                    <field name="requested_quantity"/>
+                  </group>
+                  <group string="Incidencia">
+                    <field name="error_code"/>
+                    <field name="location_detected"/>
+                    <field name="issue_description"/>
+                  </group>
+                </group>
+              </page>
+
+              <page string="Correo" invisible="source != 'email'">
+                <group>
+                  <field name="sender"/>
+                  <field name="sender_domain" readonly="1"/>
+                  <field name="subject"/>
+                  <field name="email_message_id"/>
+                </group>
+                <field name="body_plain" readonly="1"/>
+              </page>
+
+              <page string="Patrones / IA">
+                <group>
+                  <group string="Patrones">
+                    <field name="patterns_used" readonly="1"/>
+                    <field name="pattern_confidence" readonly="1"/>
+                  </group>
+                  <group string="Inteligencia Artificial">
+                    <field name="ai_used" readonly="1"/>
+                    <field name="ai_provider_name" readonly="1"/>
+                    <field name="ai_model_name" readonly="1"/>
+                    <field name="ai_confidence" readonly="1"/>
+                    <field name="ai_input_tokens" readonly="1"/>
+                    <field name="ai_output_tokens" readonly="1"/>
+                    <field name="ai_cost" readonly="1"/>
+                  </group>
+                </group>
+                <field name="ai_raw_response" readonly="1" invisible="not ai_used"/>
+              </page>
+
+              <page string="Acción">
+                <group>
+                  <field name="action_type" readonly="1"/>
+                  <field name="action_model" readonly="1"/>
+                  <field name="action_record_id" readonly="1"/>
+                  <field name="action_description" readonly="1"/>
+                </group>
+              </page>
+
+              <page string="Diagnóstico">
+                <group>
+                  <field name="retry_count" readonly="1"/>
+                  <field name="last_retry_at" readonly="1"/>
+                  <field name="error_message" readonly="1"/>
+                </group>
+                <field name="error_traceback" readonly="1" invisible="not error_traceback"/>
+                <field name="payload_json" readonly="1"/>
+              </page>
+            </notebook>
+          </sheet>
+          <chatter/>
+        </form>
+      </field>
+    </record>
+
+    <record id="view_sat_automation_event_search" model="ir.ui.view">
+      <field name="name">sat.automation.event.search</field>
+      <field name="model">sat.automation.event</field>
+      <field name="arch" type="xml">
+        <search string="Buscar Eventos">
+          <field name="name"/>
+          <field name="serial_number"/>
+          <field name="equipment_id"/>
+          <field name="partner_id"/>
+          <field name="sender"/>
+          <separator/>
+          <filter name="filter_review" string="Revisión" domain="[('state','=','review')]"/>
+          <filter name="filter_error" string="Errores" domain="[('state','=','error')]"/>
+          <filter name="filter_ai" string="Con IA" domain="[('ai_used','=',True)]"/>
+          <filter name="filter_today" string="Hoy"
+                  domain="[('event_datetime','&gt;=',context_today().strftime('%Y-%m-%d'))]"/>
+          <group expand="0" string="Agrupar por">
+            <filter string="Estado" context="{'group_by':'state'}"/>
+            <filter string="Origen" context="{'group_by':'source'}"/>
+            <filter string="Tipo" context="{'group_by':'event_type'}"/>
+            <filter string="Cliente" context="{'group_by':'partner_id'}"/>
+          </group>
+        </search>
+      </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- APRENDIZAJE                                                  -->
+    <!-- ============================================================ -->
+    <record id="view_sat_automation_pattern_learning_list" model="ir.ui.view">
+      <field name="name">sat.automation.pattern.learning.list</field>
+      <field name="model">sat.automation.pattern.learning</field>
+      <field name="arch" type="xml">
+        <list string="Aprendizaje de Patrones"
+              decoration-success="result == 'success'"
+              decoration-danger="result == 'failure'"
+              decoration-muted="result == 'no_match'">
+          <field name="create_date" string="Fecha"/>
+          <field name="event_id"/>
+          <field name="pattern_id"/>
+          <field name="source"/>
+          <field name="event_type"/>
+          <field name="target_key"/>
+          <field name="expected_value"/>
+          <field name="extracted_value"/>
+          <field name="result"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_automation_pattern_learning_form" model="ir.ui.view">
+      <field name="name">sat.automation.pattern.learning.form</field>
+      <field name="model">sat.automation.pattern.learning</field>
+      <field name="arch" type="xml">
+        <form string="Prueba de Aprendizaje">
+          <sheet>
+            <group>
+              <group>
+                <field name="event_id"/>
+                <field name="pattern_id"/>
+                <field name="source"/>
+                <field name="event_type"/>
+              </group>
+              <group>
+                <field name="target_key"/>
+                <field name="expected_value"/>
+                <field name="extracted_value"/>
+                <field name="result"/>
+              </group>
+            </group>
+            <field name="notes"/>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- AUDITORÍA                                                    -->
+    <!-- ============================================================ -->
+    <record id="view_sat_automation_audit_list" model="ir.ui.view">
+      <field name="name">sat.automation.audit.list</field>
+      <field name="model">sat.automation.audit</field>
+      <field name="arch" type="xml">
+        <list string="Auditoría"
+              decoration-warning="level == 'warning'"
+              decoration-danger="level in ('error','critical')">
+          <field name="create_date" string="Fecha"/>
+          <field name="event_id"/>
+          <field name="level"/>
+          <field name="action"/>
+          <field name="message"/>
+          <field name="user_id"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_automation_audit_form" model="ir.ui.view">
+      <field name="name">sat.automation.audit.form</field>
+      <field name="model">sat.automation.audit</field>
+      <field name="arch" type="xml">
+        <form string="Auditoría de Automatización">
+          <sheet>
+            <group>
+              <field name="event_id"/>
+              <field name="level"/>
+              <field name="action"/>
+              <field name="user_id"/>
+            </group>
+            <field name="message"/>
+            <field name="data_json"/>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- CONFIGURACIÓN GENERAL                                        -->
+    <!-- ============================================================ -->
+    <record id="view_sat_automation_config_list" model="ir.ui.view">
+      <field name="name">sat.automation.config.list</field>
+      <field name="model">sat.automation.config</field>
+      <field name="arch" type="xml">
+        <list string="Configuración de Automatización">
+          <field name="name"/>
+          <field name="processing_enabled"/>
+          <field name="ai_mode"/>
+          <field name="learning_enabled"/>
+          <field name="learning_shadow_mode"/>
+          <field name="active"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_automation_config_form" model="ir.ui.view">
+      <field name="name">sat.automation.config.form</field>
+      <field name="model">sat.automation.config</field>
+      <field name="arch" type="xml">
+        <form string="Configuración de Automatización">
+          <sheet>
+            <div class="oe_title"><h1><field name="name"/></h1></div>
+            <group>
+              <group string="Motor">
+                <field name="active"/>
+                <field name="processing_enabled"/>
+                <field name="stuck_processing_hours"/>
+              </group>
+              <group string="IA">
+                <field name="ai_mode"/>
+                <field name="ai_failure_policy"/>
+                <field name="min_ai_confidence"/>
+                <field name="min_pattern_confidence"/>
+              </group>
+            </group>
+            <group string="Aprendizaje">
+              <field name="learning_enabled"/>
+              <field name="learning_shadow_mode"/>
+              <field name="learning_auto_promote"/>
+              <field name="learning_min_tests"/>
+              <field name="learning_min_success_rate"/>
+              <field name="learning_reject_after_failures"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- REGLAS                                                       -->
+    <!-- ============================================================ -->
+    <record id="view_sat_automation_rule_list" model="ir.ui.view">
+      <field name="name">sat.automation.rule.list</field>
+      <field name="model">sat.automation.rule</field>
+      <field name="arch" type="xml">
+        <list string="Reglas de Automatización">
+          <field name="sequence" widget="handle"/>
+          <field name="name"/>
+          <field name="source"/>
+          <field name="event_type"/>
+          <field name="partner_id" optional="hide"/>
+          <field name="action_mode"/>
+          <field name="target_model"/>
+          <field name="target_method"/>
+          <field name="active"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_automation_rule_form" model="ir.ui.view">
+      <field name="name">sat.automation.rule.form</field>
+      <field name="model">sat.automation.rule</field>
+      <field name="arch" type="xml">
+        <form string="Regla de Automatización">
+          <sheet>
+            <group>
+              <group>
+                <field name="name"/>
+                <field name="active"/>
+                <field name="sequence"/>
+                <field name="source"/>
+                <field name="event_type"/>
+                <field name="partner_id"/>
+              </group>
+              <group>
+                <field name="require_equipment"/>
+                <field name="require_partner"/>
+                <field name="min_confidence"/>
+                <field name="duplicate_window_hours"/>
+                <field name="stop_after_match"/>
+              </group>
+            </group>
+            <group string="Acción">
+              <field name="action_mode"/>
+              <field name="target_model"/>
+              <field name="target_method"/>
+              <field name="action_type"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- FILTROS DE CORREO                                            -->
+    <!-- ============================================================ -->
+    <record id="view_sat_automation_mail_filter_list" model="ir.ui.view">
+      <field name="name">sat.automation.mail.filter.list</field>
+      <field name="model">sat.automation.mail.filter</field>
+      <field name="arch" type="xml">
+        <list string="Filtros de Correo">
+          <field name="sequence" widget="handle"/>
+          <field name="name"/>
+          <field name="sender_domain"/>
+          <field name="subject_contains"/>
+          <field name="action"/>
+          <field name="expected_event_type"/>
+          <field name="ai_mode_override"/>
+          <field name="active"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_automation_mail_filter_form" model="ir.ui.view">
+      <field name="name">sat.automation.mail.filter.form</field>
+      <field name="model">sat.automation.mail.filter</field>
+      <field name="arch" type="xml">
+        <form string="Filtro de Correo">
+          <sheet>
+            <group>
+              <group>
+                <field name="name"/>
+                <field name="active"/>
+                <field name="sequence"/>
+                <field name="match_mode"/>
+                <field name="partner_id"/>
+              </group>
+              <group>
+                <field name="action"/>
+                <field name="expected_event_type"/>
+                <field name="use_patterns"/>
+                <field name="ai_mode_override"/>
+                <field name="min_pattern_confidence"/>
+                <field name="min_ai_confidence"/>
+              </group>
+            </group>
+            <group string="Remitente">
+              <field name="sender_exact"/>
+              <field name="sender_domain"/>
+              <field name="sender_regex"/>
+              <field name="require_odoo_contact"/>
+              <field name="require_company_domain"/>
+            </group>
+            <group string="Contenido">
+              <field name="subject_contains"/>
+              <field name="subject_regex"/>
+              <field name="body_contains"/>
+              <field name="body_regex"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- PROVEEDORES IA                                               -->
+    <!-- ============================================================ -->
+    <record id="view_sat_ai_provider_list" model="ir.ui.view">
+      <field name="name">sat.ai.provider.list</field>
+      <field name="model">sat.ai.provider</field>
+      <field name="arch" type="xml">
+        <list string="Proveedores IA">
+          <field name="sequence" widget="handle"/>
+          <field name="name"/>
+          <field name="provider_type"/>
+          <field name="model_name"/>
+          <field name="timeout_seconds"/>
+          <field name="max_retries"/>
+          <field name="active"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_ai_provider_form" model="ir.ui.view">
+      <field name="name">sat.ai.provider.form</field>
+      <field name="model">sat.ai.provider</field>
+      <field name="arch" type="xml">
+        <form string="Proveedor IA">
+          <sheet>
+            <group>
+              <group>
+                <field name="name"/>
+                <field name="active"/>
+                <field name="sequence"/>
+                <field name="provider_type"/>
+                <field name="base_url"/>
+                <field name="model_name"/>
+              </group>
+              <group>
+                <field name="api_key" password="True"/>
+                <field name="timeout_seconds"/>
+                <field name="max_retries"/>
+                <field name="retry_delay_seconds"/>
+                <field name="temperature"/>
+                <field name="max_output_tokens"/>
+                <field name="supports_json"/>
+              </group>
+            </group>
+            <group string="Costo por millón de tokens">
+              <field name="input_cost_per_million"/>
+              <field name="output_cost_per_million"/>
+            </group>
+            <field name="extra_headers_json"/>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- PROMPTS IA                                                   -->
+    <!-- ============================================================ -->
+    <record id="view_sat_ai_prompt_list" model="ir.ui.view">
+      <field name="name">sat.ai.prompt.list</field>
+      <field name="model">sat.ai.prompt</field>
+      <field name="arch" type="xml">
+        <list string="Prompts IA">
+          <field name="sequence" widget="handle"/>
+          <field name="name"/>
+          <field name="task_type"/>
+          <field name="version"/>
+          <field name="active"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_ai_prompt_form" model="ir.ui.view">
+      <field name="name">sat.ai.prompt.form</field>
+      <field name="model">sat.ai.prompt</field>
+      <field name="arch" type="xml">
+        <form string="Prompt IA">
+          <sheet>
+            <group>
+              <field name="name"/>
+              <field name="task_type"/>
+              <field name="version"/>
+              <field name="sequence"/>
+              <field name="active"/>
+            </group>
+            <group string="Prompt">
+              <field name="system_prompt"/>
+              <field name="user_template"/>
+              <field name="expected_json_schema"/>
+            </group>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+    <!-- ============================================================ -->
+    <!-- CONSUMO IA                                                   -->
+    <!-- ============================================================ -->
+    <record id="view_sat_ai_usage_list" model="ir.ui.view">
+      <field name="name">sat.ai.usage.list</field>
+      <field name="model">sat.ai.usage</field>
+      <field name="arch" type="xml">
+        <list string="Consumo IA" decoration-danger="success == False">
+          <field name="create_date" string="Fecha"/>
+          <field name="event_id"/>
+          <field name="provider_id"/>
+          <field name="model_name"/>
+          <field name="task_type"/>
+          <field name="input_tokens"/>
+          <field name="output_tokens"/>
+          <field name="total_cost"/>
+          <field name="latency_ms"/>
+          <field name="success"/>
+        </list>
+      </field>
+    </record>
+
+    <record id="view_sat_ai_usage_form" model="ir.ui.view">
+      <field name="name">sat.ai.usage.form</field>
+      <field name="model">sat.ai.usage</field>
+      <field name="arch" type="xml">
+        <form string="Consumo IA">
+          <sheet>
+            <group>
+              <group>
+                <field name="event_id"/>
+                <field name="provider_id"/>
+                <field name="prompt_id"/>
+                <field name="model_name"/>
+                <field name="task_type"/>
+              </group>
+              <group>
+                <field name="input_tokens"/>
+                <field name="output_tokens"/>
+                <field name="total_cost"/>
+                <field name="latency_ms"/>
+                <field name="success"/>
+              </group>
+            </group>
+            <field name="error_message" invisible="success"/>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+  </data>
+</odoo>

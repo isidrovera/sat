@@ -203,6 +203,25 @@ class TonerMonitoringEvent(models.Model):
         copy=False,
     )
 
+    automation_event_id = fields.Many2one(
+        "sat.automation.event",
+        string="Evento de automatización SAT",
+        ondelete="set null",
+        index=True,
+        copy=False,
+        readonly=True,
+        help=(
+            "Evento central asociado. Su ausencia o un error de sincronización "
+            "no impiden el procesamiento normal de tóner."
+        ),
+    )
+
+    automation_sync_error = fields.Text(
+        string="Error sincronización automatización",
+        readonly=True,
+        copy=False,
+    )
+
     # ============================================================
     # EVENTO
     # ============================================================
@@ -635,6 +654,15 @@ class TonerMonitoringEvent(models.Model):
 
         event = self.create(values)
 
+        # --------------------------------------------------------
+        # Puente al motor central SAT
+        # --------------------------------------------------------
+        # La sincronización es deliberadamente NO bloqueante.
+        # Si el motor central no está disponible o falla, este modelo
+        # conserva exactamente su flujo operativo actual.
+        if not self.env.context.get("skip_sat_automation_bridge"):
+            event._emit_to_sat_automation(auto_process=False)
+
         try:
             event.action_process_event()
         except Exception:
@@ -643,7 +671,365 @@ class TonerMonitoringEvent(models.Model):
                 event.id,
             )
 
+        if not self.env.context.get("skip_sat_automation_bridge"):
+            event._sync_sat_automation_result()
+
         return event
+
+    # ============================================================
+    # INTEGRACIÓN CON MOTOR CENTRAL SAT
+    # ============================================================
+
+    def _automation_source(self):
+        """Mapea el origen del evento de tóner al origen del motor central."""
+        self.ensure_one()
+
+        if self.source in ("printtracker", "email", "api", "manual"):
+            return self.source
+
+        # SNMP no tiene un código propio en sat.automation.event.
+        # Se conserva el detalle exacto en source_subtype.
+        return "other"
+
+    def _automation_event_type(self):
+        """Mapea eventos de suministro a la taxonomía central."""
+        self.ensure_one()
+
+        mapping = {
+            "low": "toner_low",
+            "critical": "toner_critical",
+            "empty": "toner_empty",
+            "replaced": "toner_replaced",
+            "level": "notification",
+            "normal": "notification",
+            "estimated_depletion": "notification",
+            "supply_event": "notification",
+            "unknown": "unknown",
+        }
+        return mapping.get(self.event_type, "other")
+
+    def _prepare_sat_automation_values(self):
+        """
+        Prepara el evento central sin ejecutar reglas nuevas.
+
+        El modelo toner.monitoring.event continúa siendo la fuente de verdad
+        para LOW/CRITICAL/EMPTY/REPLACED mientras esta integración se adopta.
+        """
+        self.ensure_one()
+
+        external_id = False
+        if self.external_event_id:
+            external_id = "%s:%s" % (
+                self.source or "other",
+                self.external_event_id,
+            )
+
+        raw_payload = self.raw_payload or False
+
+        return {
+            "source": self._automation_source(),
+            "source_subtype": "toner.monitoring.event:%s" % (
+                self.source or "other"
+            ),
+            "source_model": self._name,
+            "source_record_id": self.id,
+            "external_id": external_id,
+            "event_type": self._automation_event_type(),
+            "event_subtype": self.event_type,
+            "event_datetime": self.event_date or fields.Datetime.now(),
+            "serial_number": self.equipment_serial or False,
+            "equipment_id": self.equipment_id.id if self.equipment_id else False,
+            "partner_id": self.partner_id.id if self.partner_id else False,
+            "subject": self.raw_subject or False,
+            "body_plain": self.raw_description or False,
+            "meter_bn": (
+                int(self.counter_bn or 0)
+                if self.counter_bn_available
+                else 0
+            ),
+            "meter_color": (
+                int(self.counter_color or 0)
+                if self.counter_color_available
+                else 0
+            ),
+            "supply_type": "toner",
+            "supply_color": (
+                self.color
+                if self.color in ("black", "cyan", "magenta", "yellow")
+                else "unknown"
+            ),
+            "supply_percentage": (
+                float(self.level_percent or 0.0)
+                if self.level_available
+                else 0.0
+            ),
+            "issue_description": self.raw_description or False,
+            "raw_payload_json": raw_payload,
+        }
+
+    def _emit_to_sat_automation(self, auto_process=False):
+        """
+        Crea/enlaza el evento central.
+
+        IMPORTANTE:
+        - no altera el resultado del evento de tóner;
+        - no lanza excepciones hacia el flujo actual;
+        - utiliza fingerprint/idempotencia del motor central;
+        - por defecto NO vuelve a procesar el evento central para evitar
+          duplicar la lógica que este modelo ya ejecuta.
+        """
+        self.ensure_one()
+
+        if self.env.context.get("skip_sat_automation_bridge"):
+            return False
+
+        if "sat.automation.event" not in self.env.registry.models:
+            _logger.warning(
+                "[TONER EVENT][AUTOMATION] Modelo sat.automation.event "
+                "no disponible event=%s",
+                self.id,
+            )
+            return False
+
+        try:
+            AutomationEvent = self.env["sat.automation.event"].sudo()
+            automation_event, created = AutomationEvent.create_from_source(
+                self._prepare_sat_automation_values(),
+                auto_process=bool(auto_process),
+            )
+
+            self.sudo().write({
+                "automation_event_id": automation_event.id,
+                "automation_sync_error": False,
+            })
+
+            _logger.info(
+                "[TONER EVENT][AUTOMATION][EMIT] toner_event=%s "
+                "automation_event=%s created=%s source=%s type=%s",
+                self.id,
+                automation_event.id,
+                created,
+                automation_event.source,
+                automation_event.event_type,
+            )
+            return automation_event
+
+        except Exception as error:
+            _logger.exception(
+                "[TONER EVENT][AUTOMATION][EMIT_ERROR] toner_event=%s",
+                self.id,
+            )
+            # Guardar el error sin impedir LOW/CRITICAL/EMPTY/REPLACED.
+            try:
+                self.sudo().write({
+                    "automation_sync_error": str(error),
+                })
+            except Exception:
+                _logger.exception(
+                    "[TONER EVENT][AUTOMATION] No se pudo guardar sync_error "
+                    "toner_event=%s",
+                    self.id,
+                )
+            return False
+
+    def _sync_sat_automation_result(self):
+        """
+        Refleja el resultado YA obtenido por la lógica actual en el evento SAT.
+
+        No ejecuta una segunda vez las reglas de tóner.
+        """
+        self.ensure_one()
+
+        if self.env.context.get("skip_sat_automation_bridge"):
+            return True
+
+        automation_event = self.automation_event_id
+        if not automation_event:
+            automation_event = self._emit_to_sat_automation(auto_process=False)
+
+        if not automation_event:
+            return False
+
+        try:
+            # Relacionar el resultado de negocio más útil disponible.
+            result_record = False
+            action_type = "update_record"
+
+            if self.submission_id:
+                result_record = self.submission_id
+                action_type = "create_toner_request"
+            elif self.stock_movement_id:
+                result_record = self.stock_movement_id
+            elif self.installation_history_id:
+                result_record = self.installation_history_id
+            else:
+                result_record = self
+
+            if result_record and result_record.exists():
+                automation_event.link_action(
+                    result_record,
+                    action_type=action_type,
+                    description=self.processing_message or False,
+                )
+
+            if self.processing_state == "processed":
+                automation_event.mark_done(
+                    self.processing_message
+                    or _("Evento de tóner procesado correctamente.")
+                )
+            elif self.processing_state == "ignored":
+                automation_event.mark_ignored(
+                    self.processing_message or _("Evento de tóner ignorado.")
+                )
+            elif self.processing_state == "pending_data":
+                automation_event.mark_review(
+                    self.processing_message
+                    or _("El evento de tóner requiere datos adicionales.")
+                )
+            elif self.processing_state == "error":
+                automation_event.mark_error(
+                    self.processing_error
+                    or self.processing_message
+                    or _("Error procesando evento de tóner.")
+                )
+
+            self.sudo().write({"automation_sync_error": False})
+
+            _logger.info(
+                "[TONER EVENT][AUTOMATION][SYNC] toner_event=%s "
+                "automation_event=%s toner_state=%s automation_state=%s",
+                self.id,
+                automation_event.id,
+                self.processing_state,
+                automation_event.state,
+            )
+            return True
+
+        except Exception as error:
+            _logger.exception(
+                "[TONER EVENT][AUTOMATION][SYNC_ERROR] toner_event=%s "
+                "automation_event=%s",
+                self.id,
+                automation_event.id,
+            )
+            try:
+                self.sudo().write({
+                    "automation_sync_error": str(error),
+                })
+            except Exception:
+                pass
+            return False
+
+    @api.model
+    def automation_process_toner_event(self, automation_event):
+        """
+        Puente estable llamado por sat.automation.rule.
+
+        Se usa para eventos centrales de monitoreo:
+            toner_low
+            toner_critical
+            toner_empty
+            toner_replaced
+
+        La solicitud explícita de un cliente (toner_request) debe apuntar a
+        toner.counter.submission.automation_create_toner_request().
+        """
+        if not automation_event or not automation_event.exists():
+            raise ValidationError(_("El evento de automatización no existe."))
+
+        type_mapping = {
+            "toner_low": "low",
+            "toner_critical": "critical",
+            "toner_empty": "empty",
+            "toner_replaced": "replaced",
+            "notification": "supply_event",
+        }
+
+        toner_event_type = type_mapping.get(automation_event.event_type)
+        if not toner_event_type:
+            raise ValidationError(
+                _(
+                    "El tipo de evento SAT '%s' no corresponde al flujo "
+                    "de monitoreo de tóner."
+                ) % automation_event.event_type
+            )
+
+        equipment = automation_event.equipment_id
+        if not equipment and automation_event.serial_number:
+            equipment = self.env["alquiler"].sudo().search(
+                [("serie", "=ilike", automation_event.serial_number.strip())],
+                limit=1,
+            )
+
+        if not equipment:
+            raise ValidationError(
+                _("No se pudo identificar el equipo del evento SAT.")
+            )
+
+        color = automation_event.supply_color or "unknown"
+        if color not in ("black", "cyan", "magenta", "yellow"):
+            color = "unknown"
+
+        source_mapping = {
+            "printtracker": "printtracker",
+            "email": "email",
+            "api": "api",
+            "manual": "manual",
+            "mobile_app": "api",
+            "system": "other",
+            "other": "other",
+        }
+
+        values = {
+            "equipment_id": equipment.id,
+            "source": source_mapping.get(automation_event.source, "other"),
+            "external_event_id": "sat-automation:%s" % automation_event.event_uuid,
+            "source_reference": automation_event.external_id or automation_event.name,
+            "event_type": toner_event_type,
+            "color": color,
+            "event_date": automation_event.event_datetime or fields.Datetime.now(),
+            "level_percent": float(automation_event.supply_percentage or 0.0),
+            "level_available": automation_event.supply_percentage is not False,
+            "counter_bn": int(automation_event.meter_bn or 0),
+            "counter_color": int(automation_event.meter_color or 0),
+            "counter_bn_available": bool(automation_event.meter_bn),
+            "counter_color_available": bool(automation_event.meter_color),
+            "raw_description": automation_event.issue_description or automation_event.body_plain,
+            "raw_subject": automation_event.subject,
+            "raw_payload": automation_event.payload_json or automation_event.raw_payload_json,
+        }
+
+        toner_event = self.with_context(
+            skip_sat_automation_bridge=True
+        ).create_normalized_event(values)
+
+        # Relacionar el evento central original, pero sin volver a emitirlo.
+        toner_event.sudo().write({
+            "automation_event_id": automation_event.id,
+            "automation_sync_error": False,
+        })
+
+        _logger.info(
+            "[TONER EVENT][AUTOMATION][PROCESS] automation_event=%s "
+            "toner_event=%s state=%s submission=%s",
+            automation_event.id,
+            toner_event.id,
+            toner_event.processing_state,
+            toner_event.submission_id.id if toner_event.submission_id else False,
+        )
+
+        if toner_event.submission_id:
+            return {
+                "model": toner_event.submission_id._name,
+                "record_id": toner_event.submission_id.id,
+                "description": toner_event.processing_message,
+            }
+
+        return {
+            "model": toner_event._name,
+            "record_id": toner_event.id,
+            "description": toner_event.processing_message,
+        }
 
     # ============================================================
     # PROCESAMIENTO CENTRAL
@@ -672,6 +1058,10 @@ class TonerMonitoringEvent(models.Model):
                         ),
                     }
                 )
+
+            # Reflejar el resultado en SAT sin afectar el flujo actual.
+            if not self.env.context.get("skip_sat_automation_bridge"):
+                event._sync_sat_automation_result()
 
         return True
 
