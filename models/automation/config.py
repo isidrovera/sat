@@ -4,7 +4,6 @@ import json
 import logging
 import re
 import time
-import traceback
 from uuid import uuid4
 
 from odoo import api, fields, models, _
@@ -279,12 +278,6 @@ class SatAutomationConfig(models.Model):
 
     @api.model
     def _diagnostic_selection_values(self, model, field_name):
-        """
-        Devuelve los valores internos disponibles en un Selection.
-
-        Se usa únicamente para hacer el diagnóstico tolerante a cambios
-        en las selecciones del modelo.
-        """
         field = model._fields.get(field_name)
 
         if not field:
@@ -325,11 +318,6 @@ class SatAutomationConfig(models.Model):
         preferred,
         fallback=None,
     ):
-        """
-        Devuelve preferred si es válido para un Selection.
-
-        Si el campo no es Selection, devuelve preferred.
-        """
         field = model._fields.get(field_name)
 
         if not field:
@@ -366,33 +354,6 @@ class SatAutomationConfig(models.Model):
     # ============================================================
 
     def action_test_full_system(self):
-        """
-        Diagnóstico integral del sistema SAT Automation.
-
-        La prueba está diseñada para ser SEGURA:
-
-        - No crea tickets reales.
-        - No crea solicitudes reales de tóner.
-        - No modifica contadores de equipos.
-        - No mueve stock.
-        - No ejecuta métodos destino de las reglas.
-
-        Sí prueba:
-
-        - configuración;
-        - modelos instalados;
-        - creación de evento;
-        - fingerprint/deduplicación;
-        - auditoría;
-        - prompts;
-        - proveedores IA;
-        - llamada real a IA;
-        - patrones;
-        - reglas;
-        - existencia de métodos destino;
-        - consumo IA;
-        - cron/recuperación.
-        """
         self.ensure_one()
 
         started = time.time()
@@ -408,10 +369,6 @@ class SatAutomationConfig(models.Model):
 
         ai_provider_name = False
         ai_model_name = False
-
-        # --------------------------------------------------------
-        # Helpers de salida
-        # --------------------------------------------------------
 
         def add_ok(message):
             nonlocal total
@@ -457,10 +414,6 @@ class SatAutomationConfig(models.Model):
                 "[SAT AUTOMATION][DIAGNOSTIC] %s",
                 line,
             )
-
-        # --------------------------------------------------------
-        # Inicio
-        # --------------------------------------------------------
 
         lines.append(
             "============================================================"
@@ -557,8 +510,6 @@ class SatAutomationConfig(models.Model):
             "sat.ai.service",
         ]
 
-        missing_models = []
-
         for model_name in required_models:
             if self._diagnostic_model_available(
                 model_name
@@ -568,8 +519,6 @@ class SatAutomationConfig(models.Model):
                     % model_name
                 )
             else:
-                missing_models.append(model_name)
-
                 add_error(
                     "Modelo NO disponible: %s"
                     % model_name
@@ -596,9 +545,6 @@ class SatAutomationConfig(models.Model):
                 "sat.automation.event"
             ].sudo()
 
-            # NUEVO:
-            # cada ejecución utiliza un token distinto.
-            # Esto evita volver a generar el mismo fingerprint.
             diagnostic_token = uuid4().hex
 
             diagnostic_text = (
@@ -611,10 +557,6 @@ class SatAutomationConfig(models.Model):
             ) % diagnostic_token
 
             event_vals = {}
-
-            # ----------------------------------------------------
-            # Solo escribir campos que realmente existan.
-            # ----------------------------------------------------
 
             if "source" in Event._fields:
                 source_value = self._diagnostic_safe_value(
@@ -716,11 +658,6 @@ class SatAutomationConfig(models.Model):
                 )
 
             try:
-                # MUY IMPORTANTE:
-                #
-                # Si PostgreSQL lanza cualquier error durante
-                # create(), el savepoint evita que toda la
-                # transacción quede en estado abortado.
                 with self.env.cr.savepoint():
                     diagnostic_event = (
                         Event.with_context(
@@ -796,10 +733,6 @@ class SatAutomationConfig(models.Model):
         else:
             audit_done = False
 
-            # ----------------------------------------------------
-            # Primera posibilidad: método del evento
-            # ----------------------------------------------------
-
             audit_method = getattr(
                 diagnostic_event,
                 "_audit",
@@ -839,10 +772,6 @@ class SatAutomationConfig(models.Model):
                         "no pudo completarse: %s"
                         % exc
                     )
-
-            # ----------------------------------------------------
-            # Segunda posibilidad: modelo de auditoría
-            # ----------------------------------------------------
 
             if not audit_done:
                 Audit = self.env[
@@ -1206,10 +1135,6 @@ class SatAutomationConfig(models.Model):
                         "compilan correctamente."
                     )
 
-                # -----------------------------------------------
-                # Probar motor real de patrones si existe.
-                # -----------------------------------------------
-
                 apply_patterns = getattr(
                     Pattern,
                     "apply_active_patterns",
@@ -1336,7 +1261,6 @@ class SatAutomationConfig(models.Model):
             else:
                 try:
                     with self.env.cr.savepoint():
-                        # Primera firma esperada.
                         try:
                             ai_result = analyze_event(
                                 diagnostic_event,
@@ -1344,8 +1268,6 @@ class SatAutomationConfig(models.Model):
                                 fail_silently=True,
                             )
 
-                        # Fallback si el servicio tiene
-                        # una firma más simple.
                         except TypeError:
                             try:
                                 ai_result = analyze_event(
@@ -1367,13 +1289,6 @@ class SatAutomationConfig(models.Model):
                         ai_result,
                         dict,
                     ):
-                        # ---------------------------------------
-                        # Diferentes servicios pueden devolver:
-                        #
-                        # {ok: True, data: {...}}
-                        # o directamente {...}
-                        # ---------------------------------------
-
                         if (
                             "ok" in ai_result
                             and not ai_result.get("ok")
@@ -1471,10 +1386,6 @@ class SatAutomationConfig(models.Model):
                                 )
                             )
 
-                            # -----------------------------------
-                            # Comprobar datos esperados.
-                            # -----------------------------------
-
                             if isinstance(
                                 ai_data,
                                 dict,
@@ -1533,14 +1444,6 @@ class SatAutomationConfig(models.Model):
                                         "IA no devolvió "
                                         "event_type."
                                     )
-
-                                # -------------------------------
-                                # Copiar SOLAMENTE al evento
-                                # diagnóstico.
-                                #
-                                # Esto permite posteriormente
-                                # probar matching de reglas.
-                                # -------------------------------
 
                                 event_updates = {}
 
@@ -1833,18 +1736,144 @@ class SatAutomationConfig(models.Model):
                             )
 
                         add_ok(
-                            "Reglas compatibles: %s"
+                            "Reglas compatibles encontradas: %s"
                             % names
                         )
 
-                    else:
-                        add_warning(
-                            "El evento de prueba no "
-                            "coincidió con ninguna regla."
+                        add_ok(
+                            "Matching de reglas funcionando "
+                            "correctamente."
                         )
 
-                    # IMPORTANTE:
-                    # NO ejecutar reglas aquí.
+                    else:
+                        event_type = False
+                        equipment = False
+
+                        if (
+                            "event_type"
+                            in diagnostic_event._fields
+                        ):
+                            event_type = (
+                                diagnostic_event.event_type
+                            )
+
+                        if (
+                            "equipment_id"
+                            in diagnostic_event._fields
+                        ):
+                            equipment = (
+                                diagnostic_event.equipment_id
+                            )
+
+                        protected_rules = (
+                            self.env[
+                                "sat.automation.rule"
+                            ]
+                            .sudo()
+                            .browse()
+                        )
+
+                        try:
+                            protected_domain = []
+
+                            if (
+                                "active"
+                                in Rule._fields
+                            ):
+                                protected_domain.append(
+                                    (
+                                        "active",
+                                        "=",
+                                        True,
+                                    )
+                                )
+
+                            if (
+                                event_type
+                                and "event_type"
+                                in Rule._fields
+                            ):
+                                protected_domain.append(
+                                    (
+                                        "event_type",
+                                        "=",
+                                        event_type,
+                                    )
+                                )
+
+                            if (
+                                "require_equipment"
+                                in Rule._fields
+                            ):
+                                protected_domain.append(
+                                    (
+                                        "require_equipment",
+                                        "=",
+                                        True,
+                                    )
+                                )
+
+                            if (
+                                event_type
+                                and protected_domain
+                            ):
+                                protected_rules = (
+                                    Rule.search(
+                                        protected_domain
+                                    )
+                                )
+
+                        except Exception:
+                            _logger.exception(
+                                "[SAT AUTOMATION]"
+                                "[DIAGNOSTIC] "
+                                "No se pudo revisar reglas "
+                                "protegidas por equipo"
+                            )
+
+                        if (
+                            event_type
+                            and not equipment
+                            and protected_rules
+                        ):
+                            add_ok(
+                                "Evento clasificado como '%s'."
+                                % event_type
+                            )
+
+                            add_ok(
+                                "Existe regla operativa para "
+                                "'%s' que requiere equipo."
+                                % event_type
+                            )
+
+                            add_ok(
+                                "El evento de diagnóstico no "
+                                "tiene equipo real asociado, "
+                                "por lo que la regla fue "
+                                "bloqueada correctamente."
+                            )
+
+                            add_ok(
+                                "Protección require_equipment "
+                                "funcionando correctamente."
+                            )
+
+                        elif event_type:
+                            add_warning(
+                                "El evento fue clasificado como "
+                                "'%s', pero no coincidió con "
+                                "ninguna regla activa."
+                                % event_type
+                            )
+
+                        else:
+                            add_warning(
+                                "El evento de prueba no tiene "
+                                "event_type suficiente para "
+                                "comprobar matching."
+                            )
+
                     add_ok(
                         "Modo seguro confirmado: "
                         "ninguna acción productiva "
@@ -1855,6 +1884,12 @@ class SatAutomationConfig(models.Model):
                     add_error(
                         "Error comprobando matching: %s"
                         % exc
+                    )
+
+                    _logger.exception(
+                        "[SAT AUTOMATION][DIAGNOSTIC] "
+                        "Error comprobando matching "
+                        "de reglas"
                     )
 
         lines.append("")
@@ -2065,44 +2100,31 @@ class SatAutomationConfig(models.Model):
             "productivas de reglas."
         )
 
-        # ========================================================
-        # GUARDAR DIAGNÓSTICO
-        # ========================================================
-
-        try:
-            self.write({
-                "diagnostic_status": status,
-                "diagnostic_date": fields.Datetime.now(),
-                "diagnostic_total": total,
-                "diagnostic_ok": ok_count,
-                "diagnostic_warnings": warning_count,
-                "diagnostic_errors": error_count,
-                "diagnostic_duration": duration,
-                "diagnostic_ai_provider": (
-                    ai_provider_name
-                    or False
-                ),
-                "diagnostic_ai_model": (
-                    ai_model_name
-                    or False
-                ),
-                "diagnostic_event_id": (
-                    diagnostic_event.id
-                    if diagnostic_event
-                    else False
-                ),
-                "diagnostic_log": "\n".join(
-                    lines
-                ),
-            })
-
-        except Exception:
-            _logger.exception(
-                "[SAT AUTOMATION][DIAGNOSTIC] "
-                "No se pudo guardar resultado final"
-            )
-
-            raise
+        self.write({
+            "diagnostic_status": status,
+            "diagnostic_date": fields.Datetime.now(),
+            "diagnostic_total": total,
+            "diagnostic_ok": ok_count,
+            "diagnostic_warnings": warning_count,
+            "diagnostic_errors": error_count,
+            "diagnostic_duration": duration,
+            "diagnostic_ai_provider": (
+                ai_provider_name
+                or False
+            ),
+            "diagnostic_ai_model": (
+                ai_model_name
+                or False
+            ),
+            "diagnostic_event_id": (
+                diagnostic_event.id
+                if diagnostic_event
+                else False
+            ),
+            "diagnostic_log": "\n".join(
+                lines
+            ),
+        })
 
         _logger.info(
             "[SAT AUTOMATION][DIAGNOSTIC][END] "
@@ -2126,20 +2148,6 @@ class SatAutomationConfig(models.Model):
             status,
             "info",
         )
-
-        # ========================================================
-        # IMPORTANTE ODOO 18
-        #
-        # NO usar "next" aquí.
-        #
-        # El anterior "next" dentro de display_notification
-        # provocaba:
-        #
-        # Cannot read properties of undefined (reading 'map')
-        #
-        # porque el cliente web intentaba preprocesar una acción
-        # anidada incompleta.
-        # ========================================================
 
         return {
             "type": "ir.actions.client",
@@ -2193,12 +2201,8 @@ class SatAutomationConfig(models.Model):
             "name": _("Evento de diagnóstico"),
             "res_model": "sat.automation.event",
             "res_id": self.diagnostic_event_id.id,
-
-            # Odoo 18:
-            # usamos views explícitamente.
             "views": [
                 (False, "form"),
             ],
-
             "target": "current",
         }
