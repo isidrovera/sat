@@ -203,6 +203,7 @@
         'views/monitoring/monitoring_network_views.xml',
         'views/monitoring/monitoring_menu.xml',
         'views/toner_management_views.xml',
+        'views/sat_automation_views.xml',
         'views/acciones_menus.xml',
         
     ],
