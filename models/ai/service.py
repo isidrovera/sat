@@ -159,6 +159,25 @@ class SatAIService(models.AbstractModel):
 
     @api.model
     def _build_prompt_payload(self, event, prompt):
+        """
+        Construye el payload del prompt sin usar str.format().
+
+        IMPORTANTE:
+        Los prompts pueden contener ejemplos JSON con llaves { }.
+        str.format() interpreta esas llaves como placeholders y puede
+        provocar KeyError, por ejemplo con:
+            {
+                "event_type": "string"
+            }
+
+        Por eso reemplazamos únicamente los placeholders permitidos:
+            {event_json}
+            {body}
+            {subject}
+            {sender}
+
+        El resto del contenido del prompt permanece intacto.
+        """
         context = {
             "source": event.source,
             "event_type": event.event_type,
@@ -167,19 +186,39 @@ class SatAIService(models.AbstractModel):
             "subject": event.subject,
             "body": event.body_plain,
             "serial_number": event.serial_number,
-            "partner": event.partner_id.display_name if event.partner_id else None,
-            "equipment": event.equipment_id.display_name if event.equipment_id else None,
+            "partner": (
+                event.partner_id.display_name
+                if event.partner_id
+                else None
+            ),
+            "equipment": (
+                event.equipment_id.display_name
+                if event.equipment_id
+                else None
+            ),
         }
 
-        user_text = prompt.user_template.format(
-            event_json=json.dumps(context, ensure_ascii=False, default=str),
-            body=event.body_plain or "",
-            subject=event.subject or "",
-            sender=event.sender or "",
-        )
+        user_text = prompt.user_template or ""
+
+        replacements = {
+            "{event_json}": json.dumps(
+                context,
+                ensure_ascii=False,
+                default=str,
+            ),
+            "{body}": event.body_plain or "",
+            "{subject}": event.subject or "",
+            "{sender}": event.sender or "",
+        }
+
+        for placeholder, value in replacements.items():
+            user_text = user_text.replace(
+                placeholder,
+                str(value or ""),
+            )
 
         return {
-            "system": prompt.system_prompt,
+            "system": prompt.system_prompt or "",
             "user": user_text,
             "schema": prompt.expected_json_schema or "",
         }
