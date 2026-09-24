@@ -156,30 +156,77 @@
     </record>
 
     <record id="view_sat_automation_event_search" model="ir.ui.view">
-      <field name="name">sat.automation.event.search</field>
-      <field name="model">sat.automation.event</field>
-      <field name="arch" type="xml">
+    <field name="name">sat.automation.event.search</field>
+    <field name="model">sat.automation.event</field>
+    <field name="arch" type="xml">
         <search string="Buscar Eventos">
-          <field name="name"/>
-          <field name="serial_number"/>
-          <field name="equipment_id"/>
-          <field name="partner_id"/>
-          <field name="sender"/>
-          <separator/>
-          <filter name="filter_review" string="Revisión" domain="[('state','=','review')]"/>
-          <filter name="filter_error" string="Errores" domain="[('state','=','error')]"/>
-          <filter name="filter_ai" string="Con IA" domain="[('ai_used','=',True)]"/>
-          <filter name="filter_today" string="Hoy"
-                  domain="[('event_datetime','&gt;=',context_today().strftime('%Y-%m-%d'))]"/>
-          <group expand="0" string="Agrupar por">
-            <filter string="Estado" context="{'group_by':'state'}"/>
-            <filter string="Origen" context="{'group_by':'source'}"/>
-            <filter string="Tipo" context="{'group_by':'event_type'}"/>
-            <filter string="Cliente" context="{'group_by':'partner_id'}"/>
-          </group>
+
+            <!-- Campos de búsqueda -->
+            <field name="name"/>
+            <field name="serial_number"/>
+            <field name="equipment_id"/>
+            <field name="partner_id"/>
+            <field name="sender"/>
+
+            <separator/>
+
+            <!-- Filtros -->
+            <filter
+                name="filter_review"
+                string="Revisión"
+                domain="[('state', '=', 'review')]"
+            />
+
+            <filter
+                name="filter_error"
+                string="Errores"
+                domain="[('state', '=', 'error')]"
+            />
+
+            <filter
+                name="filter_ai"
+                string="Con IA"
+                domain="[('ai_used', '=', True)]"
+            />
+
+            <filter
+                name="filter_today"
+                string="Hoy"
+                domain="[('event_datetime', '&gt;=', context_today().strftime('%Y-%m-%d'))]"
+            />
+
+            <!-- Agrupaciones -->
+            <group string="Agrupar por">
+
+                <filter
+                    name="group_by_state"
+                    string="Estado"
+                    context="{'group_by': 'state'}"
+                />
+
+                <filter
+                    name="group_by_source"
+                    string="Origen"
+                    context="{'group_by': 'source'}"
+                />
+
+                <filter
+                    name="group_by_event_type"
+                    string="Tipo"
+                    context="{'group_by': 'event_type'}"
+                />
+
+                <filter
+                    name="group_by_partner"
+                    string="Cliente"
+                    context="{'group_by': 'partner_id'}"
+                />
+
+            </group>
+
         </search>
-      </field>
-    </record>
+    </field>
+</record>
 
     <!-- ============================================================ -->
     <!-- APRENDIZAJE                                                  -->
