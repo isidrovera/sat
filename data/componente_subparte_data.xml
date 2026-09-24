@@ -359,6 +359,11 @@
     <field name="code">STR_BELT</field>
     <field name="tipo_id" ref="comp_tipo_transfer_sec"/>
   </record>
+  <record id="sub_secondary_transfer_blade" model="componente.subparte">
+    <field name="name">Cuchilla de limpieza de transferencia secundaria</field>
+    <field name="code">STR_CLEANING_BLADE</field>
+    <field name="tipo_id" ref="comp_tipo_transfer_sec"/>
+</record>
   <record id="sub_secondary_transfer_roller" model="componente.subparte">
     <field name="name">Rodillo de transferencia secundaria</field>
     <field name="code">STR_ROLLER</field>
