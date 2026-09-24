@@ -802,26 +802,82 @@ class TicketRepuestoPedido(models.Model):
 
     def _crear_ticket_instalacion(self):
         self.ensure_one()
+
+        # Ticket que originó este pedido. De aquí se conservan los datos
+        # reales de atención para el ticket automático de cambio de repuestos.
+        ticket_origen = self.ticket_id
+
         lineas_desc = "\n".join([
-            f"- {l.componente_display or '?'} → {l.subparte_id.name} ({'Color: ' + l.color_id.name if l.color_id else 'B/N'}) x{int(l.cantidad)}"
+            f"- {l.componente_display or '?'} → "
+            f"{l.subparte_id.name if l.subparte_id else (l.nombre_libre or '?')} "
+            f"({'Color: ' + l.color_id.name if l.color_id else 'B/N'}) "
+            f"x{int(l.cantidad)}"
             for l in self.linea_ids
         ])
-        descripcion = f"Instalación de repuestos del pedido {self.name}\n\nRepuestos a instalar:\n{lineas_desc}\n\nEquipo: {self.modelo_nombre} — Serie: {self.serie}"
+
+        descripcion = (
+            f"Instalación de repuestos del pedido {self.name}\n\n"
+            f"Repuestos a instalar:\n{lineas_desc}\n\n"
+            f"Equipo: {self.modelo_nombre} — Serie: {self.serie}"
+        )
+
+        vals = {
+            'tipo_servicio_id': 'cambio_repuestos',
+            'product_alquiler': self.equipo_id.id if self.equipo_id else False,
+            'partner_id': self.cliente_id.id if self.cliente_id else False,
+            'description': descripcion,
+            'estado': 'nuevo',
+            'pedido_origen_id': self.id,
+
+            # Datos de atención heredados del ticket que originó el pedido
+            'direccion_id_r': ticket_origen.direccion_id_r if ticket_origen else False,
+            'contacto_id_r': ticket_origen.contacto_id_r if ticket_origen else False,
+            'celular_id_r': ticket_origen.celular_id_r if ticket_origen else False,
+            'corre_id_r': ticket_origen.corre_id_r if ticket_origen else False,
+            'piso_id_r': ticket_origen.piso_id_r if ticket_origen else False,
+            'oficina_id_r': ticket_origen.oficina_id_r if ticket_origen else False,
+            'area_id_r': ticket_origen.area_id_r if ticket_origen else False,
+            'estern_id_r': ticket_origen.estern_id_r if ticket_origen else False,
+        }
+
+        _logger.info(
+            "[_crear_ticket_instalacion] INICIO pedido=%s | ticket_origen=%s | "
+            "cliente=%s | direccion=%s | contacto=%s | celular=%s | correo=%s",
+            self.name,
+            ticket_origen.name if ticket_origen else 'N/A',
+            self.cliente_id.name if self.cliente_id else 'N/A',
+            vals.get('direccion_id_r') or 'N/A',
+            vals.get('contacto_id_r') or 'N/A',
+            vals.get('celular_id_r') or 'N/A',
+            vals.get('corre_id_r') or 'N/A',
+        )
+
         try:
-            ticket = self.env['ticket.alquiler'].sudo().create({
-                'tipo_servicio_id': 'cambio_repuestos',
-                'product_alquiler': self.equipo_id.id if self.equipo_id else False,
-                'partner_id':       self.cliente_id.id if self.cliente_id else False,
-                'description':      descripcion,
-                'estado':           'nuevo',
-                'pedido_origen_id': self.id,
-            })
+            ticket = self.env['ticket.alquiler'].sudo().create(vals)
+
             self.write({'ticket_instalacion_id': ticket.id})
-            _logger.info("[_crear_ticket_instalacion] pedido=%s → ticket=%s", self.name, ticket.name)
+
+            _logger.info(
+                "[_crear_ticket_instalacion] OK pedido=%s → ticket=%s id=%s | "
+                "direccion=%s | contacto=%s | celular=%s | correo=%s",
+                self.name,
+                ticket.name,
+                ticket.id,
+                ticket.direccion_id_r or 'N/A',
+                ticket.contacto_id_r or 'N/A',
+                ticket.celular_id_r or 'N/A',
+                ticket.corre_id_r or 'N/A',
+            )
+
             return ticket
+
         except Exception as e:
-            _logger.error("[_crear_ticket_instalacion] ERROR pedido=%s | %s", self.name, str(e))
-            return False
+            _logger.exception(
+                "[_crear_ticket_instalacion] ERROR pedido=%s | error=%s",
+                self.name,
+                str(e),
+            )
+            raise
 
     # ============================================================
     # PASO 5 — marcar instalado

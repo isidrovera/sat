@@ -1434,18 +1434,88 @@ class TicketAlquiler(models.Model):
     
             if es_instalacion_repuestos:
                 # ============================================================
-                # FLUJO A — TICKET DE INSTALACIÓN DE REPUESTOS
-                # No pasa por el wizard ni crea pedido nuevo.
-                # Solo registra historial con contómetros reales.
+                # FLUJO A — TICKET AUTOMÁTICO CREADO DESDE UN PEDIDO
+                #
+                # Este ticket instala los repuestos del pedido_origen_id.
+                # Si durante la instalación el técnico detecta OTROS
+                # componentes/accesorios con "requiere_cambio", se utiliza
+                # el mismo wizard de subpartes del flujo normal y se genera
+                # un NUEVO pedido solamente con esas nuevas intervenciones.
                 # ============================================================
                 _logger.info(
-                    "[action_finalizar] FLUJO A — instalación de repuestos | "
-                    "ticket=%s pedido_origen=%s",
-                    ticket.id, ticket.pedido_origen_id.name
+                    "[action_finalizar] FLUJO A — ticket automático de cambio de "
+                    "repuestos | ticket=%s pedido_origen=%s skip_wizard=%s",
+                    ticket.id,
+                    ticket.pedido_origen_id.name,
+                    self.env.context.get('skip_subpartes_validation', False),
                 )
-    
+
+                # ------------------------------------------------------------
+                # A1. Verificar nuevas necesidades detectadas durante la
+                #     instalación. Esto NO corresponde a los repuestos del
+                #     pedido original; esos solo están en pedido_origen_id.
+                # ------------------------------------------------------------
+                if not self.env.context.get('skip_subpartes_validation'):
+                    pendientes = ticket._get_componentes_requieren_cambio_sin_subpartes()
+
+                    _logger.info(
+                        "[action_finalizar] ticket automático=%s | nuevas "
+                        "necesidades sin subpartes=%s",
+                        ticket.id,
+                        len(pendientes),
+                    )
+
+                    if pendientes:
+                        _logger.info(
+                            "[action_finalizar] ticket automático=%s → abriendo "
+                            "wizard para %s nueva(s) necesidad(es)",
+                            ticket.id,
+                            len(pendientes),
+                        )
+                        return ticket._abrir_wizard_subpartes(pendientes)
+                else:
+                    _logger.info(
+                        "[action_finalizar] ticket automático=%s | "
+                        "skip_subpartes_validation=True — wizard ya procesado",
+                        ticket.id,
+                    )
+
+                # ------------------------------------------------------------
+                # A2. Si el wizard creó intervenciones con subpartes, generar
+                #     un NUEVO pedido. El pedido original NO se copia porque
+                #     sus repuestos no existen en ticket_intervencion_ids.
+                # ------------------------------------------------------------
+                nuevas_intervenciones = ticket.ticket_intervencion_ids.filtered(
+                    lambda x: x.detalle_ids
+                )
+
+                _logger.info(
+                    "[action_finalizar] ticket automático=%s | "
+                    "nuevas_intervenciones=%s",
+                    ticket.id,
+                    len(nuevas_intervenciones),
+                )
+
+                if nuevas_intervenciones:
+                    _logger.info(
+                        "[action_finalizar] ticket automático=%s → creando NUEVO "
+                        "pedido por repuestos adicionales detectados en instalación",
+                        ticket.id,
+                    )
+                    ticket._crear_pedido_repuestos()
+                else:
+                    _logger.info(
+                        "[action_finalizar] ticket automático=%s → sin repuestos "
+                        "adicionales; no se crea nuevo pedido",
+                        ticket.id,
+                    )
+
+                # ------------------------------------------------------------
+                # A3. Registrar la instalación del pedido original con los
+                #     contómetros reales del cierre.
+                # ------------------------------------------------------------
                 ticket._registrar_historial_instalacion()
-    
+
                 try:
                     ticket.pedido_origen_id.action_marcar_instalado()
                     _logger.info(
@@ -1454,11 +1524,13 @@ class TicketAlquiler(models.Model):
                     )
                 except Exception as e:
                     _logger.error(
-                        "[action_finalizar] Error marcando pedido como instalado "
-                        "ticket=%s pedido=%s error=%s",
-                        ticket.id, ticket.pedido_origen_id.name, str(e)
+                        "[action_finalizar] Error marcando pedido original como "
+                        "instalado ticket=%s pedido=%s error=%s",
+                        ticket.id,
+                        ticket.pedido_origen_id.name,
+                        str(e),
                     )
-    
+
             else:
                 # ============================================================
                 # FLUJO B — TICKET NORMAL
