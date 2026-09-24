@@ -336,37 +336,312 @@
     </record>
 
     <record id="view_sat_automation_config_form" model="ir.ui.view">
-      <field name="name">sat.automation.config.form</field>
-      <field name="model">sat.automation.config</field>
-      <field name="arch" type="xml">
+    <field name="name">sat.automation.config.form</field>
+    <field name="model">sat.automation.config</field>
+    <field name="arch" type="xml">
         <form string="Configuración de Automatización">
-          <sheet>
-            <div class="oe_title"><h1><field name="name"/></h1></div>
-            <group>
-              <group string="Motor">
-                <field name="active"/>
-                <field name="processing_enabled"/>
-                <field name="stuck_processing_hours"/>
-              </group>
-              <group string="IA">
-                <field name="ai_mode"/>
-                <field name="ai_failure_policy"/>
-                <field name="min_ai_confidence"/>
-                <field name="min_pattern_confidence"/>
-              </group>
-            </group>
-            <group string="Aprendizaje">
-              <field name="learning_enabled"/>
-              <field name="learning_shadow_mode"/>
-              <field name="learning_auto_promote"/>
-              <field name="learning_min_tests"/>
-              <field name="learning_min_success_rate"/>
-              <field name="learning_reject_after_failures"/>
-            </group>
-          </sheet>
+
+            <!-- ===================================================== -->
+            <!-- HEADER                                                -->
+            <!-- ===================================================== -->
+            <header>
+
+                <button name="action_test_full_system"
+                        type="object"
+                        string="🧪 Probar sistema completo"
+                        class="btn-primary"
+                        groups="base.group_system"/>
+
+                <button name="action_open_diagnostic_event"
+                        type="object"
+                        string="🔎 Ver evento de prueba"
+                        class="btn-secondary"
+                        groups="base.group_system"
+                        invisible="not diagnostic_event_id"/>
+
+            </header>
+
+            <sheet>
+
+                <!-- ================================================= -->
+                <!-- TÍTULO                                            -->
+                <!-- ================================================= -->
+                <div class="oe_title">
+                    <h1>
+                        <field name="name"/>
+                    </h1>
+                </div>
+
+
+                <!-- ================================================= -->
+                <!-- ESTADO GENERAL                                    -->
+                <!-- ================================================= -->
+                <group>
+
+                    <group string="Motor">
+                        <field name="active"/>
+                        <field name="processing_enabled"/>
+                        <field name="stuck_processing_hours"/>
+                    </group>
+
+                    <group string="IA">
+                        <field name="ai_mode"/>
+                        <field name="ai_failure_policy"/>
+                        <field name="min_ai_confidence"/>
+                        <field name="min_pattern_confidence"/>
+                    </group>
+
+                </group>
+
+
+                <notebook>
+
+                    <!-- ============================================= -->
+                    <!-- APRENDIZAJE                                   -->
+                    <!-- ============================================= -->
+                    <page string="🧠 Aprendizaje"
+                          name="learning">
+
+                        <group>
+
+                            <group string="Estado">
+                                <field name="learning_enabled"/>
+                                <field name="learning_shadow_mode"/>
+                                <field name="learning_auto_promote"/>
+                            </group>
+
+                            <group string="Umbrales">
+                                <field name="learning_min_tests"/>
+                                <field name="learning_min_success_rate"/>
+                                <field name="learning_reject_after_failures"/>
+                            </group>
+
+                        </group>
+
+                        <div class="alert alert-info"
+                             role="alert"
+                             invisible="not learning_enabled">
+
+                            <strong>Aprendizaje activo</strong>
+
+                            <br/>
+
+                            Los patrones candidatos se pueden probar sin afectar
+                            el procesamiento operativo.
+
+                            <span invisible="not learning_shadow_mode">
+                                Actualmente el sistema utiliza
+                                <strong>Shadow Mode</strong>.
+                            </span>
+
+                        </div>
+
+                    </page>
+
+
+                    
+                    <page string="🧪 Diagnóstico"
+                          name="diagnostic"
+                          groups="base.group_system">
+
+
+                        <group>
+
+                            <group string="Última prueba">
+
+                                <field name="diagnostic_status"
+                                       widget="badge"
+                                       readonly="1"/>
+
+                                <field name="diagnostic_date"
+                                       readonly="1"/>
+
+                                <field name="diagnostic_duration"
+                                       readonly="1"/>
+
+                                <field name="diagnostic_event_id"
+                                       readonly="1"/>
+
+                            </group>
+
+
+                            <group string="Resultados">
+
+                                <field name="diagnostic_total"
+                                       readonly="1"/>
+
+                                <field name="diagnostic_ok"
+                                       readonly="1"/>
+
+                                <field name="diagnostic_warnings"
+                                       readonly="1"/>
+
+                                <field name="diagnostic_errors"
+                                       readonly="1"/>
+
+                            </group>
+
+                        </group>
+
+
+                        <div class="alert alert-success"
+                             role="alert"
+                             invisible="diagnostic_status != 'ok'">
+
+                            <strong>✅ Sistema correcto</strong>
+
+                            <br/>
+
+                            Todas las pruebas principales del motor de
+                            automatización finalizaron correctamente.
+
+                        </div>
+
+
+                        <div class="alert alert-warning"
+                             role="alert"
+                             invisible="diagnostic_status != 'warning'">
+
+                            <strong>⚠️ Sistema funcionando con advertencias</strong>
+
+                            <br/>
+
+                            El motor está operativo, pero existen observaciones
+                            que conviene revisar en el log del diagnóstico.
+
+                        </div>
+
+
+                        <div class="alert alert-danger"
+                             role="alert"
+                             invisible="diagnostic_status != 'error'">
+
+                            <strong>❌ Se encontraron errores</strong>
+
+                            <br/>
+
+                            Una o más pruebas del sistema fallaron.
+                            Revise el log completo para identificar el componente
+                            afectado.
+
+                        </div>
+
+
+                        <div class="alert alert-secondary"
+                             role="alert"
+                             invisible="diagnostic_status != 'never'">
+
+                            <strong>Sin pruebas realizadas</strong>
+
+                            <br/>
+
+                            Pulse
+                            <strong>Probar sistema completo</strong>
+                            para ejecutar el diagnóstico.
+
+                        </div>
+
+
+                       
+
+                        <group string="Inteligencia Artificial">
+
+                            <group>
+
+                                <field name="diagnostic_ai_provider"
+                                       readonly="1"/>
+
+                                <field name="diagnostic_ai_model"
+                                       readonly="1"/>
+
+                            </group>
+
+                        </group>
+
+
+                       
+
+                        <group string="Log completo del diagnóstico">
+
+                            <field name="diagnostic_log"
+                                   nolabel="1"
+                                   readonly="1"
+                                   widget="text"
+                                   placeholder="Ejecute una prueba para generar el diagnóstico..."/>
+
+                        </group>
+
+                    </page>
+
+
+              
+                    <page string="ℹ️ Información"
+                          name="information">
+
+                        <div class="alert alert-info"
+                             role="alert">
+
+                            <h4>
+                                Motor de Automatización SAT
+                            </h4>
+
+                            <p>
+                                Este motor permite recibir eventos desde
+                                diferentes fuentes y procesarlos mediante
+                                reglas, patrones e inteligencia artificial.
+                            </p>
+
+                            <p>
+                                La inteligencia artificial es opcional.
+                                Si el modo está configurado como
+                                <strong>Fallback</strong>,
+                                primero se intentan utilizar reglas y patrones.
+                            </p>
+
+                            <p>
+                                El diagnóstico integral realiza pruebas
+                                controladas y no debe generar movimientos
+                                reales de stock, solicitudes de tóner,
+                                tickets ni cambios de contadores.
+                            </p>
+
+                        </div>
+
+
+                        <group>
+
+                            <group string="Modo de procesamiento">
+
+                                <field name="processing_enabled"
+                                       readonly="1"/>
+
+                                <field name="ai_mode"
+                                       readonly="1"/>
+
+                            </group>
+
+
+                            <group string="Aprendizaje">
+
+                                <field name="learning_enabled"
+                                       readonly="1"/>
+
+                                <field name="learning_shadow_mode"
+                                       readonly="1"/>
+
+                            </group>
+
+                        </group>
+
+                    </page>
+
+                </notebook>
+
+            </sheet>
+
         </form>
-      </field>
-    </record>
+    </field>
+</record>
 
     <!-- ============================================================ -->
     <!-- REGLAS                                                       -->
