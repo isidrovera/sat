@@ -482,6 +482,11 @@
     <field name="code">FUSER_OIL_PAD</field>
     <field name="tipo_id" ref="comp_tipo_fusora"/>
 </record>
+<record id="sub_fuser_upper_film_guide" model="componente.subparte">
+    <field name="name">Guía metálica superior del film fusor</field>
+    <field name="code">FUSER_UPPER_FILM_GUIDE</field>
+    <field name="tipo_id" ref="comp_tipo_fusora"/>
+</record>
 <!-- Rodillo de esponja (limpieza del rodillo de calor) -->
 <record id="sub_fuser_sponge_roller" model="componente.subparte">
     <field name="name">Rodillo de esponja</field>
