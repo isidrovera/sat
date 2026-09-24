@@ -85,15 +85,37 @@ class PrintTrackerConfig(models.Model):
             return default
 
     def _retry_api_call(self, func, *args, **kwargs):
-        """Wrapper para reintentar llamadas API fallidas"""
-        for attempt in range(self.max_retries):
+        """
+        Wrapper para llamadas API con reintentos.
+
+        max_retries representa reintentos adicionales a la primera llamada.
+        Ejemplo: max_retries=3 -> hasta 4 intentos totales.
+        """
+        retries = max(int(self.max_retries or 0), 0)
+        attempts = retries + 1
+        last_error = None
+
+        for attempt in range(attempts):
             try:
                 return func(*args, **kwargs)
-            except requests.exceptions.RequestException as e:
-                if attempt == self.max_retries - 1:
-                    raise e
-                _logger.warning(f"⚠️ Intento {attempt + 1} falló, reintentando en {self.retry_delay}s...")
-                time.sleep(self.retry_delay)
+            except requests.exceptions.RequestException as error:
+                last_error = error
+                if attempt >= attempts - 1:
+                    raise
+
+                delay = max(int(self.retry_delay or 0), 0)
+                _logger.warning(
+                    "⚠️ Llamada API falló intento %s/%s: %s. Reintentando en %ss...",
+                    attempt + 1,
+                    attempts,
+                    error,
+                    delay,
+                )
+                if delay:
+                    time.sleep(delay)
+
+        if last_error:
+            raise last_error
 
     def test_connection(self):
         """Prueba la conexión con PrintTracker API"""
@@ -183,8 +205,9 @@ class PrintTrackerConfig(models.Model):
             if response.status_code == 200:
                 data = response.json()
                 
-                # Crear/actualizar entidad principal
-                self._sync_entity(data)
+                # Crear/actualizar entidad principal aislando errores SQL
+                with self.env.cr.savepoint():
+                    self._sync_entity(data)
                 
                 # Sincronizar entidades hijas
                 children_synced = 0
@@ -201,8 +224,20 @@ class PrintTrackerConfig(models.Model):
                         
                         if child_response.status_code == 200:
                             child_data = child_response.json()
-                            self._sync_entity(child_data, parent_entity_id=data['id'])
-                            children_synced += 1
+                            try:
+                                with self.env.cr.savepoint():
+                                    self._sync_entity(
+                                        child_data,
+                                        parent_entity_id=data['id'],
+                                    )
+                                children_synced += 1
+                            except Exception:
+                                _logger.exception(
+                                    "❌ Error sincronizando entidad hija id=%s name=%s parent=%s",
+                                    child_data.get('id'),
+                                    child_data.get('name'),
+                                    data.get('id'),
+                                )
                 
                 self.last_sync_date = fields.Datetime.now()
                 
@@ -237,45 +272,65 @@ class PrintTrackerConfig(models.Model):
             }
 
     def _sync_entity(self, entity_data, parent_entity_id=None):
-        """Sincroniza una entidad individual - SIMPLIFICADO"""
-        try:
-            # Buscar si ya existe
-            existing_entity = self.env['printtracker.entity'].search([
-                ('pt_entity_id', '=', entity_data['id'])
+        """
+        Sincroniza una entidad individual.
+
+        No absorbe errores SQL: el llamador debe usar savepoint para aislarlos.
+        """
+        entity_id = entity_data.get('id')
+        entity_name = entity_data.get('name') or 'Sin nombre'
+
+        if not entity_id:
+            raise ValueError("PrintTracker devolvió una entidad sin campo 'id'.")
+
+        existing_entity = self.env['printtracker.entity'].search([
+            ('pt_entity_id', '=', entity_id)
+        ], limit=1)
+
+        parent_entity = self.env['printtracker.entity'].browse()
+        if parent_entity_id:
+            parent_entity = self.env['printtracker.entity'].search([
+                ('pt_entity_id', '=', parent_entity_id)
             ], limit=1)
-            
-            # Buscar entidad padre
-            parent_entity = None
-            if parent_entity_id:
-                parent_entity = self.env['printtracker.entity'].search([
-                    ('pt_entity_id', '=', parent_entity_id)
-                ], limit=1)
-            
-            entity_values = {
-                'pt_entity_id': entity_data['id'],
-                'name': entity_data.get('name', 'Sin nombre'),
-                'genealogy': str(entity_data.get('genealogy', [])),
-                'parent_id': parent_entity.id if parent_entity else False,
-                'last_sync': fields.Datetime.now(),
-                'sync_error': False,
-                'is_active': True
-            }
-            
+
+        entity_values = {
+            'pt_entity_id': entity_id,
+            'name': entity_name,
+            'genealogy': str(entity_data.get('genealogy', [])),
+            'parent_id': parent_entity.id if parent_entity else False,
+            'last_sync': fields.Datetime.now(),
+            'sync_error': False,
+            'is_active': True,
+        }
+
+        try:
             if existing_entity:
                 existing_entity.write(entity_values)
-                _logger.info(f"📝 Entidad actualizada: {entity_data.get('name')}")
+                entity = existing_entity
+                _logger.info("📝 Entidad actualizada: %s (%s)", entity_name, entity_id)
             else:
-                new_entity = self.env['printtracker.entity'].create(entity_values)
-                _logger.info(f"🆕 Entidad creada: {entity_data.get('name')}")
-                
-                # Sincronizar direcciones y labels
-                if 'addresses' in entity_data:
-                    new_entity._sync_addresses(entity_data['addresses'])
-                if 'labels' in entity_data:
-                    new_entity._sync_labels(entity_data['labels'])
-                    
-        except Exception as e:
-            _logger.error(f"❌ Error sincronizando entidad {entity_data.get('name')}: {e}")
+                entity = self.env['printtracker.entity'].create(entity_values)
+                _logger.info("🆕 Entidad creada: %s (%s)", entity_name, entity_id)
+
+            if 'addresses' in entity_data:
+                sync_addresses = getattr(entity, '_sync_addresses', None)
+                if callable(sync_addresses):
+                    sync_addresses(entity_data.get('addresses') or [])
+
+            if 'labels' in entity_data:
+                sync_labels = getattr(entity, '_sync_labels', None)
+                if callable(sync_labels):
+                    sync_labels(entity_data.get('labels') or {})
+
+            return entity
+        except Exception:
+            _logger.exception(
+                "❌ Error sincronizando entidad name=%s id=%s parent=%s",
+                entity_name,
+                entity_id,
+                parent_entity_id,
+            )
+            raise
 
     def sync_all_devices(self):
         """Sincroniza todos los dispositivos desde PrintTracker - CON PAGINACIÓN"""
@@ -292,7 +347,7 @@ class PrintTrackerConfig(models.Model):
                 
                 params = {
                     'includeChildren': True,
-                    'excludeDisabled': not self.solo_equipos_gestionados,
+                    'excludeDisabled': bool(self.solo_equipos_gestionados),
                     'limit': self.max_records_per_request,
                     'page': page  # ← ESTE PARÁMETRO FALTABA
                 }
@@ -311,8 +366,18 @@ class PrintTrackerConfig(models.Model):
                 
                 if response.status_code == 200:
                     devices_page = response.json()
-                    
-                    _logger.info(f"📊 Página {page}: {len(devices_page)} dispositivos recibidos")
+
+                    if not isinstance(devices_page, list):
+                        raise ValueError(
+                            "PrintTracker /device devolvió un JSON no-lista "
+                            f"en página {page}: {type(devices_page).__name__}"
+                        )
+
+                    _logger.info(
+                        "📊 Página %s: %s dispositivos recibidos",
+                        page,
+                        len(devices_page),
+                    )
                     
                     if not devices_page:
                         _logger.info(f"📄 Página {page} vacía - Fin de datos")
@@ -360,8 +425,13 @@ class PrintTrackerConfig(models.Model):
             devices_error = 0
             
             for i, device_data in enumerate(all_devices):
+                serial_number = device_data.get('serialNumber')
+                device_key = device_data.get('id')
+
                 try:
-                    result = self._sync_device(device_data)
+                    with self.env.cr.savepoint():
+                        result = self._sync_device(device_data)
+
                     if result == 'created':
                         devices_synced += 1
                     elif result == 'updated':
@@ -372,14 +442,24 @@ class PrintTrackerConfig(models.Model):
                         devices_invalid_serial += 1
                     else:
                         devices_error += 1
-                except Exception as e:
+
+                except Exception:
                     devices_error += 1
-                    _logger.error(f"❌ Error procesando dispositivo {i+1}: {e}")
-                
-                # Progreso cada 10 dispositivos
+                    _logger.exception(
+                        "❌ Error procesando dispositivo %s/%s serial=%s pt_device_id=%s",
+                        i + 1,
+                        len(all_devices),
+                        serial_number,
+                        device_key,
+                    )
+
                 if (i + 1) % 10 == 0:
-                    _logger.info(f"📊 Progreso: {i+1}/{len(all_devices)} dispositivos procesados")
-            
+                    _logger.info(
+                        "📊 Progreso: %s/%s dispositivos procesados",
+                        i + 1,
+                        len(all_devices),
+                    )
+
             # RESULTADO FINAL DETALLADO
             _logger.info(f"🎯 === RESUMEN FINAL ===")
             _logger.info(f"📄 Páginas: {total_pages_processed}")
@@ -412,7 +492,7 @@ class PrintTrackerConfig(models.Model):
             }
             
         except Exception as e:
-            _logger.error(f"❌ Error sincronizando dispositivos: {e}")
+            _logger.exception("❌ Error sincronizando dispositivos: %s", e)
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -423,62 +503,73 @@ class PrintTrackerConfig(models.Model):
             }
     def _sync_device(self, device_data):
         """
-        LIMPIO: Sincroniza un dispositivo individual - Solo mapeo con alquiler
-        NO actualiza contadores (eso va al cron consolidador)
+        Sincroniza el mapeo de un dispositivo PrintTracker con alquiler.
+
+        No actualiza contadores. Los errores SQL se propagan para que el
+        savepoint del llamador revierta únicamente este dispositivo.
         """
+        serial_number = str(device_data.get('serialNumber') or '').strip()
+        device_key = device_data.get('id')
+
+        if not serial_number or serial_number.lower() in ('notavailable', 'none'):
+            _logger.info("⏭️ Saltando dispositivo con serie inválida: %s", serial_number)
+            return 'invalid_serial'
+
+        existing_device = self.env['alquiler'].search([
+            ('serie', '=', serial_number)
+        ], limit=1)
+
+        if not existing_device:
+            _logger.info(
+                "📋 Equipo en PrintTracker no registrado en Odoo: serial=%s pt_device_id=%s",
+                serial_number,
+                device_key,
+            )
+            return 'not_in_odoo'
+
+        entity = self.env['printtracker.entity'].search([
+            ('pt_entity_id', '=', device_data.get('entityKey'))
+        ], limit=1)
+
+        update_values = {
+            'pt_device_id': device_key,
+            'pt_entity_id': entity.id if entity else False,
+            'pt_last_sync': fields.Datetime.now(),
+        }
+
+        if 'mac_address' in existing_device._fields:
+            update_values['mac_address'] = device_data.get('macAddress')
+        if 'ip_address' in existing_device._fields:
+            update_values['ip_address'] = device_data.get('ipAddress')
+        if 'custom_location' in existing_device._fields:
+            update_values['custom_location'] = device_data.get('customLocation')
+        if 'asset_id' in existing_device._fields:
+            update_values['asset_id'] = (
+                device_data.get('assetID')
+                if device_data.get('assetID') is not None
+                else device_data.get('assetId')
+            )
+        if 'is_managed' in existing_device._fields:
+            update_values['is_managed'] = device_data.get('managed', True)
+
         try:
-            serial_number = device_data.get('serialNumber')
-            
-            # Filtrar series inválidas
-            if not serial_number or serial_number in ['notavailable', 'None', '', None]:
-                _logger.info(f"⏭️ Saltando dispositivo con serie inválida: {serial_number}")
-                return 'invalid_serial'
-            
-            # Buscar equipo existente por serie
-            existing_device = self.env['alquiler'].search([
-                ('serie', '=', serial_number)
-            ], limit=1)
-            
-            if existing_device:
-                # Buscar entidad correspondiente
-                entity = self.env['printtracker.entity'].search([
-                    ('pt_entity_id', '=', device_data.get('entityKey'))
-                ], limit=1)
-                
-                # SOLO actualizar campos de mapeo PrintTracker - SIN CONTADORES
-                update_values = {
-                    'pt_device_id': device_data.get('id'),
-                    'pt_entity_id': entity.id if entity else False,
-                    'pt_last_sync': fields.Datetime.now()
-                }
-                
-                # Campos adicionales si existen en el modelo alquiler
-                if hasattr(existing_device, 'mac_address'):
-                    update_values['mac_address'] = device_data.get('macAddress')
-                
-                if hasattr(existing_device, 'ip_address'):
-                    update_values['ip_address'] = device_data.get('ipAddress')
-                
-                if hasattr(existing_device, 'custom_location'):
-                    update_values['custom_location'] = device_data.get('customLocation')
-                
-                if hasattr(existing_device, 'asset_id'):
-                    update_values['asset_id'] = device_data.get('assetID')
-                
-                if hasattr(existing_device, 'is_managed'):
-                    update_values['is_managed'] = device_data.get('managed', True)
-                
-                existing_device.sudo().write(update_values)
-                _logger.info(f"📝 Equipo mapeado con PrintTracker: {serial_number}")
-                
-                return 'updated'
-            else:
-                _logger.info(f"📋 Equipo en PrintTracker no registrado en Odoo: {serial_number}")
-                return 'not_in_odoo'
-                
-        except Exception as e:
-            _logger.error(f"❌ Error sincronizando dispositivo: {e}")
-            return 'error'
+            existing_device.sudo().write(update_values)
+            _logger.info(
+                "📝 Equipo mapeado con PrintTracker: serial=%s pt_device_id=%s entity=%s",
+                serial_number,
+                device_key,
+                device_data.get('entityKey'),
+            )
+            return 'updated'
+        except Exception:
+            _logger.exception(
+                "❌ Error sincronizando dispositivo serial=%s pt_device_id=%s entity=%s values=%s",
+                serial_number,
+                device_key,
+                device_data.get('entityKey'),
+                update_values,
+            )
+            raise
 
     def sync_current_meters(self):
         """
@@ -499,7 +590,7 @@ class PrintTrackerConfig(models.Model):
                 
                 params = {
                     'includeChildren': True,
-                    'excludeDisabled': not self.solo_equipos_gestionados,
+                    'excludeDisabled': bool(self.solo_equipos_gestionados),
                     'limit': self.max_records_per_request,
                     'page': page
                 }
@@ -518,8 +609,18 @@ class PrintTrackerConfig(models.Model):
                 
                 if response.status_code == 200:
                     meters_page = response.json()
-                    
-                    _logger.info(f"📊 Página {page}: {len(meters_page)} medidores recibidos")
+
+                    if not isinstance(meters_page, list):
+                        raise ValueError(
+                            "PrintTracker /currentMeter devolvió un JSON no-lista "
+                            f"en página {page}: {type(meters_page).__name__}"
+                        )
+
+                    _logger.info(
+                        "📊 Página %s: %s medidores recibidos",
+                        page,
+                        len(meters_page),
+                    )
                     
                     if not meters_page:
                         _logger.info(f"📄 Página {page} vacía - Fin de datos")
@@ -563,19 +664,37 @@ class PrintTrackerConfig(models.Model):
             meters_failed = 0
             
             for i, meter_data in enumerate(all_meters):
+                device_key = meter_data.get('deviceKey')
+                meter_id = meter_data.get('id')
+
                 try:
-                    if self._sync_meter(meter_data):
+                    with self.env.cr.savepoint():
+                        result = self._sync_meter(meter_data)
+
+                    if result:
                         meters_synced += 1
                     else:
                         meters_failed += 1
-                except Exception as e:
+
+                except Exception:
                     meters_failed += 1
-                    _logger.error(f"❌ Error procesando medidor {i+1}: {e}")
-                
-                # Progreso cada 10 medidores
+                    _logger.exception(
+                        "❌ Error procesando medidor %s/%s meter_id=%s deviceKey=%s",
+                        i + 1,
+                        len(all_meters),
+                        meter_id,
+                        device_key,
+                    )
+
                 if (i + 1) % 10 == 0:
-                    _logger.info(f"📊 Progreso: {i+1}/{len(all_meters)} medidores procesados")
-            
+                    _logger.info(
+                        "📊 Progreso: %s/%s medidores procesados (ok=%s fallidos=%s)",
+                        i + 1,
+                        len(all_meters),
+                        meters_synced,
+                        meters_failed,
+                    )
+
             # Resultado final
             _logger.info(f"🎯 === RESUMEN FINAL ===")
             _logger.info(f"📄 Páginas: {total_pages_processed}")
@@ -603,7 +722,7 @@ class PrintTrackerConfig(models.Model):
             }
             
         except Exception as e:
-            _logger.error(f"❌ Error sincronizando medidores: {e}")
+            _logger.exception("❌ Error sincronizando medidores: %s", e)
             return {
                 'type': 'ir.actions.client',
                 'tag': 'display_notification',
@@ -615,77 +734,130 @@ class PrintTrackerConfig(models.Model):
 
     def _sync_meter(self, meter_data):
         """
-        LIMPIO: Sincroniza un medidor individual 
-        CORREGIDO: Usa estructura 'default' en lugar de 'life'
-        SIMPLIFICADO: Solo guarda en printtracker.meter, NO actualiza equipos
+        Sincroniza una lectura actual de PrintTracker en printtracker.meter.
+
+        La documentación actual de GET /currentMeter muestra pageCounts.life.
+        Para compatibilidad aceptamos: life -> default -> equiv.
+        Este método NO actualiza los contadores del equipo alquiler.
         """
+        device_key = meter_data.get('deviceKey')
+        meter_id = meter_data.get('id')
+
+        if not device_key:
+            _logger.warning("⚠️ Medidor omitido: falta deviceKey meter_id=%s", meter_id)
+            return False
+
+        device = self.env['alquiler'].search([
+            ('pt_device_id', '=', device_key)
+        ], limit=1)
+
+        if not device:
+            _logger.warning(
+                "⚠️ Medidor omitido: no existe alquiler con pt_device_id=%s meter_id=%s",
+                device_key,
+                meter_id,
+            )
+            return False
+
+        page_counts = meter_data.get('pageCounts') or {}
+        if not isinstance(page_counts, dict):
+            _logger.warning(
+                "⚠️ Medidor omitido: pageCounts no es dict meter_id=%s deviceKey=%s type=%s",
+                meter_id,
+                device_key,
+                type(page_counts).__name__,
+            )
+            return False
+
+        counter_format = None
+        counts = {}
+        for candidate in ('life', 'default', 'equiv'):
+            candidate_counts = page_counts.get(candidate)
+            if isinstance(candidate_counts, dict) and candidate_counts:
+                counter_format = candidate
+                counts = candidate_counts
+                break
+
+        if not counts:
+            _logger.warning(
+                "⚠️ Medidor omitido: no existe pageCounts.life/default/equiv meter_id=%s deviceKey=%s keys=%s",
+                meter_id,
+                device_key,
+                list(page_counts.keys()),
+            )
+            return False
+
+        if counter_format != 'life':
+            _logger.info(
+                "ℹ️ Medidor usando formato alternativo pageCounts.%s meter_id=%s deviceKey=%s",
+                counter_format,
+                meter_id,
+                device_key,
+            )
+
+        def _counter(name):
+            raw = counts.get(name) or {}
+            if isinstance(raw, dict):
+                raw = raw.get('value', 0)
+            return self._safe_int(raw, 0)
+
+        meter_values = {
+            'pt_meter_id': meter_id,
+            'device_id': device.id,
+            'reading_date': self._parse_printtracker_datetime(meter_data.get('timestamp')),
+            'console_status': meter_data.get('console'),
+            'total_pages_life': _counter('total'),
+            'black_pages_life': _counter('totalBlack'),
+            'color_pages_life': _counter('totalColor'),
+            'scan_pages': _counter('totalScans'),
+            'copy_pages': _counter('totalCopies'),
+            'fax_pages': _counter('totalFaxes'),
+            'print_pages': _counter('totalPrints'),
+            'sync_source': 'api',
+            'last_sync': fields.Datetime.now(),
+        }
+
         try:
-            device_key = meter_data.get('deviceKey')
-            if not device_key:
-                _logger.error("❌ No se proporcionó deviceKey")
-                return False
-            
-            # Buscar equipo por pt_device_id
-            device = self.env['alquiler'].search([
-                ('pt_device_id', '=', device_key)
-            ], limit=1)
-            
-            if not device:
-                _logger.warning(f"⚠️ No se encontró equipo con pt_device_id: {device_key}")
-                return False
-            
-            # CORRECCIÓN CRÍTICA: Usar 'default' en lugar de 'life'
-            page_counts = meter_data.get('pageCounts', {})
-            default_counts = page_counts.get('default', {})
-            
-            if not default_counts:
-                _logger.warning(f"⚠️ No se encontró estructura 'default' en pageCounts")
-                # Fallback: intentar con 'life' por compatibilidad
-                default_counts = page_counts.get('life', {})
-                if not default_counts:
-                    _logger.error(f"❌ No se encontró estructura de contadores válida")
-                    return False
-            
-            # Extraer todos los contadores disponibles
-            meter_values = {
-                'pt_meter_id': meter_data.get('id'),
-                'device_id': device.id,
-                'reading_date': self._parse_printtracker_datetime(meter_data.get('timestamp')),
-                'console_status': meter_data.get('console'),
-                
-                # Contadores principales
-                'total_pages_life': self._safe_int(default_counts.get('total', {}).get('value', 0)),
-                'black_pages_life': self._safe_int(default_counts.get('totalBlack', {}).get('value', 0)),
-                'color_pages_life': self._safe_int(default_counts.get('totalColor', {}).get('value', 0)),
-                
-                # NUEVOS CONTADORES DISPONIBLES
-                'scan_pages': self._safe_int(default_counts.get('totalScans', {}).get('value', 0)),
-                'copy_pages': self._safe_int(default_counts.get('totalCopies', {}).get('value', 0)),
-                'fax_pages': self._safe_int(default_counts.get('totalFaxes', {}).get('value', 0)),
-                'print_pages': self._safe_int(default_counts.get('totalPrints', {}).get('value', 0)),
-                
-                # Control de sincronización
-                'sync_source': 'api',
-                'last_sync': fields.Datetime.now()
-            }
-            
-            # Buscar medidor existente
             existing_meter = self.env['printtracker.meter'].search([
-                ('pt_meter_id', '=', meter_data.get('id'))
+                ('pt_meter_id', '=', meter_id)
             ], limit=1)
-            
+
             if existing_meter:
                 existing_meter.write(meter_values)
-                _logger.info(f"📝 Medidor actualizado: {device.serie}")
+                _logger.info(
+                    "📝 Medidor actualizado: serie=%s meter_id=%s deviceKey=%s format=%s total=%s bn=%s color=%s",
+                    device.serie,
+                    meter_id,
+                    device_key,
+                    counter_format,
+                    meter_values['total_pages_life'],
+                    meter_values['black_pages_life'],
+                    meter_values['color_pages_life'],
+                )
             else:
                 self.env['printtracker.meter'].create(meter_values)
-                _logger.info(f"🆕 Medidor creado: {device.serie}")
-            
+                _logger.info(
+                    "🆕 Medidor creado: serie=%s meter_id=%s deviceKey=%s format=%s total=%s bn=%s color=%s",
+                    device.serie,
+                    meter_id,
+                    device_key,
+                    counter_format,
+                    meter_values['total_pages_life'],
+                    meter_values['black_pages_life'],
+                    meter_values['color_pages_life'],
+                )
+
             return True
-            
-        except Exception as e:
-            _logger.error(f"❌ Error sincronizando medidor: {e}")
-            return False
+        except Exception:
+            _logger.exception(
+                "❌ Error SQL/ORM sincronizando medidor serie=%s meter_id=%s deviceKey=%s format=%s values=%s",
+                device.serie,
+                meter_id,
+                device_key,
+                counter_format,
+                meter_values,
+            )
+            raise
 
     def _parse_printtracker_datetime(self, datetime_str):
         """Convierte fecha de PrintTracker (ISO 8601) a formato Odoo"""
