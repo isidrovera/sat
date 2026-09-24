@@ -2,11 +2,14 @@
 
 import json
 import logging
+import re
 import time
 import traceback
+from uuid import uuid4
 
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
+
 
 _logger = logging.getLogger(__name__)
 
@@ -16,23 +19,29 @@ class SatAutomationConfig(models.Model):
     _description = "Configuración de Automatización SAT"
     _rec_name = "name"
 
+    # ============================================================
+    # CONFIGURACIÓN GENERAL
+    # ============================================================
+
     name = fields.Char(
+        string="Nombre",
         default="Configuración SAT",
         required=True,
     )
 
     active = fields.Boolean(
+        string="Activo",
         default=True,
     )
-
-    # ============================================================
-    # MOTOR DE AUTOMATIZACIÓN
-    # ============================================================
 
     processing_enabled = fields.Boolean(
         string="Procesamiento automático",
         default=True,
     )
+
+    # ============================================================
+    # INTELIGENCIA ARTIFICIAL
+    # ============================================================
 
     ai_mode = fields.Selection(
         [
@@ -114,7 +123,7 @@ class SatAutomationConfig(models.Model):
     )
 
     # ============================================================
-    # DIAGNÓSTICO DEL SISTEMA
+    # DIAGNÓSTICO
     # ============================================================
 
     diagnostic_status = fields.Selection(
@@ -265,46 +274,149 @@ class SatAutomationConfig(models.Model):
         return config
 
     # ============================================================
-    # DIAGNÓSTICO
+    # HELPERS DE DIAGNÓSTICO
+    # ============================================================
+
+    @api.model
+    def _diagnostic_selection_values(self, model, field_name):
+        """
+        Devuelve los valores internos disponibles en un Selection.
+
+        Se usa únicamente para hacer el diagnóstico tolerante a cambios
+        en las selecciones del modelo.
+        """
+        field = model._fields.get(field_name)
+
+        if not field:
+            return []
+
+        selection = getattr(field, "selection", None)
+
+        if not selection:
+            return []
+
+        try:
+            if callable(selection):
+                selection = selection(model)
+        except Exception:
+            _logger.exception(
+                "[SAT AUTOMATION][DIAGNOSTIC] "
+                "No se pudo resolver selection del campo %s.%s",
+                model._name,
+                field_name,
+            )
+            return []
+
+        try:
+            return [
+                item[0]
+                for item in selection
+                if isinstance(item, (list, tuple))
+                and len(item) >= 2
+            ]
+        except Exception:
+            return []
+
+    @api.model
+    def _diagnostic_safe_value(
+        self,
+        model,
+        field_name,
+        preferred,
+        fallback=None,
+    ):
+        """
+        Devuelve preferred si es válido para un Selection.
+
+        Si el campo no es Selection, devuelve preferred.
+        """
+        field = model._fields.get(field_name)
+
+        if not field:
+            return False
+
+        if getattr(field, "type", None) != "selection":
+            return preferred
+
+        values = self._diagnostic_selection_values(
+            model,
+            field_name,
+        )
+
+        if preferred in values:
+            return preferred
+
+        if fallback and fallback in values:
+            return fallback
+
+        if values:
+            return values[0]
+
+        return False
+
+    @api.model
+    def _diagnostic_model_available(self, model_name):
+        try:
+            return model_name in self.env
+        except Exception:
+            return False
+
+    # ============================================================
+    # DIAGNÓSTICO COMPLETO
     # ============================================================
 
     def action_test_full_system(self):
         """
-        Ejecuta un diagnóstico integral del motor SAT.
+        Diagnóstico integral del sistema SAT Automation.
 
-        IMPORTANTE:
-        - NO ejecuta acciones productivas.
-        - NO crea tickets.
-        - NO crea solicitudes de tóner.
-        - NO modifica contadores de equipos.
-        - NO mueve stock.
+        La prueba está diseñada para ser SEGURA:
 
-        Sí realiza:
-        - creación de evento de diagnóstico;
-        - prueba de patrones;
-        - llamada REAL al proveedor IA;
-        - validación de prompts;
-        - validación de reglas;
-        - validación de modelos/métodos destino;
-        - comprobación de auditoría;
-        - comprobación del motor.
+        - No crea tickets reales.
+        - No crea solicitudes reales de tóner.
+        - No modifica contadores de equipos.
+        - No mueve stock.
+        - No ejecuta métodos destino de las reglas.
+
+        Sí prueba:
+
+        - configuración;
+        - modelos instalados;
+        - creación de evento;
+        - fingerprint/deduplicación;
+        - auditoría;
+        - prompts;
+        - proveedores IA;
+        - llamada real a IA;
+        - patrones;
+        - reglas;
+        - existencia de métodos destino;
+        - consumo IA;
+        - cron/recuperación.
         """
         self.ensure_one()
 
         started = time.time()
 
         lines = []
+
         total = 0
         ok_count = 0
         warning_count = 0
         error_count = 0
 
         diagnostic_event = False
+
         ai_provider_name = False
         ai_model_name = False
 
+        # --------------------------------------------------------
+        # Helpers de salida
+        # --------------------------------------------------------
+
         def add_ok(message):
-            nonlocal total, ok_count
+            nonlocal total
+            nonlocal ok_count
+
             total += 1
             ok_count += 1
 
@@ -317,7 +429,9 @@ class SatAutomationConfig(models.Model):
             )
 
         def add_warning(message):
-            nonlocal total, warning_count
+            nonlocal total
+            nonlocal warning_count
+
             total += 1
             warning_count += 1
 
@@ -330,7 +444,9 @@ class SatAutomationConfig(models.Model):
             )
 
         def add_error(message):
-            nonlocal total, error_count
+            nonlocal total
+            nonlocal error_count
+
             total += 1
             error_count += 1
 
@@ -341,6 +457,10 @@ class SatAutomationConfig(models.Model):
                 "[SAT AUTOMATION][DIAGNOSTIC] %s",
                 line,
             )
+
+        # --------------------------------------------------------
+        # Inicio
+        # --------------------------------------------------------
 
         lines.append(
             "============================================================"
@@ -353,489 +473,993 @@ class SatAutomationConfig(models.Model):
         )
         lines.append("")
 
-        try:
-            # ====================================================
-            # 1. CONFIGURACIÓN
-            # ====================================================
+        _logger.info(
+            "[SAT AUTOMATION][DIAGNOSTIC][START] "
+            "config_id=%s",
+            self.id,
+        )
 
-            lines.append("=== 1. CONFIGURACIÓN ===")
+        # ========================================================
+        # 1. CONFIGURACIÓN
+        # ========================================================
 
-            if self.active:
-                add_ok(
-                    "Configuración activa: %s"
-                    % self.display_name
-                )
-            else:
-                add_warning(
-                    "Esta configuración está inactiva."
-                )
+        lines.append("=== 1. CONFIGURACIÓN ===")
 
-            if self.processing_enabled:
-                add_ok(
-                    "Procesamiento automático habilitado."
-                )
-            else:
-                add_warning(
-                    "Procesamiento automático deshabilitado."
-                )
-
+        if self.active:
             add_ok(
-                "Modo IA configurado: %s"
-                % (
-                    dict(
-                        self._fields["ai_mode"].selection
-                    ).get(
-                        self.ai_mode,
-                        self.ai_mode,
-                    )
-                )
+                "Configuración activa: %s"
+                % self.display_name
+            )
+        else:
+            add_warning(
+                "La configuración está inactiva."
             )
 
-            if self.learning_enabled:
+        if self.processing_enabled:
+            add_ok(
+                "Procesamiento automático habilitado."
+            )
+        else:
+            add_warning(
+                "Procesamiento automático deshabilitado."
+            )
+
+        ai_label = dict(
+            self._fields["ai_mode"].selection
+        ).get(
+            self.ai_mode,
+            self.ai_mode,
+        )
+
+        add_ok(
+            "Modo IA configurado: %s"
+            % ai_label
+        )
+
+        if self.learning_enabled:
+            add_ok(
+                "Aprendizaje de patrones habilitado."
+            )
+        else:
+            add_warning(
+                "Aprendizaje de patrones deshabilitado."
+            )
+
+        if self.learning_shadow_mode:
+            add_ok(
+                "Shadow mode habilitado."
+            )
+        else:
+            add_warning(
+                "Shadow mode deshabilitado."
+            )
+
+        lines.append("")
+
+        # ========================================================
+        # 2. MODELOS
+        # ========================================================
+
+        lines.append("=== 2. MODELOS DEL MOTOR ===")
+
+        required_models = [
+            "sat.automation.event",
+            "sat.automation.audit",
+            "sat.automation.config",
+            "sat.automation.mail.filter",
+            "sat.automation.capture.pattern",
+            "sat.automation.pattern.learning",
+            "sat.automation.rule",
+            "sat.automation.processor",
+            "sat.ai.provider",
+            "sat.ai.prompt",
+            "sat.ai.usage",
+            "sat.ai.service",
+        ]
+
+        missing_models = []
+
+        for model_name in required_models:
+            if self._diagnostic_model_available(
+                model_name
+            ):
                 add_ok(
-                    "Aprendizaje de patrones habilitado."
+                    "Modelo disponible: %s"
+                    % model_name
                 )
             else:
-                add_warning(
-                    "Aprendizaje de patrones deshabilitado."
+                missing_models.append(model_name)
+
+                add_error(
+                    "Modelo NO disponible: %s"
+                    % model_name
                 )
 
-            if self.learning_shadow_mode:
-                add_ok(
-                    "Shadow mode habilitado."
-                )
-            else:
-                add_warning(
-                    "Shadow mode deshabilitado."
-                )
+        lines.append("")
 
-            lines.append("")
+        # ========================================================
+        # 3. EVENTO DE DIAGNÓSTICO
+        # ========================================================
 
-            # ====================================================
-            # 2. MODELOS PRINCIPALES
-            # ====================================================
+        lines.append(
+            "=== 3. EVENTO DE DIAGNÓSTICO ==="
+        )
 
-            lines.append("=== 2. MODELOS DEL MOTOR ===")
+        if "sat.automation.event" not in self.env:
+            add_error(
+                "No es posible continuar con el evento "
+                "porque sat.automation.event no está disponible."
+            )
 
-            required_models = [
-                "sat.automation.event",
-                "sat.automation.audit",
-                "sat.automation.config",
-                "sat.automation.mail.filter",
-                "sat.automation.capture.pattern",
-                "sat.automation.pattern.learning",
-                "sat.automation.rule",
-                "sat.automation.processor",
-                "sat.ai.provider",
-                "sat.ai.prompt",
-                "sat.ai.usage",
-                "sat.ai.service",
-            ]
+        else:
+            Event = self.env[
+                "sat.automation.event"
+            ].sudo()
 
-            for model_name in required_models:
-                if model_name in self.env:
-                    add_ok(
-                        "Modelo disponible: %s"
-                        % model_name
-                    )
-                else:
-                    add_error(
-                        "Modelo NO disponible: %s"
-                        % model_name
-                    )
-
-            lines.append("")
-
-            # ====================================================
-            # 3. EVENTO DE DIAGNÓSTICO
-            # ====================================================
-
-            lines.append("=== 3. EVENTO DE DIAGNÓSTICO ===")
+            # NUEVO:
+            # cada ejecución utiliza un token distinto.
+            # Esto evita volver a generar el mismo fingerprint.
+            diagnostic_token = uuid4().hex
 
             diagnostic_text = (
                 "Prueba automática SAT. "
+                "Token diagnóstico: %s. "
                 "Serie TESTSAT98765. "
                 "Contador B/N: 125430. "
                 "Contador Color: 45670. "
                 "El equipo presenta atasco de papel."
-            )
+            ) % diagnostic_token
 
-            diagnostic_event = (
-                self.env["sat.automation.event"]
-                .sudo()
-                .create({
-                    "source": "system",
-                    "source_subtype": "diagnostic",
-                    "event_type": "unknown",
-                    "sender": "diagnostico@sat.local",
-                    "subject": (
-                        "Prueba de diagnóstico SAT - "
-                        "atasco de papel"
-                    ),
-                    "body_plain": diagnostic_text,
-                    "body_original": diagnostic_text,
-                    "payload_json": json.dumps(
-                        {
-                            "diagnostic": True,
-                            "safe_mode": True,
-                        },
-                        ensure_ascii=False,
-                    ),
-                    "raw_payload_json": json.dumps(
-                        {
-                            "source": "diagnostic",
-                        },
-                        ensure_ascii=False,
-                    ),
-                })
-            )
+            event_vals = {}
 
-            if diagnostic_event:
-                add_ok(
-                    "Evento de diagnóstico creado: %s"
-                    % diagnostic_event.display_name
-                )
-            else:
-                add_error(
-                    "No se pudo crear evento de diagnóstico."
+            # ----------------------------------------------------
+            # Solo escribir campos que realmente existan.
+            # ----------------------------------------------------
+
+            if "source" in Event._fields:
+                source_value = self._diagnostic_safe_value(
+                    Event,
+                    "source",
+                    "manual",
+                    "api",
                 )
 
-            lines.append("")
+                if source_value:
+                    event_vals["source"] = source_value
 
-            # ====================================================
-            # 4. AUDITORÍA
-            # ====================================================
+            if "source_subtype" in Event._fields:
+                event_vals[
+                    "source_subtype"
+                ] = "diagnostic"
 
-            lines.append("=== 4. AUDITORÍA ===")
+            if "external_id" in Event._fields:
+                event_vals[
+                    "external_id"
+                ] = (
+                    "SAT-DIAGNOSTIC-%s"
+                    % diagnostic_token
+                )
+
+            if "source_uid" in Event._fields:
+                event_vals[
+                    "source_uid"
+                ] = (
+                    "SAT-DIAGNOSTIC-%s"
+                    % diagnostic_token
+                )
+
+            if "event_type" in Event._fields:
+                event_type_value = (
+                    self._diagnostic_safe_value(
+                        Event,
+                        "event_type",
+                        "unknown",
+                        "notification",
+                    )
+                )
+
+                if event_type_value:
+                    event_vals[
+                        "event_type"
+                    ] = event_type_value
+
+            if "sender" in Event._fields:
+                event_vals[
+                    "sender"
+                ] = "diagnostico@sat.local"
+
+            if "subject" in Event._fields:
+                event_vals["subject"] = (
+                    "Prueba diagnóstico SAT - %s"
+                    % diagnostic_token
+                )
+
+            if "body_plain" in Event._fields:
+                event_vals[
+                    "body_plain"
+                ] = diagnostic_text
+
+            if "body_original" in Event._fields:
+                event_vals[
+                    "body_original"
+                ] = diagnostic_text
+
+            if "event_datetime" in Event._fields:
+                event_vals[
+                    "event_datetime"
+                ] = fields.Datetime.now()
+
+            payload = {
+                "diagnostic": True,
+                "safe_mode": True,
+                "diagnostic_token": diagnostic_token,
+                "test_serial": "TESTSAT98765",
+                "test_meter_bn": 125430,
+                "test_meter_color": 45670,
+                "test_issue": "atasco de papel",
+            }
+
+            if "payload_json" in Event._fields:
+                event_vals[
+                    "payload_json"
+                ] = json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                )
+
+            if "raw_payload_json" in Event._fields:
+                event_vals[
+                    "raw_payload_json"
+                ] = json.dumps(
+                    payload,
+                    ensure_ascii=False,
+                )
 
             try:
-                diagnostic_event._audit(
-                    "system_diagnostic",
-                    message=(
-                        "Inicio del diagnóstico integral "
-                        "del motor SAT."
-                    ),
-                    data={
-                        "config_id": self.id,
-                        "safe_mode": True,
-                    },
-                )
+                # MUY IMPORTANTE:
+                #
+                # Si PostgreSQL lanza cualquier error durante
+                # create(), el savepoint evita que toda la
+                # transacción quede en estado abortado.
+                with self.env.cr.savepoint():
+                    diagnostic_event = (
+                        Event.with_context(
+                            sat_automation_diagnostic=True,
+                            automation_diagnostic=True,
+                            skip_automation_processing=True,
+                            skip_auto_process=True,
+                        )
+                        .create(event_vals)
+                    )
 
-                audit_count = (
-                    self.env["sat.automation.audit"]
-                    .sudo()
-                    .search_count([
-                        (
-                            "event_id",
-                            "=",
+                if diagnostic_event:
+                    add_ok(
+                        "Evento de diagnóstico creado: "
+                        "%s (ID %s)"
+                        % (
+                            diagnostic_event.display_name,
                             diagnostic_event.id,
-                        ),
-                    ])
-                )
-
-                if audit_count:
-                    add_ok(
-                        "Auditoría funcionando. "
-                        "Registros generados: %s"
-                        % audit_count
-                    )
-                else:
-                    add_warning(
-                        "La llamada de auditoría no produjo "
-                        "un registro visible."
-                    )
-
-            except Exception as exc:
-                add_error(
-                    "Error en auditoría: %s"
-                    % exc
-                )
-
-            lines.append("")
-
-            # ====================================================
-            # 5. PROMPT IA
-            # ====================================================
-
-            lines.append("=== 5. PROMPT IA ===")
-
-            try:
-                prompt = (
-                    self.env["sat.ai.prompt"]
-                    .sudo()
-                    .get_active_prompt(
-                        "extract_event"
-                    )
-                )
-
-                if prompt:
-                    add_ok(
-                        "Prompt activo encontrado: %s "
-                        "(versión %s)"
-                        % (
-                            prompt.name,
-                            prompt.version,
-                        )
-                    )
-                else:
-                    add_error(
-                        "No se encontró prompt activo "
-                        "extract_event."
-                    )
-
-            except Exception as exc:
-                prompt = False
-
-                add_error(
-                    "Error buscando prompt extract_event: %s"
-                    % exc
-                )
-
-            lines.append("")
-
-            # ====================================================
-            # 6. PROVEEDORES IA
-            # ====================================================
-
-            lines.append("=== 6. PROVEEDORES IA ===")
-
-            providers = (
-                self.env["sat.ai.provider"]
-                .sudo()
-                .search(
-                    [("active", "=", True)],
-                    order="sequence, id",
-                )
-            )
-
-            if providers:
-                add_ok(
-                    "Proveedores IA activos encontrados: %s"
-                    % len(providers)
-                )
-
-                for provider in providers:
-                    add_ok(
-                        "Proveedor: %s | tipo=%s | modelo=%s"
-                        % (
-                            provider.name,
-                            provider.provider_type,
-                            provider.model_name,
                         )
                     )
 
-                    if provider.api_key:
+                    add_ok(
+                        "Token único de diagnóstico: %s"
+                        % diagnostic_token
+                    )
+
+                    if (
+                        "fingerprint"
+                        in diagnostic_event._fields
+                    ):
                         add_ok(
-                            "API key configurada para %s."
-                            % provider.name
-                        )
-                    else:
-                        add_error(
-                            "Proveedor %s sin API key."
-                            % provider.name
-                        )
-
-            else:
-                add_error(
-                    "No existen proveedores IA activos."
-                )
-
-            lines.append("")
-
-            # ====================================================
-            # 7. PATRONES PRODUCTIVOS
-            # ====================================================
-
-            lines.append("=== 7. PATRONES ===")
-
-            try:
-                pattern_model = self.env[
-                    "sat.automation.capture.pattern"
-                ].sudo()
-
-                active_patterns = pattern_model.search([
-                    ("active", "=", True),
-                    (
-                        "state",
-                        "in",
-                        [
-                            "validated",
-                            "active",
-                        ],
-                    ),
-                ])
-
-                add_ok(
-                    "Patrones productivos disponibles: %s"
-                    % len(active_patterns)
-                )
-
-                invalid_regex = []
-
-                for pattern in active_patterns:
-                    try:
-                        pattern._validate_regex()
-                    except Exception as exc:
-                        invalid_regex.append(
-                            "%s: %s"
+                            "Fingerprint generado: %s"
                             % (
-                                pattern.name,
-                                exc,
+                                diagnostic_event.fingerprint
+                                or "vacío"
                             )
                         )
 
-                if invalid_regex:
-                    for error in invalid_regex:
-                        add_error(
-                            "Regex inválido: %s"
-                            % error
-                        )
-                else:
-                    add_ok(
-                        "Todos los patrones activos "
-                        "tienen regex válido."
-                    )
-
-                pattern_result = (
-                    pattern_model
-                    .apply_active_patterns(
-                        diagnostic_event,
-                        text=diagnostic_text,
-                    )
-                )
-
-                values = (
-                    pattern_result.get("values")
-                    if isinstance(
-                        pattern_result,
-                        dict,
-                    )
-                    else {}
-                )
-
-                confidence = (
-                    pattern_result.get(
-                        "confidence",
-                        0.0,
-                    )
-                    if isinstance(
-                        pattern_result,
-                        dict,
-                    )
-                    else 0.0
-                )
-
-                if values:
-                    add_ok(
-                        "Patrones extrajeron datos: %s"
-                        % json.dumps(
-                            values,
-                            ensure_ascii=False,
-                            default=str,
-                        )
-                    )
-
-                    add_ok(
-                        "Confianza de patrones: %.2f%%"
-                        % confidence
-                    )
-                else:
-                    add_warning(
-                        "Ningún patrón productivo coincidió "
-                        "con el texto de diagnóstico. "
-                        "Esto no impide probar la IA."
-                    )
-
             except Exception as exc:
+                diagnostic_event = False
+
                 add_error(
-                    "Error probando patrones: %s"
+                    "No se pudo crear el evento "
+                    "de diagnóstico: %s"
                     % exc
                 )
 
                 _logger.exception(
                     "[SAT AUTOMATION][DIAGNOSTIC] "
-                    "Error en prueba de patrones"
+                    "Error creando evento diagnóstico"
                 )
 
-            lines.append("")
+        lines.append("")
 
-            # ====================================================
-            # 8. IA REAL
-            # ====================================================
+        # ========================================================
+        # 4. AUDITORÍA
+        # ========================================================
 
-            lines.append("=== 8. INTELIGENCIA ARTIFICIAL ===")
+        lines.append("=== 4. AUDITORÍA ===")
 
-            if self.ai_mode == "disabled":
+        if not diagnostic_event:
+            add_warning(
+                "Prueba de auditoría omitida porque "
+                "no existe evento de diagnóstico."
+            )
+
+        elif "sat.automation.audit" not in self.env:
+            add_error(
+                "Modelo sat.automation.audit "
+                "no disponible."
+            )
+
+        else:
+            audit_done = False
+
+            # ----------------------------------------------------
+            # Primera posibilidad: método del evento
+            # ----------------------------------------------------
+
+            audit_method = getattr(
+                diagnostic_event,
+                "_audit",
+                None,
+            )
+
+            if callable(audit_method):
+                try:
+                    with self.env.cr.savepoint():
+                        try:
+                            audit_method(
+                                "system_diagnostic",
+                                message=(
+                                    "Prueba integral del "
+                                    "motor SAT."
+                                ),
+                                data={
+                                    "safe_mode": True,
+                                    "config_id": self.id,
+                                },
+                            )
+                        except TypeError:
+                            audit_method(
+                                "system_diagnostic"
+                            )
+
+                    audit_done = True
+
+                    add_ok(
+                        "Auditoría mediante "
+                        "sat.automation.event._audit()."
+                    )
+
+                except Exception as exc:
+                    add_warning(
+                        "_audit() existe pero la prueba "
+                        "no pudo completarse: %s"
+                        % exc
+                    )
+
+            # ----------------------------------------------------
+            # Segunda posibilidad: modelo de auditoría
+            # ----------------------------------------------------
+
+            if not audit_done:
+                Audit = self.env[
+                    "sat.automation.audit"
+                ].sudo()
+
+                create_log = getattr(
+                    Audit,
+                    "create_log",
+                    None,
+                )
+
+                if callable(create_log):
+                    try:
+                        with self.env.cr.savepoint():
+                            try:
+                                create_log(
+                                    event=diagnostic_event,
+                                    action="system_diagnostic",
+                                    message=(
+                                        "Prueba integral SAT."
+                                    ),
+                                )
+                            except TypeError:
+                                try:
+                                    create_log(
+                                        diagnostic_event,
+                                        "system_diagnostic",
+                                        "Prueba integral SAT.",
+                                    )
+                                except TypeError:
+                                    create_log(
+                                        diagnostic_event
+                                    )
+
+                        audit_done = True
+
+                        add_ok(
+                            "Auditoría mediante "
+                            "sat.automation.audit.create_log()."
+                        )
+
+                    except Exception as exc:
+                        add_warning(
+                            "create_log() existe pero no "
+                            "aceptó la llamada de prueba: %s"
+                            % exc
+                        )
+
+            if not audit_done:
                 add_warning(
-                    "IA desactivada en configuración. "
-                    "No se realizó llamada externa."
+                    "No se encontró un método público "
+                    "de auditoría compatible para "
+                    "ejecutar la prueba."
+                )
+
+        lines.append("")
+
+        # ========================================================
+        # 5. PROMPTS
+        # ========================================================
+
+        lines.append("=== 5. PROMPTS IA ===")
+
+        prompt = False
+
+        if "sat.ai.prompt" not in self.env:
+            add_error(
+                "Modelo sat.ai.prompt no disponible."
+            )
+
+        else:
+            Prompt = self.env[
+                "sat.ai.prompt"
+            ].sudo()
+
+            try:
+                domain = []
+
+                if "active" in Prompt._fields:
+                    domain.append(
+                        ("active", "=", True)
+                    )
+
+                if "task_type" in Prompt._fields:
+                    domain.append(
+                        (
+                            "task_type",
+                            "=",
+                            "extract_event",
+                        )
+                    )
+
+                prompt = Prompt.search(
+                    domain,
+                    order="id",
+                    limit=1,
+                )
+
+                if prompt:
+                    version = (
+                        prompt.version
+                        if "version" in prompt._fields
+                        else ""
+                    )
+
+                    add_ok(
+                        "Prompt activo encontrado: "
+                        "%s%s"
+                        % (
+                            prompt.display_name,
+                            (
+                                " | versión %s"
+                                % version
+                            )
+                            if version
+                            else "",
+                        )
+                    )
+
+                    if (
+                        "system_prompt"
+                        in prompt._fields
+                        and prompt.system_prompt
+                    ):
+                        add_ok(
+                            "System prompt configurado."
+                        )
+                    else:
+                        add_warning(
+                            "System prompt vacío "
+                            "o no disponible."
+                        )
+
+                    if (
+                        "user_template"
+                        in prompt._fields
+                        and prompt.user_template
+                    ):
+                        add_ok(
+                            "User template configurado."
+                        )
+                    else:
+                        add_warning(
+                            "User template vacío "
+                            "o no disponible."
+                        )
+
+                else:
+                    add_error(
+                        "No se encontró un prompt activo "
+                        "para extract_event."
+                    )
+
+            except Exception as exc:
+                add_error(
+                    "Error comprobando prompts: %s"
+                    % exc
+                )
+
+                _logger.exception(
+                    "[SAT AUTOMATION][DIAGNOSTIC] "
+                    "Error comprobando prompts"
+                )
+
+        lines.append("")
+
+        # ========================================================
+        # 6. PROVEEDORES IA
+        # ========================================================
+
+        lines.append("=== 6. PROVEEDORES IA ===")
+
+        providers = False
+
+        if "sat.ai.provider" not in self.env:
+            add_error(
+                "Modelo sat.ai.provider no disponible."
+            )
+
+        else:
+            Provider = self.env[
+                "sat.ai.provider"
+            ].sudo()
+
+            try:
+                domain = []
+
+                if "active" in Provider._fields:
+                    domain.append(
+                        ("active", "=", True)
+                    )
+
+                order_parts = []
+
+                if "sequence" in Provider._fields:
+                    order_parts.append("sequence")
+
+                order_parts.append("id")
+
+                providers = Provider.search(
+                    domain,
+                    order=", ".join(order_parts),
+                )
+
+                if not providers:
+                    if self.ai_mode == "disabled":
+                        add_warning(
+                            "No existen proveedores IA "
+                            "activos, pero la IA está "
+                            "desactivada."
+                        )
+                    else:
+                        add_error(
+                            "No existen proveedores IA "
+                            "activos."
+                        )
+
+                else:
+                    add_ok(
+                        "Proveedores IA activos: %s"
+                        % len(providers)
+                    )
+
+                    for provider in providers:
+                        provider_type = (
+                            provider.provider_type
+                            if "provider_type"
+                            in provider._fields
+                            else ""
+                        )
+
+                        model_name = (
+                            provider.model_name
+                            if "model_name"
+                            in provider._fields
+                            else ""
+                        )
+
+                        add_ok(
+                            "Proveedor: %s | tipo=%s "
+                            "| modelo=%s"
+                            % (
+                                provider.display_name,
+                                provider_type or "-",
+                                model_name or "-",
+                            )
+                        )
+
+                        if "api_key" in provider._fields:
+                            if provider.api_key:
+                                add_ok(
+                                    "API key configurada "
+                                    "para %s."
+                                    % provider.display_name
+                                )
+                            else:
+                                add_error(
+                                    "Proveedor %s "
+                                    "sin API key."
+                                    % provider.display_name
+                                )
+
+            except Exception as exc:
+                add_error(
+                    "Error comprobando proveedores IA: %s"
+                    % exc
+                )
+
+                _logger.exception(
+                    "[SAT AUTOMATION][DIAGNOSTIC] "
+                    "Error comprobando proveedores"
+                )
+
+        lines.append("")
+
+        # ========================================================
+        # 7. PATRONES
+        # ========================================================
+
+        lines.append("=== 7. PATRONES ===")
+
+        if (
+            "sat.automation.capture.pattern"
+            not in self.env
+        ):
+            add_error(
+                "Modelo sat.automation.capture.pattern "
+                "no disponible."
+            )
+
+        else:
+            Pattern = self.env[
+                "sat.automation.capture.pattern"
+            ].sudo()
+
+            try:
+                pattern_domain = []
+
+                if "active" in Pattern._fields:
+                    pattern_domain.append(
+                        ("active", "=", True)
+                    )
+
+                active_patterns = Pattern.search(
+                    pattern_domain
+                )
+
+                add_ok(
+                    "Patrones activos encontrados: %s"
+                    % len(active_patterns)
+                )
+
+                invalid_patterns = []
+
+                for pattern in active_patterns:
+                    regex_value = False
+
+                    for regex_field in (
+                        "regex",
+                        "pattern_regex",
+                        "patron_regex",
+                        "pattern",
+                    ):
+                        if (
+                            regex_field
+                            in pattern._fields
+                        ):
+                            regex_value = (
+                                pattern[
+                                    regex_field
+                                ]
+                            )
+
+                            if regex_value:
+                                break
+
+                    if not regex_value:
+                        continue
+
+                    try:
+                        re.compile(regex_value)
+                    except Exception as exc:
+                        invalid_patterns.append(
+                            "%s: %s"
+                            % (
+                                pattern.display_name,
+                                exc,
+                            )
+                        )
+
+                if invalid_patterns:
+                    for item in invalid_patterns:
+                        add_error(
+                            "Regex inválido: %s"
+                            % item
+                        )
+                else:
+                    add_ok(
+                        "Los regex disponibles "
+                        "compilan correctamente."
+                    )
+
+                # -----------------------------------------------
+                # Probar motor real de patrones si existe.
+                # -----------------------------------------------
+
+                apply_patterns = getattr(
+                    Pattern,
+                    "apply_active_patterns",
+                    None,
+                )
+
+                if (
+                    diagnostic_event
+                    and callable(apply_patterns)
+                ):
+                    try:
+                        with self.env.cr.savepoint():
+                            try:
+                                pattern_result = (
+                                    apply_patterns(
+                                        diagnostic_event,
+                                        text=(
+                                            diagnostic_event.body_plain
+                                            if (
+                                                "body_plain"
+                                                in diagnostic_event._fields
+                                            )
+                                            else ""
+                                        ),
+                                    )
+                                )
+                            except TypeError:
+                                pattern_result = (
+                                    apply_patterns(
+                                        diagnostic_event
+                                    )
+                                )
+
+                        if pattern_result:
+                            add_ok(
+                                "Motor de patrones respondió."
+                            )
+
+                            lines.append(
+                                "Resultado patrones: %s"
+                                % json.dumps(
+                                    pattern_result,
+                                    ensure_ascii=False,
+                                    default=str,
+                                )
+                            )
+                        else:
+                            add_warning(
+                                "Motor de patrones respondió "
+                                "sin coincidencias."
+                            )
+
+                    except Exception as exc:
+                        add_warning(
+                            "No se pudo ejecutar "
+                            "apply_active_patterns(): %s"
+                            % exc
+                        )
+
+                else:
+                    add_warning(
+                        "No existe método "
+                        "apply_active_patterns() "
+                        "o no existe evento de prueba."
+                    )
+
+            except Exception as exc:
+                add_error(
+                    "Error comprobando patrones: %s"
+                    % exc
+                )
+
+                _logger.exception(
+                    "[SAT AUTOMATION][DIAGNOSTIC] "
+                    "Error comprobando patrones"
+                )
+
+        lines.append("")
+
+        # ========================================================
+        # 8. PRUEBA REAL DE IA
+        # ========================================================
+
+        lines.append(
+            "=== 8. INTELIGENCIA ARTIFICIAL ==="
+        )
+
+        ai_data = {}
+
+        if self.ai_mode == "disabled":
+            add_warning(
+                "La IA está desactivada. "
+                "No se realizó llamada externa."
+            )
+
+        elif not diagnostic_event:
+            add_error(
+                "No se puede probar IA porque "
+                "no existe evento de diagnóstico."
+            )
+
+        elif "sat.ai.service" not in self.env:
+            add_error(
+                "Modelo sat.ai.service no disponible."
+            )
+
+        else:
+            AIService = self.env[
+                "sat.ai.service"
+            ].sudo()
+
+            analyze_event = getattr(
+                AIService,
+                "analyze_event",
+                None,
+            )
+
+            if not callable(analyze_event):
+                add_error(
+                    "sat.ai.service no tiene "
+                    "método analyze_event()."
                 )
 
             else:
                 try:
-                    ai_result = (
-                        self.env["sat.ai.service"]
-                        .sudo()
-                        .analyze_event(
-                            diagnostic_event,
-                            task_type="extract_event",
-                            fail_silently=True,
-                        )
-                    )
-
-                    if ai_result.get("ok"):
-                        provider = ai_result.get(
-                            "provider"
-                        )
-
-                        ai_provider_name = (
-                            provider.name
-                            if provider
-                            else diagnostic_event.ai_provider_name
-                        )
-
-                        ai_model_name = (
-                            provider.model_name
-                            if provider
-                            else diagnostic_event.ai_model_name
-                        )
-
-                        add_ok(
-                            "IA respondió correctamente."
-                        )
-
-                        add_ok(
-                            "Proveedor utilizado: %s"
-                            % (
-                                ai_provider_name
-                                or "No identificado"
+                    with self.env.cr.savepoint():
+                        # Primera firma esperada.
+                        try:
+                            ai_result = analyze_event(
+                                diagnostic_event,
+                                task_type="extract_event",
+                                fail_silently=True,
                             )
+
+                        # Fallback si el servicio tiene
+                        # una firma más simple.
+                        except TypeError:
+                            try:
+                                ai_result = analyze_event(
+                                    diagnostic_event,
+                                    task_type="extract_event",
+                                )
+
+                            except TypeError:
+                                ai_result = analyze_event(
+                                    diagnostic_event
+                                )
+
+                    if not ai_result:
+                        add_error(
+                            "La IA no devolvió resultado."
                         )
 
-                        add_ok(
-                            "Modelo utilizado: %s"
-                            % (
-                                ai_model_name
-                                or "No identificado"
+                    elif isinstance(
+                        ai_result,
+                        dict,
+                    ):
+                        # ---------------------------------------
+                        # Diferentes servicios pueden devolver:
+                        #
+                        # {ok: True, data: {...}}
+                        # o directamente {...}
+                        # ---------------------------------------
+
+                        if (
+                            "ok" in ai_result
+                            and not ai_result.get("ok")
+                        ):
+                            add_error(
+                                "La IA reportó error: %s"
+                                % (
+                                    ai_result.get("error")
+                                    or "sin detalle"
+                                )
                             )
-                        )
 
-                        add_ok(
-                            "Confianza IA: %.2f%%"
-                            % (
-                                diagnostic_event.ai_confidence
-                                or 0.0
-                            )
-                        )
-
-                        ai_data = (
-                            ai_result.get("data")
-                            or {}
-                        )
-
-                        if ai_data:
+                        else:
                             add_ok(
-                                "JSON IA válido recibido."
+                                "La IA respondió "
+                                "correctamente."
+                            )
+
+                            ai_data = (
+                                ai_result.get("data")
+                                if isinstance(
+                                    ai_result.get("data"),
+                                    dict,
+                                )
+                                else ai_result
+                            )
+
+                            provider_obj = (
+                                ai_result.get(
+                                    "provider"
+                                )
+                            )
+
+                            if (
+                                provider_obj
+                                and hasattr(
+                                    provider_obj,
+                                    "display_name",
+                                )
+                            ):
+                                ai_provider_name = (
+                                    provider_obj.display_name
+                                )
+
+                                if (
+                                    "model_name"
+                                    in provider_obj._fields
+                                ):
+                                    ai_model_name = (
+                                        provider_obj.model_name
+                                    )
+
+                            if (
+                                not ai_provider_name
+                                and diagnostic_event
+                            ):
+                                if (
+                                    "ai_provider_name"
+                                    in diagnostic_event._fields
+                                ):
+                                    ai_provider_name = (
+                                        diagnostic_event.ai_provider_name
+                                    )
+
+                                if (
+                                    "ai_model_name"
+                                    in diagnostic_event._fields
+                                ):
+                                    ai_model_name = (
+                                        diagnostic_event.ai_model_name
+                                    )
+
+                            if ai_provider_name:
+                                add_ok(
+                                    "Proveedor utilizado: %s"
+                                    % ai_provider_name
+                                )
+
+                            if ai_model_name:
+                                add_ok(
+                                    "Modelo utilizado: %s"
+                                    % ai_model_name
+                                )
+
+                            lines.append(
+                                "Respuesta IA:"
                             )
 
                             lines.append(
@@ -846,109 +1470,193 @@ class SatAutomationConfig(models.Model):
                                     default=str,
                                 )
                             )
-                        else:
-                            add_warning(
-                                "IA respondió OK pero sin "
-                                "datos estructurados."
-                            )
 
-                        # Verificaciones útiles sobre esta prueba.
-                        detected_serial = (
-                            ai_data.get(
-                                "serial_number"
-                            )
+                            # -----------------------------------
+                            # Comprobar datos esperados.
+                            # -----------------------------------
+
                             if isinstance(
                                 ai_data,
                                 dict,
-                            )
-                            else False
-                        )
+                            ):
+                                serial = (
+                                    ai_data.get(
+                                        "serial_number"
+                                    )
+                                )
 
-                        if detected_serial:
-                            add_ok(
-                                "IA detectó serie: %s"
-                                % detected_serial
-                            )
-                        else:
-                            add_warning(
-                                "IA no detectó la serie "
-                                "TESTSAT98765."
-                            )
+                                meter_bn = (
+                                    ai_data.get(
+                                        "meter_bn"
+                                    )
+                                )
 
-                        detected_bn = (
-                            ai_data.get("meter_bn")
-                            if isinstance(
-                                ai_data,
-                                dict,
-                            )
-                            else False
-                        )
+                                event_type = (
+                                    ai_data.get(
+                                        "event_type"
+                                    )
+                                )
 
-                        if detected_bn:
-                            add_ok(
-                                "IA detectó contador B/N: %s"
-                                % detected_bn
-                            )
-                        else:
-                            add_warning(
-                                "IA no devolvió meter_bn."
-                            )
+                                if serial:
+                                    add_ok(
+                                        "IA detectó serie: %s"
+                                        % serial
+                                    )
+                                else:
+                                    add_warning(
+                                        "IA no devolvió "
+                                        "serial_number."
+                                    )
 
-                        detected_type = (
-                            ai_data.get("event_type")
-                            if isinstance(
-                                ai_data,
-                                dict,
-                            )
-                            else False
-                        )
+                                if meter_bn not in (
+                                    None,
+                                    False,
+                                    "",
+                                ):
+                                    add_ok(
+                                        "IA detectó B/N: %s"
+                                        % meter_bn
+                                    )
+                                else:
+                                    add_warning(
+                                        "IA no devolvió "
+                                        "meter_bn."
+                                    )
 
-                        if detected_type:
-                            add_ok(
-                                "IA clasificó evento como: %s"
-                                % detected_type
-                            )
-                        else:
-                            add_warning(
-                                "IA no devolvió event_type."
-                            )
+                                if event_type:
+                                    add_ok(
+                                        "IA clasificó como: %s"
+                                        % event_type
+                                    )
+                                else:
+                                    add_warning(
+                                        "IA no devolvió "
+                                        "event_type."
+                                    )
+
+                                # -------------------------------
+                                # Copiar SOLAMENTE al evento
+                                # diagnóstico.
+                                #
+                                # Esto permite posteriormente
+                                # probar matching de reglas.
+                                # -------------------------------
+
+                                event_updates = {}
+
+                                safe_ai_fields = (
+                                    "serial_number",
+                                    "meter_bn",
+                                    "meter_color",
+                                    "meter_scan",
+                                    "meter_total",
+                                    "supply_type",
+                                    "supply_color",
+                                    "supply_percentage",
+                                    "requested_quantity",
+                                    "issue_description",
+                                    "error_code",
+                                    "location_detected",
+                                )
+
+                                for key in safe_ai_fields:
+                                    if (
+                                        key
+                                        in diagnostic_event._fields
+                                        and key in ai_data
+                                        and ai_data[key]
+                                        is not None
+                                    ):
+                                        event_updates[
+                                            key
+                                        ] = ai_data[key]
+
+                                if (
+                                    event_type
+                                    and "event_type"
+                                    in diagnostic_event._fields
+                                ):
+                                    valid_types = (
+                                        self._diagnostic_selection_values(
+                                            diagnostic_event,
+                                            "event_type",
+                                        )
+                                    )
+
+                                    if (
+                                        not valid_types
+                                        or event_type
+                                        in valid_types
+                                    ):
+                                        event_updates[
+                                            "event_type"
+                                        ] = event_type
+
+                                if event_updates:
+                                    with self.env.cr.savepoint():
+                                        diagnostic_event.write(
+                                            event_updates
+                                        )
+
+                                    add_ok(
+                                        "Resultado IA aplicado "
+                                        "al evento de diagnóstico."
+                                    )
 
                     else:
-                        add_error(
-                            "La prueba IA falló: %s"
-                            % (
-                                ai_result.get("error")
-                                or "Error desconocido"
-                            )
+                        add_warning(
+                            "La IA respondió con un tipo "
+                            "no esperado: %s"
+                            % type(ai_result).__name__
                         )
 
                 except Exception as exc:
                     add_error(
-                        "Excepción probando IA: %s"
+                        "Excepción durante prueba IA: %s"
                         % exc
                     )
 
                     _logger.exception(
                         "[SAT AUTOMATION][DIAGNOSTIC] "
-                        "Error en prueba IA"
+                        "Error probando IA"
                     )
 
-            lines.append("")
+        lines.append("")
 
-            # ====================================================
-            # 9. REGLAS
-            # ====================================================
+        # ========================================================
+        # 9. REGLAS
+        # ========================================================
 
-            lines.append("=== 9. REGLAS ===")
+        lines.append("=== 9. REGLAS ===")
+
+        if "sat.automation.rule" not in self.env:
+            add_error(
+                "Modelo sat.automation.rule "
+                "no disponible."
+            )
+
+        else:
+            Rule = self.env[
+                "sat.automation.rule"
+            ].sudo()
 
             try:
-                rules = (
-                    self.env["sat.automation.rule"]
-                    .sudo()
-                    .search(
-                        [("active", "=", True)],
-                        order="sequence, id",
+                rule_domain = []
+
+                if "active" in Rule._fields:
+                    rule_domain.append(
+                        ("active", "=", True)
                     )
+
+                order = (
+                    "sequence, id"
+                    if "sequence" in Rule._fields
+                    else "id"
+                )
+
+                rules = Rule.search(
+                    rule_domain,
+                    order=order,
                 )
 
                 if rules:
@@ -962,56 +1670,94 @@ class SatAutomationConfig(models.Model):
                     )
 
                 target_errors = 0
+                checked_targets = 0
 
                 for rule in rules:
-                    if rule.action_mode != "model_method":
+                    action_mode = (
+                        rule.action_mode
+                        if "action_mode"
+                        in rule._fields
+                        else False
+                    )
+
+                    if (
+                        action_mode
+                        and action_mode
+                        != "model_method"
+                    ):
                         continue
 
-                    if rule.target_model not in self.env:
+                    target_model = (
+                        rule.target_model
+                        if "target_model"
+                        in rule._fields
+                        else False
+                    )
+
+                    target_method = (
+                        rule.target_method
+                        if "target_method"
+                        in rule._fields
+                        else False
+                    )
+
+                    if (
+                        not target_model
+                        or not target_method
+                    ):
+                        continue
+
+                    checked_targets += 1
+
+                    if target_model not in self.env:
                         target_errors += 1
 
                         add_error(
-                            "Regla '%s': modelo destino "
-                            "'%s' no existe."
+                            "Regla '%s': modelo "
+                            "destino '%s' no existe."
                             % (
-                                rule.name,
-                                rule.target_model,
+                                rule.display_name,
+                                target_model,
                             )
                         )
 
                         continue
 
                     method = getattr(
-                        self.env[rule.target_model],
-                        rule.target_method,
+                        self.env[target_model],
+                        target_method,
                         None,
                     )
 
-                    if not method or not callable(method):
+                    if not callable(method):
                         target_errors += 1
 
                         add_error(
-                            "Regla '%s': método %s.%s "
-                            "no existe."
+                            "Regla '%s': método "
+                            "%s.%s no existe."
                             % (
-                                rule.name,
-                                rule.target_model,
-                                rule.target_method,
+                                rule.display_name,
+                                target_model,
+                                target_method,
                             )
                         )
+
                     else:
                         add_ok(
                             "Destino válido: %s.%s"
                             % (
-                                rule.target_model,
-                                rule.target_method,
+                                target_model,
+                                target_method,
                             )
                         )
 
-                if not target_errors:
+                if (
+                    checked_targets
+                    and not target_errors
+                ):
                     add_ok(
                         "Todos los métodos destino "
-                        "de reglas son válidos."
+                        "revisados existen."
                     )
 
             except Exception as exc:
@@ -1020,159 +1766,226 @@ class SatAutomationConfig(models.Model):
                     % exc
                 )
 
-            lines.append("")
+                _logger.exception(
+                    "[SAT AUTOMATION][DIAGNOSTIC] "
+                    "Error validando reglas"
+                )
 
-            # ====================================================
-            # 10. MATCHING DE REGLAS EN MODO SEGURO
-            # ====================================================
+        lines.append("")
 
-            lines.append(
-                "=== 10. MATCHING DE REGLAS - SIN EJECUTAR ==="
+        # ========================================================
+        # 10. MATCHING DE REGLAS
+        # ========================================================
+
+        lines.append(
+            "=== 10. MATCHING DE REGLAS "
+            "(SIN EJECUTAR ACCIONES) ==="
+        )
+
+        if not diagnostic_event:
+            add_warning(
+                "Matching omitido porque no existe "
+                "evento de diagnóstico."
             )
 
-            try:
-                # Utilizamos la clasificación devuelta por IA
-                # solamente para comprobar matching.
-                if diagnostic_event.ai_raw_response:
-                    pass
+        elif "sat.automation.rule" not in self.env:
+            add_warning(
+                "Matching omitido porque el modelo "
+                "de reglas no está disponible."
+            )
 
-                if (
-                    diagnostic_event.ai_used
-                    and diagnostic_event.ai_confidence
-                ):
-                    diagnostic_event.write({
-                        "classification_method": "ai",
-                    })
+        else:
+            Rule = self.env[
+                "sat.automation.rule"
+            ].sudo()
 
-                matching_rules = (
-                    self.env["sat.automation.rule"]
-                    .sudo()
-                    .find_matching_rules(
-                        diagnostic_event
-                    )
+            find_matching_rules = getattr(
+                Rule,
+                "find_matching_rules",
+                None,
+            )
+
+            if not callable(find_matching_rules):
+                add_warning(
+                    "sat.automation.rule no tiene "
+                    "find_matching_rules()."
                 )
 
-                if matching_rules:
-                    add_ok(
-                        "Reglas compatibles encontradas: %s"
-                        % ", ".join(
-                            matching_rules.mapped(
-                                "name"
+            else:
+                try:
+                    with self.env.cr.savepoint():
+                        matching_rules = (
+                            find_matching_rules(
+                                diagnostic_event
                             )
                         )
+
+                    if matching_rules:
+                        try:
+                            names = ", ".join(
+                                matching_rules.mapped(
+                                    "name"
+                                )
+                            )
+                        except Exception:
+                            names = str(
+                                matching_rules
+                            )
+
+                        add_ok(
+                            "Reglas compatibles: %s"
+                            % names
+                        )
+
+                    else:
+                        add_warning(
+                            "El evento de prueba no "
+                            "coincidió con ninguna regla."
+                        )
+
+                    # IMPORTANTE:
+                    # NO ejecutar reglas aquí.
+                    add_ok(
+                        "Modo seguro confirmado: "
+                        "ninguna acción productiva "
+                        "fue ejecutada."
                     )
-                else:
-                    add_warning(
-                        "El evento de diagnóstico no "
-                        "coincidió con ninguna regla. "
-                        "No se ejecutó ninguna acción."
+
+                except Exception as exc:
+                    add_error(
+                        "Error comprobando matching: %s"
+                        % exc
                     )
 
-                add_ok(
-                    "Modo seguro confirmado: "
-                    "ninguna regla fue ejecutada."
-                )
+        lines.append("")
 
-            except Exception as exc:
-                add_error(
-                    "Error comprobando matching: %s"
-                    % exc
-                )
+        # ========================================================
+        # 11. CONSUMO IA
+        # ========================================================
 
-            lines.append("")
+        lines.append(
+            "=== 11. REGISTRO DE CONSUMO IA ==="
+        )
 
-            # ====================================================
-            # 11. USO IA
-            # ====================================================
+        if "sat.ai.usage" not in self.env:
+            add_error(
+                "Modelo sat.ai.usage no disponible."
+            )
 
-            lines.append("=== 11. REGISTRO DE CONSUMO IA ===")
+        elif not diagnostic_event:
+            add_warning(
+                "No se puede verificar consumo "
+                "porque no existe evento."
+            )
+
+        else:
+            Usage = self.env[
+                "sat.ai.usage"
+            ].sudo()
 
             try:
-                usage_count = (
-                    self.env["sat.ai.usage"]
-                    .sudo()
-                    .search_count([
+                usage_domain = []
+
+                if "event_id" in Usage._fields:
+                    usage_domain.append(
                         (
                             "event_id",
                             "=",
                             diagnostic_event.id,
-                        ),
-                    ])
-                )
-
-                if (
-                    self.ai_mode != "disabled"
-                    and usage_count
-                ):
-                    add_ok(
-                        "Consumo IA registrado: %s "
-                        "llamada(s)."
-                        % usage_count
+                        )
                     )
 
-                elif self.ai_mode == "disabled":
+                if not usage_domain:
                     add_warning(
-                        "No hay consumo IA porque está "
-                        "desactivada."
+                        "sat.ai.usage no tiene event_id; "
+                        "no se puede relacionar la prueba "
+                        "de forma segura."
                     )
 
                 else:
-                    add_warning(
-                        "No se encontró registro "
-                        "sat.ai.usage para la prueba."
+                    usage_count = (
+                        Usage.search_count(
+                            usage_domain
+                        )
                     )
+
+                    if usage_count:
+                        add_ok(
+                            "Consumo IA registrado: %s"
+                            % usage_count
+                        )
+
+                    elif self.ai_mode == "disabled":
+                        add_warning(
+                            "Sin consumo porque IA "
+                            "está desactivada."
+                        )
+
+                    else:
+                        add_warning(
+                            "No se encontró consumo IA "
+                            "asociado al evento."
+                        )
 
             except Exception as exc:
                 add_error(
-                    "Error verificando consumo IA: %s"
+                    "Error comprobando consumo IA: %s"
                     % exc
                 )
 
-            lines.append("")
+        lines.append("")
 
-            # ====================================================
-            # 12. CRON / RECUPERACIÓN
-            # ====================================================
+        # ========================================================
+        # 12. CRON / RECUPERACIÓN
+        # ========================================================
 
-            lines.append("=== 12. RECUPERACIÓN DE EVENTOS ===")
+        lines.append(
+            "=== 12. RECUPERACIÓN DE EVENTOS ==="
+        )
 
-            try:
-                cron_method = getattr(
-                    self.env["sat.automation.event"],
-                    "cron_recover_stuck_events",
+        if "sat.automation.event" not in self.env:
+            add_error(
+                "No se puede revisar cron porque "
+                "sat.automation.event no existe."
+            )
+
+        else:
+            Event = self.env[
+                "sat.automation.event"
+            ]
+
+            possible_cron_methods = [
+                "cron_recover_stuck_events",
+                "_cron_recover_stuck_events",
+                "cron_recover_stuck",
+            ]
+
+            found_cron_method = False
+
+            for method_name in possible_cron_methods:
+                method = getattr(
+                    Event,
+                    method_name,
                     None,
                 )
 
-                if cron_method and callable(cron_method):
-                    add_ok(
-                        "Método cron_recover_stuck_events "
-                        "disponible."
-                    )
-                else:
-                    add_error(
-                        "Método cron_recover_stuck_events "
-                        "no disponible."
-                    )
+                if callable(method):
+                    found_cron_method = method_name
+                    break
 
-            except Exception as exc:
-                add_error(
-                    "Error comprobando cron: %s"
-                    % exc
+            if found_cron_method:
+                add_ok(
+                    "Método de recuperación disponible: %s"
+                    % found_cron_method
+                )
+            else:
+                add_warning(
+                    "No se encontró un método de "
+                    "recuperación conocido en "
+                    "sat.automation.event."
                 )
 
-        except Exception as exc:
-            add_error(
-                "ERROR CRÍTICO DEL DIAGNÓSTICO: %s"
-                % exc
-            )
-
-            lines.append("")
-            lines.append(traceback.format_exc())
-
-            _logger.exception(
-                "[SAT AUTOMATION][DIAGNOSTIC] "
-                "Error crítico"
-            )
+        lines.append("")
 
         # ========================================================
         # RESULTADO FINAL
@@ -1182,12 +1995,13 @@ class SatAutomationConfig(models.Model):
 
         if error_count:
             status = "error"
+
         elif warning_count:
             status = "warning"
+
         else:
             status = "ok"
 
-        lines.append("")
         lines.append(
             "============================================================"
         )
@@ -1195,22 +2009,27 @@ class SatAutomationConfig(models.Model):
         lines.append(
             "============================================================"
         )
+
         lines.append(
             "Pruebas ejecutadas: %s"
             % total
         )
+
         lines.append(
             "Correctas: %s"
             % ok_count
         )
+
         lines.append(
             "Advertencias: %s"
             % warning_count
         )
+
         lines.append(
             "Errores: %s"
             % error_count
         )
+
         lines.append(
             "Duración: %.3f segundos"
             % duration
@@ -1225,42 +2044,71 @@ class SatAutomationConfig(models.Model):
                 )
             )
 
-        self.write({
-            "diagnostic_status": status,
-            "diagnostic_date": fields.Datetime.now(),
-            "diagnostic_total": total,
-            "diagnostic_ok": ok_count,
-            "diagnostic_warnings": warning_count,
-            "diagnostic_errors": error_count,
-            "diagnostic_duration": duration,
-            "diagnostic_ai_provider": (
-                ai_provider_name
-                or (
-                    diagnostic_event.ai_provider_name
+            if (
+                "fingerprint"
+                in diagnostic_event._fields
+            ):
+                lines.append(
+                    "Fingerprint: %s"
+                    % (
+                        diagnostic_event.fingerprint
+                        or "-"
+                    )
+                )
+
+        lines.append("")
+        lines.append(
+            "IMPORTANTE:"
+        )
+        lines.append(
+            "El diagnóstico NO ejecutó acciones "
+            "productivas de reglas."
+        )
+
+        # ========================================================
+        # GUARDAR DIAGNÓSTICO
+        # ========================================================
+
+        try:
+            self.write({
+                "diagnostic_status": status,
+                "diagnostic_date": fields.Datetime.now(),
+                "diagnostic_total": total,
+                "diagnostic_ok": ok_count,
+                "diagnostic_warnings": warning_count,
+                "diagnostic_errors": error_count,
+                "diagnostic_duration": duration,
+                "diagnostic_ai_provider": (
+                    ai_provider_name
+                    or False
+                ),
+                "diagnostic_ai_model": (
+                    ai_model_name
+                    or False
+                ),
+                "diagnostic_event_id": (
+                    diagnostic_event.id
                     if diagnostic_event
                     else False
-                )
-            ),
-            "diagnostic_ai_model": (
-                ai_model_name
-                or (
-                    diagnostic_event.ai_model_name
-                    if diagnostic_event
-                    else False
-                )
-            ),
-            "diagnostic_event_id": (
-                diagnostic_event.id
-                if diagnostic_event
-                else False
-            ),
-            "diagnostic_log": "\n".join(lines),
-        })
+                ),
+                "diagnostic_log": "\n".join(
+                    lines
+                ),
+            })
+
+        except Exception:
+            _logger.exception(
+                "[SAT AUTOMATION][DIAGNOSTIC] "
+                "No se pudo guardar resultado final"
+            )
+
+            raise
 
         _logger.info(
             "[SAT AUTOMATION][DIAGNOSTIC][END] "
-            "config=%s status=%s total=%s ok=%s "
-            "warnings=%s errors=%s duration=%.3fs",
+            "config=%s status=%s total=%s "
+            "ok=%s warnings=%s errors=%s "
+            "duration=%.3fs",
             self.id,
             status,
             total,
@@ -1279,6 +2127,20 @@ class SatAutomationConfig(models.Model):
             "info",
         )
 
+        # ========================================================
+        # IMPORTANTE ODOO 18
+        #
+        # NO usar "next" aquí.
+        #
+        # El anterior "next" dentro de display_notification
+        # provocaba:
+        #
+        # Cannot read properties of undefined (reading 'map')
+        #
+        # porque el cliente web intentaba preprocesar una acción
+        # anidada incompleta.
+        # ========================================================
+
         return {
             "type": "ir.actions.client",
             "tag": "display_notification",
@@ -1287,9 +2149,10 @@ class SatAutomationConfig(models.Model):
                     "Diagnóstico de Automatización SAT"
                 ),
                 "message": _(
-                    "%s correctas, %s advertencias, "
-                    "%s errores. Revise la pestaña "
-                    "Diagnóstico para ver el detalle."
+                    "%s correctas, "
+                    "%s advertencias, "
+                    "%s errores. "
+                    "Revise la pestaña Diagnóstico."
                 )
                 % (
                     ok_count,
@@ -1297,14 +2160,9 @@ class SatAutomationConfig(models.Model):
                     error_count,
                 ),
                 "type": notification_type,
-                "sticky": error_count > 0,
-                "next": {
-                    "type": "ir.actions.act_window",
-                    "res_model": "sat.automation.config",
-                    "res_id": self.id,
-                    "view_mode": "form",
-                    "target": "current",
-                },
+                "sticky": (
+                    error_count > 0
+                ),
             },
         }
 
@@ -1335,6 +2193,12 @@ class SatAutomationConfig(models.Model):
             "name": _("Evento de diagnóstico"),
             "res_model": "sat.automation.event",
             "res_id": self.diagnostic_event_id.id,
-            "view_mode": "form",
+
+            # Odoo 18:
+            # usamos views explícitamente.
+            "views": [
+                (False, "form"),
+            ],
+
             "target": "current",
         }
