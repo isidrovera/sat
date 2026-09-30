@@ -1750,7 +1750,7 @@
                 <table cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;">
                     <tr>
                         <td valign="middle">
-                            <div style="font-size:12px;font-weight:700;letter-spacing:1px;opacity:.85;">ANDES COPIERS | SAT</div>
+                            
                             <div style="font-size:27px;line-height:1.2;font-weight:700;margin-top:7px;">
                                 Resumen diario de solicitudes de tóner pendientes
                             </div>
@@ -1885,11 +1885,7 @@
             </div>
         </div>
 
-        <!-- FOOTER -->
-        <div style="background:#0f172a;color:#cbd5e1;border-radius:0 0 14px 14px;padding:18px 24px;text-align:center;font-size:11px;line-height:1.6;">
-            Correo automático generado por SAT - Andes Copiers<br/>
-            📧 soporte@andescopiers.com.pe
-        </div>
+        
 
     </div>
 </div>
