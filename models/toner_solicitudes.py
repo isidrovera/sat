@@ -3415,6 +3415,300 @@ class TonerCounterSubmission(models.Model):
             return False
 
 
+    # -------------------------------------------------------------------------
+    # Resumen diario de solicitudes de tóner pendientes
+    # -------------------------------------------------------------------------
+
+    @api.model
+    def _daily_pending_summary_states(self):
+        """Estados que deben aparecer en el resumen diario.
+
+        Se excluyen expresamente los estados finales o sin acción pendiente:
+        entregada, cancelada y rechazada_gerencia.
+        """
+        return [
+            "recibida",
+            "evaluacion",
+            "devuelta",
+            "pendiente_gerencia",
+            "aprobada_gerencia",
+            "confirmacion_ventas",
+            "lista_despacho",
+            "en_despacho",
+        ]
+
+    @api.model
+    def _daily_pending_summary_section_config(self):
+        """Configuración visual del correo, sin modificar el flujo del pedido."""
+        return [
+            {
+                "state": "recibida",
+                "title": "Solicitudes recibidas",
+                "icon": "📥",
+                "color": "#2563eb",
+                "background": "#eff6ff",
+                "button": "Revisar solicitud",
+            },
+            {
+                "state": "evaluacion",
+                "title": "En evaluación",
+                "icon": "🔎",
+                "color": "#ea580c",
+                "background": "#fff7ed",
+                "button": "Continuar evaluación",
+            },
+            {
+                "state": "devuelta",
+                "title": "Devueltas para corrección",
+                "icon": "↩️",
+                "color": "#c2410c",
+                "background": "#fff7ed",
+                "button": "Completar información",
+            },
+            {
+                "state": "pendiente_gerencia",
+                "title": "Pendientes de gerencia",
+                "icon": "👥",
+                "color": "#dc2626",
+                "background": "#fef2f2",
+                "button": "Ver solicitud",
+            },
+            {
+                "state": "aprobada_gerencia",
+                "title": "Aprobadas por gerencia",
+                "icon": "✅",
+                "color": "#16a34a",
+                "background": "#f0fdf4",
+                "button": "Continuar proceso",
+            },
+            {
+                "state": "confirmacion_ventas",
+                "title": "Pendientes de confirmación de stock",
+                "icon": "📦",
+                "color": "#ca8a04",
+                "background": "#fefce8",
+                "button": "Confirmar stock",
+            },
+            {
+                "state": "lista_despacho",
+                "title": "Listas para despacho",
+                "icon": "🧾",
+                "color": "#0891b2",
+                "background": "#ecfeff",
+                "button": "Crear despacho",
+            },
+            {
+                "state": "en_despacho",
+                "title": "En despacho",
+                "icon": "🚚",
+                "color": "#059669",
+                "background": "#ecfdf5",
+                "button": "Ver despacho",
+            },
+        ]
+
+    def _daily_summary_requested_toners(self):
+        """Texto compacto de los tóners solicitados y sus cantidades."""
+        self.ensure_one()
+        parts = []
+        for color, label in self.COLOR_LABELS.items():
+            qty = int(getattr(self, self._requested_quantity_field(color), 0) or 0)
+            selected = bool(
+                getattr(self, self._color_boolean_field(color), False)
+                or qty > 0
+            )
+            if not selected:
+                continue
+            parts.append("%s x%s" % (label, max(qty, 1)))
+        return ", ".join(parts) or "Sin detalle"
+
+    @api.model
+    def _daily_summary_panel_url(self):
+        """URL del listado general de solicitudes de tóner."""
+        base_url = (
+            self.env["ir.config_parameter"]
+            .sudo()
+            .get_param("web.base.url", "")
+            .rstrip("/")
+        )
+        if not base_url:
+            return ""
+
+        action = self.env.ref(
+            "sat.action_toner_counter_submission",
+            raise_if_not_found=False,
+        )
+        if action:
+            return "%s/odoo/action-%s" % (base_url, action.id)
+        return "%s/odoo" % base_url
+
+    @api.model
+    def _prepare_daily_pending_summary_data(self, records):
+        """Prepara únicamente datos de lectura para el correo diario."""
+        today = fields.Date.context_today(self)
+        sections = []
+        warning_count = 0
+
+        for config in self._daily_pending_summary_section_config():
+            section_records = records.filtered(
+                lambda record, state=config["state"]: record.state == state
+            )
+            if not section_records:
+                continue
+
+            items = []
+            for record in section_records.sorted(
+                key=lambda rec: (rec.submission_date or fields.Datetime.now(), rec.id)
+            ):
+                request_dt = fields.Datetime.to_datetime(record.submission_date)
+                if request_dt:
+                    local_dt = fields.Datetime.context_timestamp(record, request_dt)
+                    request_date = local_dt.date()
+                    request_date_text = request_date.strftime("%d/%m/%Y")
+                    days_pending = max((today - request_date).days, 0)
+                else:
+                    request_date_text = "Sin fecha"
+                    days_pending = 0
+
+                if days_pending > 5:
+                    age_background = "#fee2e2"
+                    age_color = "#b91c1c"
+                    warning_count += 1
+                elif days_pending >= 3:
+                    age_background = "#ffedd5"
+                    age_color = "#c2410c"
+                else:
+                    age_background = "#dbeafe"
+                    age_color = "#1d4ed8"
+
+                equipment = record.equipment_id
+                model_name = (
+                    equipment.name.name
+                    if equipment and equipment.name
+                    else "Sin modelo"
+                )
+                serie = equipment.serie if equipment else ""
+
+                items.append(
+                    {
+                        "sequence": record.secuencia or ("#%s" % record.id),
+                        "client": record.partner_id.name if record.partner_id else "Sin cliente",
+                        "equipment": model_name,
+                        "serie": serie or "Sin serie",
+                        "toners": record._daily_summary_requested_toners(),
+                        "date": request_date_text,
+                        "days": days_pending,
+                        "days_label": "%s día%s" % (
+                            days_pending,
+                            "" if days_pending == 1 else "s",
+                        ),
+                        "age_background": age_background,
+                        "age_color": age_color,
+                        "url": record.get_backend_record_url(),
+                        "button": config["button"],
+                    }
+                )
+
+            section = dict(config)
+            section.update(
+                {
+                    "count": len(items),
+                    "items": items,
+                }
+            )
+            sections.append(section)
+
+        counts = {
+            "total": len(records),
+            "evaluation": len(
+                records.filtered(lambda rec: rec.state in ("recibida", "evaluacion", "devuelta"))
+            ),
+            "management": len(
+                records.filtered(lambda rec: rec.state in ("pendiente_gerencia", "aprobada_gerencia"))
+            ),
+            "stock": len(
+                records.filtered(lambda rec: rec.state in ("confirmacion_ventas", "lista_despacho"))
+            ),
+            "dispatch": len(records.filtered(lambda rec: rec.state == "en_despacho")),
+        }
+
+        return {
+            "summary_date": today.strftime("%d/%m/%Y"),
+            "sections": sections,
+            "counts": counts,
+            "warning_count": warning_count,
+            "panel_url": self._daily_summary_panel_url(),
+        }
+
+    @api.model
+    def cron_send_daily_pending_summary(self):
+        """Envía un único correo diario con todas las solicitudes pendientes.
+
+        Este cron es deliberadamente de solo lectura sobre los pedidos: no cambia
+        estados, no confirma stock, no crea despachos y no modifica contadores.
+        """
+        pending = self.sudo().search(
+            [("state", "in", self._daily_pending_summary_states())],
+            order="submission_date asc, id asc",
+        )
+
+        if not pending:
+            _logger.info(
+                "[TONER][DAILY SUMMARY] No existen solicitudes pendientes. No se envía correo."
+            )
+            return True
+
+        template = self.env.ref(
+            "sat.mail_template_toner_daily_pending_summary",
+            raise_if_not_found=False,
+        )
+        if not template:
+            _logger.error(
+                "[TONER][DAILY SUMMARY] No se encontró la plantilla sat.mail_template_toner_daily_pending_summary"
+            )
+            return False
+
+        anchor = pending[0]
+        summary = self._prepare_daily_pending_summary_data(pending)
+        recipients = (anchor.get_commercial_emails() or "").strip()
+
+        if not recipients:
+            _logger.warning(
+                "[TONER][DAILY SUMMARY] No hay destinatarios configurados en sat.toner_commercial_emails"
+            )
+            return False
+
+        try:
+            ctx = dict(
+                self.env.context,
+                summary_date=summary["summary_date"],
+                summary_sections=summary["sections"],
+                summary_counts=summary["counts"],
+                summary_warning_count=summary["warning_count"],
+                summary_panel_url=summary["panel_url"],
+            )
+            template.sudo().with_context(ctx).send_mail(
+                anchor.id,
+                force_send=True,
+                raise_exception=True,
+                email_values={
+                    "email_to": recipients,
+                    "email_from": "soporte@andescopiers.com.pe",
+                },
+            )
+            _logger.info(
+                "[TONER][DAILY SUMMARY] Correo enviado pendientes=%s destinatarios=%s",
+                len(pending),
+                recipients,
+            )
+            return True
+        except Exception:
+            _logger.exception(
+                "[TONER][DAILY SUMMARY] Error enviando resumen diario"
+            )
+            return False
+
+
 
 class TonerBrand(models.Model):
     _name = "toner.brand"
