@@ -4461,14 +4461,14 @@ class AppServiceController(AppBaseController):
             timeout = int(
                 ICP.get_param(
                     "traccar.timeout",
-                    "10",
+                    "4",
                 )
                 or
-                10
+                4
             )
 
         except Exception:
-            timeout = 10
+            timeout = 4
 
         if (
             not url
@@ -4641,7 +4641,7 @@ class AppServiceController(AppBaseController):
                             "CopierOS-App/1.0"
                         ),
                     },
-                    timeout=8,
+                    timeout=5,
                 )
             )
 
