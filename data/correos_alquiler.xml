@@ -1897,15 +1897,22 @@
              Se ejecuta una vez al día a las 08:00 a. m. hora Perú.
              La hora sigue siendo administrable desde Ajustes > Acciones planificadas.
         ====================================================== -->
-        <record id="ir_cron_toner_daily_pending_summary" model="ir.cron">
+       <record id="ir_cron_toner_daily_pending_summary" model="ir.cron">
             <field name="name">Tóner: Resumen diario de solicitudes pendientes</field>
+
             <field name="model_id" ref="model_toner_counter_submission"/>
+
             <field name="state">code</field>
+
             <field name="code">model.cron_send_daily_pending_summary()</field>
+
             <field name="interval_number">1</field>
+
             <field name="interval_type">days</field>
-            <!-- 13:00 UTC = 08:00 a. m. en Perú (America/Lima) -->
-            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 13:00:00')"/>
+
+            <!-- 14:00 UTC = 09:00 a. m. en Perú (America/Lima) -->
+            <field name="nextcall" eval="(DateTime.now() + timedelta(days=1)).strftime('%Y-%m-%d 14:00:00')"/>
+
             <field name="active" eval="True"/>
         </record>
 

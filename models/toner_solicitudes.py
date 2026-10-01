@@ -3642,70 +3642,249 @@ class TonerCounterSubmission(models.Model):
 
     @api.model
     def cron_send_daily_pending_summary(self):
-        """Envía un único correo diario con todas las solicitudes pendientes.
-
-        Este cron es deliberadamente de solo lectura sobre los pedidos: no cambia
-        estados, no confirma stock, no crea despachos y no modifica contadores.
         """
+        Envía un único correo diario con todas las solicitudes de tóner pendientes.
+
+        Reglas:
+        - El ir.cron se programa diariamente a las 09:00 a. m. hora Perú.
+        - Solo envía si el día está configurado como laboral.
+        - Respeta whatsapp.business.hours.
+        - Respeta feriados y cierres manuales de whatsapp.calendar.event.
+        - Si no existen solicitudes pendientes, no envía correo.
+        - No modifica pedidos.
+        - No cambia estados.
+        - No confirma stock.
+        - No crea despachos.
+        - No modifica contadores.
+        """
+
+        today = fields.Date.context_today(self)
+
+        _logger.info(
+            "[TONER][DAILY SUMMARY] Iniciando evaluación del resumen diario | fecha=%s",
+            today,
+        )
+
+        # ==========================================================
+        # 1. VALIDAR DÍA LABORAL
+        # ==========================================================
+        #
+        # Python:
+        # 0 = lunes
+        # 1 = martes
+        # ...
+        # 5 = sábado
+        # 6 = domingo
+        #
+        # Coincide con whatsapp.business.hours.day_of_week.
+        # ==========================================================
+        weekday = str(today.weekday())
+
+        BusinessHours = self.env["whatsapp.business.hours"].sudo()
+
+        business_hours = BusinessHours.search(
+            [
+                ("day_of_week", "=", weekday),
+                ("active", "=", True),
+            ],
+            limit=1,
+        )
+
+        if not business_hours:
+            _logger.warning(
+                "[TONER][DAILY SUMMARY] No existe configuración de horario "
+                "para fecha=%s weekday=%s. No se envía resumen.",
+                today,
+                weekday,
+            )
+            return True
+
+        if not business_hours.is_workday:
+            _logger.info(
+                "[TONER][DAILY SUMMARY] Día no laboral según "
+                "whatsapp.business.hours | fecha=%s weekday=%s",
+                today,
+                weekday,
+            )
+            return True
+
+        # ==========================================================
+        # 2. VALIDAR FERIADOS Y CIERRES MANUALES
+        # ==========================================================
+        CalendarEvent = self.env["whatsapp.calendar.event"].sudo()
+
+        if CalendarEvent.is_closed_date(today):
+            closing_event = CalendarEvent.search(
+                [
+                    ("event_date", "=", today),
+                    ("active", "=", True),
+                    ("is_closed", "=", True),
+                    (
+                        "event_type",
+                        "in",
+                        [
+                            "holiday",
+                            "manual_closed",
+                        ],
+                    ),
+                ],
+                limit=1,
+            )
+
+            _logger.info(
+                "[TONER][DAILY SUMMARY] Fecha cerrada por calendario | "
+                "fecha=%s evento=%s tipo=%s. No se envía resumen.",
+                today,
+                closing_event.name if closing_event else "Sin detalle",
+                closing_event.event_type if closing_event else "Sin detalle",
+            )
+
+            return True
+
+        # ==========================================================
+        # 3. BUSCAR SOLICITUDES PENDIENTES
+        # ==========================================================
+        #
+        # Se conserva la función existente para determinar qué
+        # estados participan en el resumen.
+        #
+        # Esto deja fuera:
+        # - entregada
+        # - cancelada
+        # - rechazada_gerencia
+        # ==========================================================
         pending = self.sudo().search(
-            [("state", "in", self._daily_pending_summary_states())],
+            [
+                (
+                    "state",
+                    "in",
+                    self._daily_pending_summary_states(),
+                )
+            ],
             order="submission_date asc, id asc",
         )
 
         if not pending:
             _logger.info(
-                "[TONER][DAILY SUMMARY] No existen solicitudes pendientes. No se envía correo."
+                "[TONER][DAILY SUMMARY] No existen solicitudes pendientes | "
+                "fecha=%s. No se envía correo.",
+                today,
             )
             return True
 
+        # ==========================================================
+        # 4. OBTENER PLANTILLA
+        # ==========================================================
         template = self.env.ref(
             "sat.mail_template_toner_daily_pending_summary",
             raise_if_not_found=False,
         )
+
         if not template:
             _logger.error(
-                "[TONER][DAILY SUMMARY] No se encontró la plantilla sat.mail_template_toner_daily_pending_summary"
+                "[TONER][DAILY SUMMARY] No se encontró la plantilla "
+                "sat.mail_template_toner_daily_pending_summary"
             )
             return False
 
+        # ==========================================================
+        # 5. PREPARAR RESUMEN
+        # ==========================================================
+        #
+        # Se utiliza el primer pedido únicamente como registro
+        # ancla para mail.template.
+        #
+        # NO se modifica ese pedido.
+        # ==========================================================
         anchor = pending[0]
-        summary = self._prepare_daily_pending_summary_data(pending)
-        recipients = (anchor.get_commercial_emails() or "").strip()
+
+        summary = self._prepare_daily_pending_summary_data(
+            pending
+        )
+
+        # ==========================================================
+        # 6. DESTINATARIOS
+        # ==========================================================
+        #
+        # Reutiliza la configuración existente:
+        #
+        # sat.toner_commercial_emails
+        #
+        # No se escriben correos nuevos directamente aquí.
+        # ==========================================================
+        recipients = (
+            anchor.get_commercial_emails()
+            or ""
+        ).strip()
 
         if not recipients:
             _logger.warning(
-                "[TONER][DAILY SUMMARY] No hay destinatarios configurados en sat.toner_commercial_emails"
+                "[TONER][DAILY SUMMARY] No hay destinatarios configurados "
+                "en sat.toner_commercial_emails"
             )
             return False
 
+        # ==========================================================
+        # 7. CONTEXTO PARA LA PLANTILLA
+        # ==========================================================
+        ctx = dict(
+            self.env.context,
+
+            summary_date=summary["summary_date"],
+
+            summary_sections=summary["sections"],
+
+            summary_counts=summary["counts"],
+
+            summary_warning_count=summary[
+                "warning_count"
+            ],
+
+            summary_panel_url=summary[
+                "panel_url"
+            ],
+        )
+
+        # ==========================================================
+        # 8. ENVIAR CORREO
+        # ==========================================================
         try:
-            ctx = dict(
-                self.env.context,
-                summary_date=summary["summary_date"],
-                summary_sections=summary["sections"],
-                summary_counts=summary["counts"],
-                summary_warning_count=summary["warning_count"],
-                summary_panel_url=summary["panel_url"],
+            mail_id = (
+                template
+                .sudo()
+                .with_context(ctx)
+                .send_mail(
+                    anchor.id,
+                    force_send=True,
+                    raise_exception=True,
+                    email_values={
+                        "email_to": recipients,
+                        "email_from": (
+                            "soporte@andescopiers.com.pe"
+                        ),
+                    },
+                )
             )
-            template.sudo().with_context(ctx).send_mail(
-                anchor.id,
-                force_send=True,
-                raise_exception=True,
-                email_values={
-                    "email_to": recipients,
-                    "email_from": "soporte@andescopiers.com.pe",
-                },
-            )
+
             _logger.info(
-                "[TONER][DAILY SUMMARY] Correo enviado pendientes=%s destinatarios=%s",
+                "[TONER][DAILY SUMMARY] Resumen enviado correctamente | "
+                "fecha=%s pendientes=%s destinatarios=%s mail_id=%s",
+                today,
                 len(pending),
                 recipients,
+                mail_id,
             )
+
             return True
-        except Exception:
+
+        except Exception as error:
             _logger.exception(
-                "[TONER][DAILY SUMMARY] Error enviando resumen diario"
+                "[TONER][DAILY SUMMARY] Error enviando resumen diario | "
+                "fecha=%s error=%s",
+                today,
+                str(error),
             )
+
             return False
 
 
