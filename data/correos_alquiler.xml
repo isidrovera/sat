@@ -1739,6 +1739,7 @@
             <field name="subject">📊 Resumen diario de solicitudes de tóner pendientes - {{ ctx.get('summary_date', '') }}</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">{{ object.get_commercial_emails() }}</field>
+            <field name="email_cc">salvarez@andescopiers.com.pe, campuero@corapsac.com.pe</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,Helvetica,sans-serif;color:#1e293b;">
