@@ -864,12 +864,12 @@ class TonerCounterSubmission(models.Model):
 
     @api.model
     def _get_known_counter_floor(self, equipment):
-        """Devuelve el mayor contador conocido y confiable del equipo.
+        """Devuelve el mayor contador técnico conocido del equipo.
 
-        La validación de una nueva solicitud nunca debe permitir que B/N o
-        color retrocedan respecto de un contador ya conocido. Se toman como
-        referencia los campos actuales del equipo y, cuando existen, los
-        eventos de monitoreo históricos con contador positivo.
+        Se conserva como utilidad de diagnóstico/monitoreo. NO se utiliza como
+        contador anterior de una solicitud de tóner porque puede contener una
+        lectura posterior al momento del pedido. La base del pedido se obtiene
+        de la última entrega de tóner o, si no existe, del valor manual.
         """
         known_bn = int(equipment.contador_bn or 0)
         known_color = int(equipment.contador_color or 0)
@@ -1158,55 +1158,24 @@ class TonerCounterSubmission(models.Model):
                 "colors": [],
             }
 
-        known_counters = self._get_known_counter_floor(equipment)
-        known_bn = int(known_counters.get("bn", 0) or 0)
-        known_color = int(known_counters.get("color", 0) or 0)
-
-        if known_bn > 0 and counter_bn < known_bn:
-            return {
-                "valid": False,
-                "can_create": False,
-                "reason": "counter_lower_than_known",
-                "message": _(
-                    "El contador B/N ingresado (%(current)s) no puede ser "
-                    "menor al último contador conocido del equipo (%(known)s)."
-                ) % {
-                    "current": counter_bn,
-                    "known": known_bn,
-                },
-                "colors": [],
-                "known_counters": known_counters,
-            }
-
-        if (
-            equipment.tipo_maquina_id == "color"
-            and known_color > 0
-            and counter_color < known_color
-        ):
-            return {
-                "valid": False,
-                "can_create": False,
-                "reason": "counter_lower_than_known",
-                "message": _(
-                    "El contador color ingresado (%(current)s) no puede ser "
-                    "menor al último contador conocido del equipo (%(known)s)."
-                ) % {
-                    "current": counter_color,
-                    "known": known_color,
-                },
-                "colors": [],
-                "known_counters": known_counters,
-            }
-
+        # IMPORTANTE:
+        # No se compara el contador del pedido contra equipment.contador_bn ni
+        # contra el máximo de toner.monitoring.event. Esos valores pueden ser
+        # lecturas posteriores (por ejemplo PrintTracker) y no representan la
+        # base de consumo de este pedido.
+        #
+        # La base válida se resuelve por color en _analyze_color():
+        #   1) última entrega de tóner anterior a la solicitud;
+        #   2) si no existe entrega, contador anterior ingresado manualmente.
         _logger.info(
-            "[TONER] Validación de contadores equipo=%s serie=%s "
-            "actual_bn=%s conocido_bn=%s actual_color=%s conocido_color=%s",
+            "[TONER] Validación pedido equipo=%s serie=%s "
+            "actual_bn=%s base_manual_bn=%s actual_color=%s base_manual_color=%s",
             equipment.id,
             equipment.serie,
             counter_bn,
-            known_bn,
+            int((base_counters or {}).get("bn", 0) or 0),
             counter_color,
-            known_color,
+            int((base_counters or {}).get("color", 0) or 0),
         )
 
         results = [
@@ -1321,6 +1290,10 @@ class TonerCounterSubmission(models.Model):
                     "bn": int(web_data.get("counter_bn", 0) or 0),
                     "color": int(web_data.get("counter_color", 0) or 0),
                 },
+                base_counters={
+                    "bn": int(web_data.get("previous_counter_bn", 0) or 0),
+                    "color": int(web_data.get("previous_counter_color", 0) or 0),
+                },
             )
 
             if not validation.get("can_create"):
@@ -1332,14 +1305,27 @@ class TonerCounterSubmission(models.Model):
                 }
 
             color_results = validation.get("colors", [])
-            first_with_history = next(
+
+            # El contador anterior que se guarda en la solicitud es exactamente
+            # la base utilizada por el análisis:
+            # - automático: contador actual de la última solicitud ENTREGADA;
+            # - manual: valor recibido en previous_counter_* cuando no hay historial.
+            black_result = next(
+                (item for item in color_results if item.get("color") == "black"),
+                {},
+            )
+            color_result = next(
                 (
                     item
                     for item in color_results
-                    if item.get("base_counter") is not None
+                    if item.get("color") in ("cyan", "magenta", "yellow")
                 ),
                 {},
             )
+
+            previous_bn = int(black_result.get("base_counter", 0) or 0)
+            previous_color = int(color_result.get("base_counter", 0) or 0)
+
             most_restrictive = next(
                 (
                     item
@@ -1368,8 +1354,8 @@ class TonerCounterSubmission(models.Model):
                 "client_phone": self._clean_phone(web_data.get("client_phone")),
                 "counter_bn": int(web_data.get("counter_bn", 0) or 0),
                 "counter_color": int(web_data.get("counter_color", 0) or 0),
-                "previous_counter_bn": 0,
-                "previous_counter_color": 0,
+                "previous_counter_bn": previous_bn,
+                "previous_counter_color": previous_color,
                 "requiere_toner_black": requested_toners["black"],
                 "requiere_toner_cyan": requested_toners["cyan"],
                 "requiere_toner_magenta": requested_toners["magenta"],
@@ -2230,9 +2216,39 @@ class TonerCounterSubmission(models.Model):
             ):
                 raise ValidationError(_("El contador color debe ser mayor que cero."))
 
-            # La comparación contra el mayor contador conocido se realiza en
-            # _validate_record_for_workflow para portal, formulario manual,
-            # API e importación.
+            # El contador anterior siempre debe ser menor o igual al actual.
+            # Si existe una entrega anterior, previous_counter_* se llena
+            # automáticamente desde esa entrega. Si no existe, se permite el
+            # ingreso manual.
+            if (
+                record.previous_counter_bn > 0
+                and record.counter_bn < record.previous_counter_bn
+            ):
+                raise ValidationError(
+                    _(
+                        "El contador B/N actual (%(current)s) no puede ser menor "
+                        "al contador B/N anterior (%(previous)s)."
+                    ) % {
+                        "current": record.counter_bn,
+                        "previous": record.previous_counter_bn,
+                    }
+                )
+
+            if (
+                record.equipment_id
+                and record.equipment_id.tipo_maquina_id == "color"
+                and record.previous_counter_color > 0
+                and record.counter_color < record.previous_counter_color
+            ):
+                raise ValidationError(
+                    _(
+                        "El contador color actual (%(current)s) no puede ser menor "
+                        "al contador color anterior (%(previous)s)."
+                    ) % {
+                        "current": record.counter_color,
+                        "previous": record.previous_counter_color,
+                    }
+                )
 
     @api.constrains(
         "cantidad_solicitada_black",
