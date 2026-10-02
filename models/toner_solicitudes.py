@@ -690,11 +690,33 @@ class TonerCounterSubmission(models.Model):
             except (ValueError, TypeError):
                 results = []
             bn = next((r for r in results if r.get("color") == "black"), {})
-            color = next((r for r in results if r.get("color") in ("cyan", "magenta", "yellow")
-                          and r.get("history_available")), {})
+            chromatic = [
+                r
+                for r in results
+                if r.get("color") in ("cyan", "magenta", "yellow")
+                and r.get("history_available")
+            ]
+
             record.copies_bn_period = int(bn.get("consumed_copies", 0) or 0)
-            record.copies_color_period = int(color.get("consumed_copies", 0) or 0)
-            record.total_copies_period = record.copies_bn_period + record.copies_color_period
+
+            # No mezclar consumos de C/M/Y. Si todos parten de la misma base,
+            # el consumo color es común. Si parten de entregas distintas, el
+            # resumen general queda en 0 y cada tarjeta muestra su consumo real.
+            chromatic_bases = {
+                int(r.get("base_counter", 0) or 0)
+                for r in chromatic
+                if int(r.get("base_counter", 0) or 0) > 0
+            }
+            if chromatic and len(chromatic_bases) == 1:
+                record.copies_color_period = int(
+                    chromatic[0].get("consumed_copies", 0) or 0
+                )
+            else:
+                record.copies_color_period = 0
+
+            record.total_copies_period = (
+                record.copies_bn_period + record.copies_color_period
+            )
 
     # -------------------------------------------------------------------------
     # Utilidades
@@ -847,19 +869,70 @@ class TonerCounterSubmission(models.Model):
 
     @api.model
     def _find_last_delivered_schedule(self, equipment_id, color):
+        """Devuelve la última entrega REAL del tóner solicitado por color.
+
+        En equipos color C/M/Y comparten el mismo contador físico, pero NO
+        comparten historial de tóner. Por ello una entrega de Cian o Magenta
+        nunca puede convertirse en la base de Amarillo (y viceversa).
+
+        Además del qty del despacho, se exige que la solicitud vinculada haya
+        pedido realmente ese color. Esto protege el historial frente a
+        despachos antiguos que pudieran tener cantidades residuales en otros
+        colores.
+        """
         quantity_field = self._delivery_quantity_field(color)
-        domain = [("equipment_id", "=", equipment_id),
-                  ("state", "=", "entregado"), (quantity_field, ">", 0)]
+        requested_field = self._color_boolean_field(color)
+        requested_qty_field = self._requested_quantity_field(color)
+
+        domain = [
+            ("equipment_id", "=", equipment_id),
+            ("state", "=", "entregado"),
+            (quantity_field, ">", 0),
+            ("submission_id", "!=", False),
+            "|",
+            ("submission_id.%s" % requested_field, "=", True),
+            ("submission_id.%s" % requested_qty_field, ">", 0),
+        ]
+
         exclude = self.env.context.get("toner_history_exclude")
         if exclude:
             domain.append(("submission_id", "!=", exclude))
+
         before = self.env.context.get("toner_history_before")
         if before:
-            domain += ["|", ("delivery_date_actual", "<=", before),
-                       "&", ("delivery_date_actual", "=", False),
-                       ("creation_date", "<=", before)]
-        return self.env["toner.delivery.schedule"].sudo().search(
-            domain, order="delivery_date_actual desc, id desc", limit=1)
+            domain += [
+                "|",
+                ("delivery_date_actual", "<=", before),
+                "&",
+                ("delivery_date_actual", "=", False),
+                ("creation_date", "<=", before),
+            ]
+
+        delivery = self.env["toner.delivery.schedule"].sudo().search(
+            domain,
+            order="delivery_date_actual desc, creation_date desc, id desc",
+            limit=1,
+        )
+
+        if delivery:
+            _logger.info(
+                "[TONER][HISTORY] equipo=%s color=%s delivery=%s "
+                "submission=%s base_bn=%s base_color=%s",
+                equipment_id,
+                color,
+                delivery.id,
+                delivery.submission_id.id,
+                delivery.submission_id.counter_bn,
+                delivery.submission_id.counter_color,
+            )
+        else:
+            _logger.info(
+                "[TONER][HISTORY] equipo=%s color=%s sin entrega previa valida",
+                equipment_id,
+                color,
+            )
+
+        return delivery
 
 
     @api.model
@@ -1314,17 +1387,30 @@ class TonerCounterSubmission(models.Model):
                 (item for item in color_results if item.get("color") == "black"),
                 {},
             )
-            color_result = next(
-                (
-                    item
-                    for item in color_results
-                    if item.get("color") in ("cyan", "magenta", "yellow")
-                ),
-                {},
-            )
+            chromatic_results = [
+                item
+                for item in color_results
+                if item.get("color") in ("cyan", "magenta", "yellow")
+            ]
 
             previous_bn = int(black_result.get("base_counter", 0) or 0)
-            previous_color = int(color_result.get("base_counter", 0) or 0)
+
+            # previous_counter_color es únicamente un resumen. Si C/M/Y tienen
+            # bases diferentes no se fuerza una sola base; el análisis conserva
+            # cada base por color dentro de analysis_json/history_snapshot_json.
+            chromatic_bases = {
+                int(item.get("base_counter", 0) or 0)
+                for item in chromatic_results
+                if int(item.get("base_counter", 0) or 0) > 0
+            }
+            if len(chromatic_bases) == 1:
+                previous_color = next(iter(chromatic_bases))
+            elif len(chromatic_bases) > 1:
+                previous_color = 0
+            else:
+                previous_color = int(
+                    web_data.get("previous_counter_color", 0) or 0
+                )
 
             most_restrictive = next(
                 (
@@ -1837,22 +1923,33 @@ class TonerCounterSubmission(models.Model):
             if automatic_previous_bn > 0:
                 self.previous_counter_bn = automatic_previous_bn
 
-        # Color: misma regla. Cian, magenta y amarillo comparten el contador
-        # color del equipo, por eso se toma una referencia histórica válida.
-        reference = next(
-            (
-                by_color[c]
-                for c in ("cyan", "magenta", "yellow")
-                if by_color.get(c, {}).get("history_available")
-            ),
-            {},
-        )
-        if reference:
-            automatic_previous_color = int(
-                reference.get("base_counter", 0) or 0
-            )
-            if automatic_previous_color > 0:
-                self.previous_counter_color = automatic_previous_color
+        # C/M/Y comparten el contador físico de color, pero cada tóner tiene
+        # su propia última entrega. El campo previous_counter_color es solo un
+        # resumen visual; nunca se usa para mezclar historiales.
+        requested_chromatic = [
+            by_color[c]
+            for c in ("cyan", "magenta", "yellow")
+            if c in by_color
+        ]
+        historical_chromatic = [
+            item
+            for item in requested_chromatic
+            if item.get("history_available")
+            and int(item.get("base_counter", 0) or 0) > 0
+        ]
+
+        # Solo mostramos una base general cuando todos los colores solicitados
+        # con historial comparten exactamente la misma base. Si cada color tiene
+        # una entrega distinta, las bases correctas se muestran en sus tarjetas
+        # base_counter_cyan/magenta/yellow y no elegimos una arbitrariamente.
+        color_bases = {
+            int(item.get("base_counter", 0) or 0)
+            for item in historical_chromatic
+        }
+        if len(color_bases) == 1:
+            self.previous_counter_color = next(iter(color_bases))
+        elif len(color_bases) > 1:
+            self.previous_counter_color = 0
 
         for color in self.COLOR_LABELS:
             requested_field = self._requested_quantity_field(color)
