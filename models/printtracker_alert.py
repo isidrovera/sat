@@ -1297,6 +1297,60 @@ class PrintTrackerAlert(models.Model):
             'printtracker.alert.email_destino', 'soporte@andescopiers.com.pe'
         )
 
+    def _equipo_esta_alquilado_actualmente(self):
+        """
+        Verifica si la serie de una alerta API Events continúa asociada a un
+        equipo cuyo estado actual es 'alquilada'.
+
+        Las alertas de origen interno conservan su flujo actual y no dependen
+        de esta validación.
+        """
+        self.ensure_one()
+
+        if self.origen_datos != 'api_events':
+            return True
+
+        serie = str(self.serie_equipo or '').strip()
+        if not serie:
+            return False
+
+        equipo_activo = self.env['alquiler'].search([
+            ('serie', '=ilike', serie),
+            ('estado_alquiler_id', '=', 'alquilada'),
+        ], limit=1)
+
+        return bool(equipo_activo)
+
+    def _cerrar_por_equipo_no_alquilado(self, motivo=None):
+        """
+        Cierra únicamente una alerta API todavía activa cuando el equipo ya
+        no se encuentra alquilado. No altera alertas internas ni estados
+        históricos ya cerrados/resueltos.
+        """
+        self.ensure_one()
+
+        if self.origen_datos != 'api_events':
+            return False
+
+        if self.estado not in ('nueva', 'notificada', 'en_proceso'):
+            return False
+
+        self.write({
+            'estado': 'cerrada',
+            'fecha_resolucion': fields.Datetime.now(),
+            'notas_resolucion': (
+                motivo
+                or 'Auto-cerrada: el equipo ya no se encuentra en estado de alquiler activo.'
+            ),
+        })
+
+        _logger.info(
+            "✅ Alerta cerrada por equipo no alquilado id=%s serie=%s",
+            self.id,
+            self.serie_equipo,
+        )
+        return True
+
     # ==========================================
     # HELPER: PARSE TIMESTAMP API → naive datetime
     # ==========================================
@@ -1883,6 +1937,20 @@ class PrintTrackerAlert(models.Model):
 
         for alert in self:
             try:
+                # Protección para API Events: si la máquina fue retirada o ya
+                # no está alquilada, no enviar email, chatter ni acciones.
+                if (
+                    alert.origen_datos == 'api_events'
+                    and not alert._equipo_esta_alquilado_actualmente()
+                ):
+                    alert._cerrar_por_equipo_no_alquilado(
+                        motivo=(
+                            'Auto-cerrada antes de procesar notificaciones: '
+                            'el equipo ya no se encuentra en estado de alquiler activo.'
+                        )
+                    )
+                    continue
+
                 email_ok = True
                 chatter_ok = True
 
@@ -1940,6 +2008,25 @@ class PrintTrackerAlert(models.Model):
         self.ensure_one()
 
         try:
+            # Última barrera: aunque otro método invoque directamente este
+            # envío, una alerta API de un equipo retirado no debe generar correo.
+            if (
+                self.origen_datos == 'api_events'
+                and not self._equipo_esta_alquilado_actualmente()
+            ):
+                self._cerrar_por_equipo_no_alquilado(
+                    motivo=(
+                        'Auto-cerrada antes de enviar email: el equipo ya no '
+                        'se encuentra en estado de alquiler activo.'
+                    )
+                )
+                _logger.info(
+                    "⏭️ Email omitido: equipo no alquilado alerta=%s serie=%s",
+                    self.id,
+                    self.serie_equipo,
+                )
+                return False
+
             email_destino = self._get_email_soporte()
             if not email_destino:
                 _logger.warning(
