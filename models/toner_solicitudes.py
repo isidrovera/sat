@@ -2279,6 +2279,12 @@ class TonerCounterSubmission(models.Model):
         "previous_counter_color",
     )
     def _check_counters(self):
+        # La reconstrucción histórica puede tocar solicitudes antiguas que
+        # fueron creadas antes de que el contador color fuera obligatorio.
+        # En ese proceso no debemos bloquear el saneamiento por datos legados.
+        if self.env.context.get("toner_legacy_rebuild"):
+            return
+
         for record in self:
             if any(getattr(record, name) < 0 for name in
                    ("counter_bn", "counter_color", "previous_counter_bn", "previous_counter_color")):
@@ -3054,19 +3060,119 @@ class TonerCounterSubmission(models.Model):
                 # Para registros legados NO usamos previous_counter_bn/color
                 # como base, porque podían provenir de la lógica general anterior.
                 # Solo una entrega previa real del mismo color genera historial.
-                validation = record.validate_web_toner_request(
-                    equipment_id=record.equipment_id.id,
-                    requested_toners=requested,
-                    current_counters={
-                        "bn": int(record.counter_bn or 0),
-                        "color": int(record.counter_color or 0),
-                    },
-                    exclude_submission_id=record.id,
-                    base_counters={
-                        "bn": 0,
-                        "color": 0,
-                    },
+                # Solicitudes antiguas pueden pertenecer a una máquina color
+                # pero no tener counter_color, porque fueron creadas antes de
+                # que ese dato fuera obligatorio. No inventamos un contador.
+                # Reconstruimos B/N cuando corresponda y dejamos los colores
+                # sin contador histórico como no verificables, sin activar
+                # falsamente consumo anticipado.
+                missing_legacy_color_counter = (
+                    record.equipment_id.tipo_maquina_id == "color"
+                    and int(record.counter_color or 0) <= 0
                 )
+
+                if missing_legacy_color_counter:
+                    color_results = []
+
+                    if requested.get("black") and int(record.counter_bn or 0) > 0:
+                        color_results.append(
+                            record._analyze_color(
+                                record.equipment_id,
+                                "black",
+                                {
+                                    "bn": int(record.counter_bn or 0),
+                                    "color": 0,
+                                },
+                                exclude_submission_id=record.id,
+                                base_counters={"bn": 0, "color": 0},
+                            )
+                        )
+
+                    for legacy_color in ("cyan", "magenta", "yellow"):
+                        if not requested.get(legacy_color):
+                            continue
+
+                        history = json.loads(history_json or "{}").get(
+                            legacy_color, {}
+                        )
+                        color_results.append({
+                            **(history or {}),
+                            "color": legacy_color,
+                            "label": record.COLOR_LABELS[legacy_color],
+                            "status": "no_history",
+                            "can_create": True,
+                            "requires_evidence": False,
+                            "current_counter": 0,
+                            "expected_yield": record._get_expected_yield(
+                                record.equipment_id, legacy_color
+                            ),
+                            "consumed_copies": 0,
+                            "consumption_percent": 0.0,
+                            "days_since_last_delivery": 0,
+                            "base_counter": int(
+                                (history or {}).get("base_counter", 0) or 0
+                            ),
+                            "base_source": (
+                                "history"
+                                if (history or {}).get("history_available")
+                                else "none"
+                            ),
+                            "manual_base": False,
+                            "message": _(
+                                "Solicitud histórica sin contador color válido para %(color)s; "
+                                "no se calcula consumo anticipado."
+                            ) % {
+                                "color": record.COLOR_LABELS[legacy_color],
+                            },
+                        })
+
+                    review_required = any(
+                        item.get("requires_evidence")
+                        for item in color_results
+                    )
+                    validation = {
+                        "valid": True,
+                        "can_create": True,
+                        "reason": (
+                            "review_required"
+                            if review_required
+                            else "legacy_rebuild"
+                        ),
+                        "review_required": review_required,
+                        "requires_evidence": review_required,
+                        "message": _(
+                            "Historial antiguo reconstruido. El registro no tenía "
+                            "contador color válido; no se inventó ningún valor."
+                        ),
+                        "colors": color_results,
+                    }
+
+                    _logger.warning(
+                        "[TONER][REBUILD][LEGACY] solicitud=%s secuencia=%s "
+                        "equipo=%s sin counter_color; colores=%s",
+                        record.id,
+                        record.secuencia,
+                        record.equipment_id.id,
+                        [
+                            color
+                            for color, selected in requested.items()
+                            if selected
+                        ],
+                    )
+                else:
+                    validation = record.validate_web_toner_request(
+                        equipment_id=record.equipment_id.id,
+                        requested_toners=requested,
+                        current_counters={
+                            "bn": int(record.counter_bn or 0),
+                            "color": int(record.counter_color or 0),
+                        },
+                        exclude_submission_id=record.id,
+                        base_counters={
+                            "bn": 0,
+                            "color": 0,
+                        },
+                    )
 
                 record._apply_validation_result(validation)
 
@@ -3115,7 +3221,8 @@ class TonerCounterSubmission(models.Model):
 
                 if vals:
                     record.with_context(
-                        toner_analysis_write=True
+                        toner_analysis_write=True,
+                        toner_legacy_rebuild=True,
                     ).write(vals)
 
                 processed += 1
