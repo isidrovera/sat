@@ -52,6 +52,15 @@
                         <button name="action_send_dispatch" type="object" string="Marcar como enviado" class="btn-primary" invisible="delivery_state != 'preparando'" icon="fa-truck"/>
                         <button name="action_register_delivery" type="object" string="Registrar entrega" class="btn-success" invisible="state != 'en_despacho' or delivery_state not in ['preparando', 'enviado']" icon="fa-check-circle"/>
                         <button name="action_cancel" type="object" string="Cancelar" class="btn-secondary" invisible="state in ['entregada', 'cancelada']" icon="fa-ban"/>
+                        <button
+    name="action_rebuild_legacy_color_history"
+    type="object"
+    string="Actualizar historial por color"
+    class="btn-secondary"
+    icon="fa-refresh"
+    confirm="¿Desea reconstruir el historial de contadores por color de las solicitudes antiguas?"
+    groups="base.group_system"
+/>
                         <field name="state" widget="statusbar" statusbar_visible="recibida,evaluacion,pendiente_gerencia,aprobada_gerencia,confirmacion_ventas,lista_despacho,en_despacho,entregada"/>
                     </header>
                     <sheet>
