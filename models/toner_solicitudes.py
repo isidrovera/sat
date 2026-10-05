@@ -684,39 +684,32 @@ class TonerCounterSubmission(models.Model):
         "history_snapshot_json",
     )
     def _compute_period_copies(self):
+        """Calcula el resumen sin mezclar referencias de C/M/Y."""
         for record in self:
             try:
                 results = json.loads(record.analysis_json or "{}").get("colors", [])
             except (ValueError, TypeError):
                 results = []
+
             bn = next((r for r in results if r.get("color") == "black"), {})
-            chromatic = [
-                r
-                for r in results
+            record.copies_bn_period = int(bn.get("consumed_copies", 0) or 0)
+
+            color_results = [
+                r for r in results
                 if r.get("color") in ("cyan", "magenta", "yellow")
                 and r.get("history_available")
             ]
-
-            record.copies_bn_period = int(bn.get("consumed_copies", 0) or 0)
-
-            # No mezclar consumos de C/M/Y. Si todos parten de la misma base,
-            # el consumo color es común. Si parten de entregas distintas, el
-            # resumen general queda en 0 y cada tarjeta muestra su consumo real.
-            chromatic_bases = {
-                int(r.get("base_counter", 0) or 0)
-                for r in chromatic
-                if int(r.get("base_counter", 0) or 0) > 0
-            }
-            if chromatic and len(chromatic_bases) == 1:
-                record.copies_color_period = int(
-                    chromatic[0].get("consumed_copies", 0) or 0
-                )
+            if not color_results:
+                color_copies = 0
+            elif len(color_results) == 1:
+                color_copies = int(color_results[0].get("consumed_copies", 0) or 0)
             else:
-                record.copies_color_period = 0
+                bases = {int(r.get("base_counter", 0) or 0) for r in color_results}
+                copies = {int(r.get("consumed_copies", 0) or 0) for r in color_results}
+                color_copies = next(iter(copies)) if len(bases) == 1 and len(copies) == 1 else 0
 
-            record.total_copies_period = (
-                record.copies_bn_period + record.copies_color_period
-            )
+            record.copies_color_period = color_copies
+            record.total_copies_period = record.copies_bn_period + record.copies_color_period
 
     # -------------------------------------------------------------------------
     # Utilidades
@@ -869,29 +862,16 @@ class TonerCounterSubmission(models.Model):
 
     @api.model
     def _find_last_delivered_schedule(self, equipment_id, color):
-        """Devuelve la última entrega REAL del tóner solicitado por color.
-
-        En equipos color C/M/Y comparten el mismo contador físico, pero NO
-        comparten historial de tóner. Por ello una entrega de Cian o Magenta
-        nunca puede convertirse en la base de Amarillo (y viceversa).
-
-        Además del qty del despacho, se exige que la solicitud vinculada haya
-        pedido realmente ese color. Esto protege el historial frente a
-        despachos antiguos que pudieran tener cantidades residuales en otros
-        colores.
-        """
+        """Devuelve la última entrega real válida del tóner por color."""
         quantity_field = self._delivery_quantity_field(color)
-        requested_field = self._color_boolean_field(color)
-        requested_qty_field = self._requested_quantity_field(color)
+        decision_field = self._commercial_decision_field(color)
 
         domain = [
             ("equipment_id", "=", equipment_id),
             ("state", "=", "entregado"),
             (quantity_field, ">", 0),
             ("submission_id", "!=", False),
-            "|",
-            ("submission_id.%s" % requested_field, "=", True),
-            ("submission_id.%s" % requested_qty_field, ">", 0),
+            ("submission_id.%s" % decision_field, "!=", "no_procede"),
         ]
 
         exclude = self.env.context.get("toner_history_exclude")
@@ -917,11 +897,12 @@ class TonerCounterSubmission(models.Model):
         if delivery:
             _logger.info(
                 "[TONER][HISTORY] equipo=%s color=%s delivery=%s "
-                "submission=%s base_bn=%s base_color=%s",
+                "submission=%s qty=%s base_bn=%s base_color=%s",
                 equipment_id,
                 color,
                 delivery.id,
                 delivery.submission_id.id,
+                getattr(delivery, quantity_field, 0),
                 delivery.submission_id.counter_bn,
                 delivery.submission_id.counter_color,
             )
@@ -2490,34 +2471,57 @@ class TonerCounterSubmission(models.Model):
         return "motivo_no_procede_%s" % color
 
     def _validate_commercial_color_decisions(self):
-        """Valida únicamente los colores realmente solicitados."""
+        """Valida colores solicitados y limpia cantidades rechazadas."""
         self.ensure_one()
         errors = []
         for color, label in self.COLOR_LABELS.items():
-            requested_qty = int(getattr(self, self._requested_quantity_field(color), 0) or 0)
-            selected = bool(getattr(self, self._color_boolean_field(color), False) or requested_qty > 0)
+            requested_qty = int(
+                getattr(self, self._requested_quantity_field(color), 0) or 0
+            )
+            selected = bool(
+                getattr(self, self._color_boolean_field(color), False)
+                or requested_qty > 0
+            )
             if not selected:
                 continue
 
             decision_field = self._commercial_decision_field(color)
             reason_field = self._commercial_reason_field(color)
             suggested_field = self._suggested_quantity_field(color)
+            approved_field = self._approved_quantity_field(color)
+
             decision = getattr(self, decision_field, False) or "pending"
             suggested_qty = int(getattr(self, suggested_field, 0) or 0)
             reason = (getattr(self, reason_field, False) or "").strip()
 
             if decision == "pending":
-                errors.append(_("%(color)s: indique si procede o no procede.") % {"color": label})
+                errors.append(
+                    _("%(color)s: indique si procede o no procede.")
+                    % {"color": label}
+                )
             elif decision == "procede" and suggested_qty <= 0:
-                errors.append(_("%(color)s: si procede, la cantidad propuesta debe ser mayor a cero.") % {"color": label})
+                errors.append(
+                    _("%(color)s: si procede, la cantidad propuesta debe ser mayor a cero.")
+                    % {"color": label}
+                )
             elif decision == "no_procede":
-                if suggested_qty != 0:
-                    setattr(self, suggested_field, 0)
+                # Un color rechazado no puede conservar cantidades que luego
+                # lleguen a Gerencia o al despacho.
+                setattr(self, suggested_field, 0)
+                setattr(self, approved_field, 0)
                 if not reason:
-                    errors.append(_("%(color)s: indique el motivo de 'No procede'.") % {"color": label})
+                    errors.append(
+                        _("%(color)s: indique el motivo de 'No procede'.")
+                        % {"color": label}
+                    )
 
         if errors:
-            raise UserError(_("Complete la evaluación comercial antes de enviar a gerencia:\n\n%s") % "\n".join("• %s" % e for e in errors))
+            raise UserError(
+                _(
+                    "Complete la evaluación comercial antes de enviar a gerencia:\n\n%s"
+                )
+                % "\n".join("• %s" % e for e in errors)
+            )
 
     def _commercial_decision_label(self, color):
         self.ensure_one()
@@ -2832,6 +2836,33 @@ class TonerCounterSubmission(models.Model):
                 _("La solicitud ya no está pendiente de gerencia.")
             )
 
+    def _prepare_management_approved_values(self):
+        """Devuelve cantidades finales de Gerencia respetando cada color."""
+        self.ensure_one()
+        values = {}
+
+        for color in self.COLOR_LABELS:
+            approved_field = self._approved_quantity_field(color)
+            requested_field = self._requested_quantity_field(color)
+            boolean_field = self._color_boolean_field(color)
+            decision_field = self._commercial_decision_field(color)
+
+            selected = bool(
+                getattr(self, boolean_field, False)
+                or int(getattr(self, requested_field, 0) or 0) > 0
+            )
+            decision = getattr(self, decision_field, False) or "pending"
+            qty = max(int(getattr(self, approved_field, 0) or 0), 0)
+
+            # Solo un color solicitado y marcado como "Procede" puede llegar
+            # con cantidad positiva al despacho.
+            if not selected or decision != "procede":
+                qty = 0
+
+            values[approved_field] = qty
+
+        return values
+
     def register_management_decision(
         self,
         token,
@@ -2879,28 +2910,14 @@ class TonerCounterSubmission(models.Model):
         }
 
         if decision == "approve":
-            approved_values = {}
-            for color in self.COLOR_LABELS:
-                approved_field = self._approved_quantity_field(color)
-                suggested_field = self._suggested_quantity_field(color)
-                approved_qty = int(
-                    getattr(self, approved_field) or 0
-                )
-                suggested_qty = int(
-                    getattr(self, suggested_field) or 0
-                )
-                approved_values[approved_field] = (
-                    approved_qty
-                    if approved_qty > 0
-                    else suggested_qty
-                )
+            approved_values = self._prepare_management_approved_values()
 
             if not any(
                 quantity > 0
                 for quantity in approved_values.values()
             ):
                 raise UserError(
-                    _("No existe una cantidad sugerida para aprobar.")
+                    _("Gerencia debe aprobar al menos una cantidad para un color marcado como Procede.")
                 )
 
             values.update(approved_values)
@@ -2976,6 +2993,182 @@ class TonerCounterSubmission(models.Model):
 
         return True
 
+    def action_rebuild_legacy_color_history(self):
+        """Reconstruye pedidos antiguos usando únicamente entregas reales por color.
+
+        Este método se mantiene para el botón administrativo de actualización.
+        Los pedidos nuevos ya usan la lógica separada por color y no necesitan
+        ejecutarlo.
+        """
+        Submission = self.env["toner.counter.submission"].sudo()
+        records = Submission.search(
+            [
+                ("equipment_id", "!=", False),
+                ("counter_bn", ">", 0),
+            ],
+            order="submission_date asc, id asc",
+        )
+
+        processed = 0
+        errors = 0
+
+        for record in records:
+            try:
+                reference_date = (
+                    record.submission_date
+                    or record.create_date
+                    or fields.Datetime.now()
+                )
+
+                service = record.with_context(
+                    toner_history_before=fields.Datetime.to_string(reference_date),
+                    toner_history_exclude=record.id,
+                )
+
+                history = {
+                    color: service._get_color_history(
+                        record.equipment_id,
+                        color,
+                    )
+                    for color in record.COLOR_LABELS
+                }
+
+                record.with_context(
+                    toner_analysis_write=True
+                ).write(
+                    {
+                        "history_snapshot_json": json.dumps(
+                            history,
+                            ensure_ascii=False,
+                            default=str,
+                        )
+                    }
+                )
+
+                requested = record._get_requested_toners_from_record()
+
+                if not any(requested.values()):
+                    processed += 1
+                    continue
+
+                # Para registros legados NO usamos previous_counter_bn/color
+                # como base, porque podían provenir de la lógica general anterior.
+                # Solo una entrega previa real del mismo color genera historial.
+                validation = record.validate_web_toner_request(
+                    equipment_id=record.equipment_id.id,
+                    requested_toners=requested,
+                    current_counters={
+                        "bn": int(record.counter_bn or 0),
+                        "color": int(record.counter_color or 0),
+                    },
+                    exclude_submission_id=record.id,
+                    base_counters={
+                        "bn": 0,
+                        "color": 0,
+                    },
+                )
+
+                record._apply_validation_result(validation)
+
+                by_color = {
+                    item.get("color"): item
+                    for item in validation.get("colors", [])
+                    if item.get("color")
+                }
+
+                vals = {}
+
+                # Compatibilidad visual con el campo general B/N.
+                if requested.get("black"):
+                    black = by_color.get("black", {})
+                    vals["previous_counter_bn"] = (
+                        int(black.get("base_counter", 0) or 0)
+                        if black.get("history_available")
+                        else 0
+                    )
+
+                # Compatibilidad visual con el campo general color.
+                # Si C/M/Y tienen bases distintas, se deja 0 y el detalle
+                # correcto se mantiene en cada tarjeta individual.
+                color_bases = []
+                has_requested_color = False
+
+                for color in ("cyan", "magenta", "yellow"):
+                    if not requested.get(color):
+                        continue
+
+                    has_requested_color = True
+                    item = by_color.get(color, {})
+
+                    if item.get("history_available"):
+                        base = int(item.get("base_counter", 0) or 0)
+                        if base > 0:
+                            color_bases.append(base)
+
+                if has_requested_color:
+                    unique_bases = set(color_bases)
+                    vals["previous_counter_color"] = (
+                        next(iter(unique_bases))
+                        if len(unique_bases) == 1
+                        else 0
+                    )
+
+                if vals:
+                    record.with_context(
+                        toner_analysis_write=True
+                    ).write(vals)
+
+                processed += 1
+
+                _logger.info(
+                    "[TONER][REBUILD] OK solicitud=%s secuencia=%s "
+                    "equipo=%s fecha=%s colores=%s requires_evidence=%s",
+                    record.id,
+                    record.secuencia,
+                    record.equipment_id.id,
+                    record.submission_date,
+                    [
+                        color
+                        for color, selected in requested.items()
+                        if selected
+                    ],
+                    record.requires_evidence,
+                )
+
+            except Exception as error:
+                errors += 1
+                _logger.exception(
+                    "[TONER][REBUILD] ERROR solicitud=%s "
+                    "secuencia=%s: %s",
+                    record.id,
+                    record.secuencia,
+                    error,
+                )
+
+        _logger.info(
+            "[TONER][REBUILD] FINALIZADO procesados=%s errores=%s",
+            processed,
+            errors,
+        )
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Reconstrucción de historial de tóner"),
+                "message": _(
+                    "Proceso terminado. Solicitudes procesadas: %(processed)s. "
+                    "Errores: %(errors)s."
+                )
+                % {
+                    "processed": processed,
+                    "errors": errors,
+                },
+                "type": "success" if not errors else "warning",
+                "sticky": True,
+            },
+        }
+
     # -------------------------------------------------------------------------
     # Flujo interno
     # -------------------------------------------------------------------------
@@ -3050,21 +3243,7 @@ class TonerCounterSubmission(models.Model):
                     _("La solicitud no está pendiente de gerencia.")
                 )
 
-            approved_values = {}
-            for color in self.COLOR_LABELS:
-                approved_field = record._approved_quantity_field(color)
-                suggested_field = record._suggested_quantity_field(color)
-                approved_qty = int(
-                    getattr(record, approved_field) or 0
-                )
-                suggested_qty = int(
-                    getattr(record, suggested_field) or 0
-                )
-                approved_values[approved_field] = (
-                    approved_qty
-                    if approved_qty > 0
-                    else suggested_qty
-                )
+            approved_values = record._prepare_management_approved_values()
 
             if not any(
                 quantity > 0
@@ -3206,14 +3385,39 @@ class TonerCounterSubmission(models.Model):
         if self.delivery_scheduled_id:
             return self.action_view_delivery()
 
+        # Segunda barrera de seguridad: solo llegan al despacho colores
+        # solicitados, marcados como "Procede" y con cantidad final > 0.
+        dispatch_qty = {}
+        for color in self.COLOR_LABELS:
+            requested = bool(
+                getattr(self, self._color_boolean_field(color), False)
+                or int(getattr(self, self._requested_quantity_field(color), 0) or 0) > 0
+            )
+            decision = (
+                getattr(self, self._commercial_decision_field(color), False)
+                or "pending"
+            )
+            approved = max(
+                int(getattr(self, self._approved_quantity_field(color), 0) or 0),
+                0,
+            )
+            dispatch_qty[color] = (
+                approved if requested and decision == "procede" else 0
+            )
+
+        if not any(dispatch_qty.values()):
+            raise UserError(
+                _("No existen cantidades válidas aprobadas para crear el despacho.")
+            )
+
         delivery_values = {
             "equipment_id": self.equipment_id.id,
             "submission_id": self.id,
             "delivery_date_planned": fields.Date.today() + timedelta(days=1),
-            "toner_black_qty": self.cantidad_aprobada_black,
-            "toner_cyan_qty": self.cantidad_aprobada_cyan,
-            "toner_magenta_qty": self.cantidad_aprobada_magenta,
-            "toner_yellow_qty": self.cantidad_aprobada_yellow,
+            "toner_black_qty": dispatch_qty["black"],
+            "toner_cyan_qty": dispatch_qty["cyan"],
+            "toner_magenta_qty": dispatch_qty["magenta"],
+            "toner_yellow_qty": dispatch_qty["yellow"],
             "calculation_basis": "reporte_cliente",
             "priority": "alta" if self.requires_evidence else "normal",
             "notes": _(
@@ -3224,13 +3428,24 @@ class TonerCounterSubmission(models.Model):
                 "notes": self.sales_notes or "",
             },
         }
+
         brand_lines = []
         for color, label in self.COLOR_LABELS.items():
-            if getattr(self, "cantidad_aprobada_%s" % color) > 0:
+            if dispatch_qty[color] > 0:
                 brand = getattr(self, "toner_brand_%s_id" % color)
-                brand_lines.append("%s: %s" % (label, brand.name or _("Sin marca indicada")))
+                brand_lines.append(
+                    "%s: %s"
+                    % (label, brand.name or _("Sin marca indicada"))
+                )
+
         if brand_lines:
-            delivery_values["notes"] += "\n" + _("Marcas de tóner a enviar:") + "\n" + "\n".join(brand_lines)
+            delivery_values["notes"] += (
+                "\n"
+                + _("Marcas de tóner a enviar:")
+                + "\n"
+                + "\n".join(brand_lines)
+            )
+
         delivery = self.env["toner.delivery.schedule"].sudo().create(
             delivery_values
         )
@@ -4000,222 +4215,7 @@ class TonerCounterSubmission(models.Model):
 
             return False
 
-    def action_rebuild_legacy_color_history(self):
-        """
-        Reconstruye el historial y análisis de solicitudes antiguas utilizando
-        una referencia independiente para cada color de tóner.
 
-        NO modifica:
-        - estado
-        - decisiones de comercial
-        - decisiones de gerencia
-        - cantidades aprobadas
-        - despachos
-        - fechas originales
-
-        Sí recalcula:
-        - history_snapshot_json
-        - analysis_json
-        - analysis_result
-        - analysis_summary
-        - requires_evidence
-        - bases históricas por color
-        - consumos y porcentajes
-        """
-
-        Submission = self.env["toner.counter.submission"].sudo()
-
-        records = Submission.search(
-            [
-                ("equipment_id", "!=", False),
-                ("counter_bn", ">", 0),
-            ],
-            order="submission_date asc, id asc",
-        )
-
-        processed = 0
-        errors = 0
-
-        for record in records:
-            try:
-                # ---------------------------------------------------------
-                # 1. Reconstruir historial exactamente a la fecha
-                #    en que fue creada la solicitud.
-                # ---------------------------------------------------------
-                service = record.with_context(
-                    toner_history_before=fields.Datetime.to_string(
-                        record.submission_date or record.create_date
-                    ),
-                    toner_history_exclude=record.id,
-                )
-
-                history = {
-                    color: service._get_color_history(
-                        record.equipment_id,
-                        color,
-                    )
-                    for color in record.COLOR_LABELS
-                }
-
-                history_json = json.dumps(
-                    history,
-                    ensure_ascii=False,
-                    default=str,
-                )
-
-                # Guardarlo directamente sin provocar una nueva validación
-                record.with_context(
-                    toner_analysis_write=True
-                ).write({
-                    "history_snapshot_json": history_json,
-                })
-
-                # ---------------------------------------------------------
-                # 2. Determinar colores realmente solicitados
-                # ---------------------------------------------------------
-                requested_toners = record._get_requested_toners_from_record()
-
-                if not any(requested_toners.values()):
-                    _logger.info(
-                        "[TONER][REBUILD] solicitud=%s sin colores solicitados",
-                        record.id,
-                    )
-                    processed += 1
-                    continue
-
-                # ---------------------------------------------------------
-                # 3. Validar nuevamente usando el historial reconstruido.
-                #
-                # previous_counter_* solo actúa como respaldo manual cuando
-                # NO existe historial para ese color.
-                # ---------------------------------------------------------
-                validation = record.validate_web_toner_request(
-                    equipment_id=record.equipment_id.id,
-                    requested_toners=requested_toners,
-                    current_counters={
-                        "bn": int(record.counter_bn or 0),
-                        "color": int(record.counter_color or 0),
-                    },
-                    exclude_submission_id=record.id,
-                    base_counters={
-                        "bn": int(record.previous_counter_bn or 0),
-                        "color": int(record.previous_counter_color or 0),
-                    },
-                )
-
-                # ---------------------------------------------------------
-                # 4. Aplicar únicamente el análisis.
-                #    No cambia el estado de la solicitud.
-                # ---------------------------------------------------------
-                record._apply_validation_result(validation)
-
-                # ---------------------------------------------------------
-                # 5. Compatibilidad con campos generales anteriores.
-                #
-                # Negro sí tiene una única base.
-                # ---------------------------------------------------------
-                color_results = {
-                    item.get("color"): item
-                    for item in validation.get("colors", [])
-                    if item.get("color")
-                }
-
-                vals = {}
-
-                black = color_results.get("black", {})
-                if (
-                    requested_toners.get("black")
-                    and black.get("history_available")
-                ):
-                    vals["previous_counter_bn"] = int(
-                        black.get("base_counter", 0) or 0
-                    )
-
-                # ---------------------------------------------------------
-                # Para C/M/Y solo llenar previous_counter_color si existe
-                # UNA sola base inequívoca.
-                #
-                # Si C, M y Y tienen bases diferentes NO debemos colocar
-                # una base general, porque volveríamos a mezclar colores.
-                # ---------------------------------------------------------
-                color_bases = []
-
-                for color in ("cyan", "magenta", "yellow"):
-                    if not requested_toners.get(color):
-                        continue
-
-                    item = color_results.get(color, {})
-
-                    if item.get("history_available"):
-                        base = int(item.get("base_counter", 0) or 0)
-                        if base > 0:
-                            color_bases.append(base)
-
-                unique_color_bases = set(color_bases)
-
-                if len(unique_color_bases) == 1:
-                    vals["previous_counter_color"] = next(
-                        iter(unique_color_bases)
-                    )
-                elif len(unique_color_bases) > 1:
-                    # No existe un único contador anterior para todos
-                    # los colores. Las tarjetas individuales conservan
-                    # las referencias correctas.
-                    vals["previous_counter_color"] = 0
-
-                if vals:
-                    record.with_context(
-                        toner_analysis_write=True
-                    ).write(vals)
-
-                processed += 1
-
-                _logger.info(
-                    "[TONER][REBUILD] OK solicitud=%s secuencia=%s "
-                    "equipo=%s fecha=%s colores=%s",
-                    record.id,
-                    record.secuencia,
-                    record.equipment_id.id,
-                    record.submission_date,
-                    [
-                        color
-                        for color, selected in requested_toners.items()
-                        if selected
-                    ],
-                )
-
-            except Exception as error:
-                errors += 1
-
-                _logger.exception(
-                    "[TONER][REBUILD] ERROR solicitud=%s secuencia=%s: %s",
-                    record.id,
-                    record.secuencia,
-                    error,
-                )
-
-        _logger.info(
-            "[TONER][REBUILD] FINALIZADO procesados=%s errores=%s",
-            processed,
-            errors,
-        )
-
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": _("Reconstrucción de historial de tóner"),
-                "message": _(
-                    "Proceso terminado. Solicitudes procesadas: %(processed)s. "
-                    "Errores: %(errors)s."
-                ) % {
-                    "processed": processed,
-                    "errors": errors,
-                },
-                "type": "success" if not errors else "warning",
-                "sticky": True,
-            },
-        }
 
 class TonerBrand(models.Model):
     _name = "toner.brand"
