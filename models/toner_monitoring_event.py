@@ -565,6 +565,70 @@ class TonerMonitoringEvent(models.Model):
             )
 
     # ============================================================
+    # CONTROL DE ALQUILER ACTIVO
+    # ============================================================
+
+    def _is_equipment_currently_rented(self):
+        """
+        Indica si el equipo continúa actualmente en estado ``alquilada``.
+
+        Esta comprobación se utiliza como barrera operativa. Los eventos de
+        equipos retirados se conservan para auditoría, pero no deben generar
+        solicitudes de tóner, ciclos de instalación, movimientos de stock ni
+        automatizaciones posteriores.
+        """
+        self.ensure_one()
+
+        if not self.equipment_id:
+            return False
+
+        active_equipment = self.env["alquiler"].sudo().search(
+            [
+                ("id", "=", self.equipment_id.id),
+                ("estado_alquiler_id", "=", "alquilada"),
+            ],
+            limit=1,
+        )
+
+        return bool(active_equipment)
+
+    def _mark_ignored_inactive_rental(self):
+        """
+        Conserva el evento como histórico y lo deja fuera del flujo operativo.
+
+        No revierte solicitudes, ciclos o movimientos ya creados previamente;
+        únicamente impide que un evento nuevo, pendiente, con error o
+        reprocesado actúe después de que el equipo haya sido retirado.
+        """
+        self.ensure_one()
+
+        self.write(
+            {
+                "processing_state": "ignored",
+                "processed_date": fields.Datetime.now(),
+                "processing_message": _(
+                    "Evento conservado para auditoría y omitido "
+                    "automáticamente porque el equipo ya no se encuentra "
+                    "en estado de alquiler activo. No se creó solicitud, "
+                    "no se modificó historial de instalación y no se movió stock."
+                ),
+                "processing_error": False,
+            }
+        )
+
+        _logger.info(
+            "[TONER EVENT] Evento ignorado por equipo no alquilado "
+            "event=%s equipment=%s serial=%s source=%s type=%s",
+            self.id,
+            self.equipment_id.id if self.equipment_id else False,
+            self.equipment_serial,
+            self.source,
+            self.event_type,
+        )
+
+        return True
+
+    # ============================================================
     # VALIDACIONES
     # ============================================================
 
@@ -653,6 +717,15 @@ class TonerMonitoringEvent(models.Model):
                 return existing
 
         event = self.create(values)
+
+        # --------------------------------------------------------
+        # BARRERA: equipo fuera de alquiler activo
+        # --------------------------------------------------------
+        # El evento se conserva para auditoría, pero no entra al motor SAT
+        # ni ejecuta lógica de solicitud, ciclos o stock.
+        if not event._is_equipment_currently_rented():
+            event._mark_ignored_inactive_rental()
+            return event
 
         # --------------------------------------------------------
         # Puente al motor central SAT
@@ -966,6 +1039,26 @@ class TonerMonitoringEvent(models.Model):
                 _("No se pudo identificar el equipo del evento SAT.")
             )
 
+        # No convertir un evento SAT histórico en una acción de tóner si el
+        # equipo ya fue retirado. Se crea el registro normalizado únicamente
+        # a través del flujo estándar, que lo conservará como ignorado.
+        active_equipment = self.env["alquiler"].sudo().search(
+            [
+                ("id", "=", equipment.id),
+                ("estado_alquiler_id", "=", "alquilada"),
+            ],
+            limit=1,
+        )
+
+        if not active_equipment:
+            _logger.info(
+                "[TONER EVENT][AUTOMATION] Evento SAT omitido: equipo fuera "
+                "de alquiler automation_event=%s equipment=%s serial=%s",
+                automation_event.id,
+                equipment.id,
+                getattr(equipment, "serie", False),
+            )
+
         color = automation_event.supply_color or "unknown"
         if color not in ("black", "cyan", "magenta", "yellow"):
             color = "unknown"
@@ -1080,6 +1173,15 @@ class TonerMonitoringEvent(models.Model):
                 _("No se pudo identificar el equipo.")
             )
             return False
+
+        # --------------------------------------------------------
+        # BARRERA: equipo retirado / fuera de alquiler
+        # --------------------------------------------------------
+        # Protege también eventos históricos pendientes, con error o
+        # reprocesados manualmente después del retiro del equipo.
+        if not self._is_equipment_currently_rented():
+            self._mark_ignored_inactive_rental()
+            return True
 
         if self.event_type == "unknown":
             self._mark_pending(
@@ -1483,6 +1585,12 @@ class TonerMonitoringEvent(models.Model):
         Nunca crea despacho directamente.
         """
         self.ensure_one()
+
+        # Segunda barrera de seguridad: ninguna solicitud automática puede
+        # crearse o enlazarse si el equipo ya no está alquilado.
+        if not self._is_equipment_currently_rented():
+            self._mark_ignored_inactive_rental()
+            return True
 
         existing_submission = self._find_open_submission()
 
