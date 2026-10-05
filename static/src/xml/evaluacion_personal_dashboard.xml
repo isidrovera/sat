@@ -13,8 +13,9 @@
             <div class="o_eval_dash_header">
 
                 <div class="o_eval_dash_title">
+
                     <div class="o_eval_dash_title_icon">
-                        <i class="fa fa-chart-line"/>
+                        <i class="fa fa-line-chart"/>
                     </div>
 
                     <div>
@@ -27,7 +28,9 @@
                             asistencia, bonos y evolución histórica.
                         </p>
                     </div>
+
                 </div>
+
 
                 <div class="o_eval_dash_header_actions">
 
@@ -35,9 +38,11 @@
                         class="btn btn-light"
                         t-on-click="setCurrentMonth">
 
-                        <i class="fa fa-calendar-day me-1"/>
+                        <i class="fa fa-calendar me-1"/>
                         Mes actual
+
                     </button>
+
 
                     <button
                         class="btn btn-outline-primary"
@@ -45,6 +50,7 @@
 
                         <i class="fa fa-list me-1"/>
                         Evaluaciones
+
                     </button>
 
                 </div>
@@ -58,107 +64,266 @@
 
             <div class="o_eval_dash_filters_bar">
 
-                <div class="o_eval_filter_group">
-                    <label>Mes</label>
+                <!-- PERIODO PRINCIPAL -->
 
-                    <select
-                        t-att-value="state.mes"
-                        t-on-change="onChangeMonth">
+                <div class="o_eval_filter_section">
 
-                        <t
-                            t-foreach="state.meses"
-                            t-as="month"
-                            t-key="'month_' + month.value">
-
-                            <option
-                                t-att-value="month.value"
-                                t-att-selected="state.mes == month.value">
-
-                                <t t-esc="month.label"/>
-
-                            </option>
-
-                        </t>
-
-                    </select>
-                </div>
-
-
-                <div class="o_eval_filter_group">
-                    <label>Año</label>
-
-                    <select
-                        t-att-value="state.anio"
-                        t-on-change="onChangeYear">
-
-                        <t
-                            t-foreach="state.anios"
-                            t-as="year"
-                            t-key="'year_' + year">
-
-                            <option
-                                t-att-value="year"
-                                t-att-selected="state.anio == year">
-
-                                <t t-esc="year"/>
-
-                            </option>
-
-                        </t>
-
-                    </select>
-                </div>
-
-
-                <div class="o_eval_filter_group wide">
-                    <label>Tipo operativo</label>
-
-                    <select
-                        t-att-value="state.tipoOperativo"
-                        t-on-change="onChangeTipo">
-
-                        <option
-                            value="todos"
-                            t-att-selected="state.tipoOperativo == 'todos'">
-                            Todos los perfiles
-                        </option>
-
-                        <option
-                            value="taller"
-                            t-att-selected="state.tipoOperativo == 'taller'">
-                            Técnico de Taller
-                        </option>
-
-                        <option
-                            value="servicios"
-                            t-att-selected="state.tipoOperativo == 'servicios'">
-                            Servicios / Alquiler
-                        </option>
-
-                        <option
-                            value="mixto"
-                            t-att-selected="state.tipoOperativo == 'mixto'">
-                            Técnico Mixto
-                        </option>
-
-                    </select>
-                </div>
-
-
-                <div class="o_eval_filter_compare">
-                    <span>Comparaciones</span>
-
-                    <div>
-                        <span class="o_eval_compare_chip">
-                            <i class="fa fa-calendar-minus me-1"/>
-                            <t t-esc="getPreviousMonthLabel()"/>
-                        </span>
-
-                        <span class="o_eval_compare_chip secondary">
-                            <i class="fa fa-calendar me-1"/>
-                            <t t-esc="getPreviousYearLabel()"/>
-                        </span>
+                    <div class="o_eval_filter_section_title">
+                        Periodo
                     </div>
+
+                    <div class="o_eval_filter_row">
+
+                        <div class="o_eval_filter_group">
+
+                            <label>Mes</label>
+
+                            <select
+                                t-att-value="state.mes"
+                                t-on-change="onChangeMonth">
+
+                                <t
+                                    t-foreach="state.meses"
+                                    t-as="month"
+                                    t-key="'main_month_' + month.value">
+
+                                    <option
+                                        t-att-value="month.value"
+                                        t-att-selected="state.mes == month.value">
+
+                                        <t t-esc="month.label"/>
+
+                                    </option>
+
+                                </t>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="o_eval_filter_group small">
+
+                            <label>Año</label>
+
+                            <select
+                                t-att-value="state.anio"
+                                t-on-change="onChangeYear">
+
+                                <t
+                                    t-foreach="state.anios"
+                                    t-as="year"
+                                    t-key="'main_year_' + year">
+
+                                    <option
+                                        t-att-value="year"
+                                        t-att-selected="state.anio == year">
+
+                                        <t t-esc="year"/>
+
+                                    </option>
+
+                                </t>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- COMPARACIÓN 1 -->
+
+                <div class="o_eval_filter_section comparison">
+
+                    <div class="o_eval_filter_section_title">
+                        Comparar con 1
+                    </div>
+
+                    <div class="o_eval_filter_row">
+
+                        <div class="o_eval_filter_group">
+
+                            <label>Mes</label>
+
+                            <select
+                                t-att-value="state.compare1Mes"
+                                t-on-change="onChangeCompare1Month">
+
+                                <t
+                                    t-foreach="state.meses"
+                                    t-as="month"
+                                    t-key="'compare1_month_' + month.value">
+
+                                    <option
+                                        t-att-value="month.value"
+                                        t-att-selected="state.compare1Mes == month.value">
+
+                                        <t t-esc="month.label"/>
+
+                                    </option>
+
+                                </t>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="o_eval_filter_group small">
+
+                            <label>Año</label>
+
+                            <select
+                                t-att-value="state.compare1Anio"
+                                t-on-change="onChangeCompare1Year">
+
+                                <t
+                                    t-foreach="state.anios"
+                                    t-as="year"
+                                    t-key="'compare1_year_' + year">
+
+                                    <option
+                                        t-att-value="year"
+                                        t-att-selected="state.compare1Anio == year">
+
+                                        <t t-esc="year"/>
+
+                                    </option>
+
+                                </t>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- COMPARACIÓN 2 -->
+
+                <div class="o_eval_filter_section comparison secondary">
+
+                    <div class="o_eval_filter_section_title">
+                        Comparar con 2
+                    </div>
+
+                    <div class="o_eval_filter_row">
+
+                        <div class="o_eval_filter_group">
+
+                            <label>Mes</label>
+
+                            <select
+                                t-att-value="state.compare2Mes"
+                                t-on-change="onChangeCompare2Month">
+
+                                <t
+                                    t-foreach="state.meses"
+                                    t-as="month"
+                                    t-key="'compare2_month_' + month.value">
+
+                                    <option
+                                        t-att-value="month.value"
+                                        t-att-selected="state.compare2Mes == month.value">
+
+                                        <t t-esc="month.label"/>
+
+                                    </option>
+
+                                </t>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="o_eval_filter_group small">
+
+                            <label>Año</label>
+
+                            <select
+                                t-att-value="state.compare2Anio"
+                                t-on-change="onChangeCompare2Year">
+
+                                <t
+                                    t-foreach="state.anios"
+                                    t-as="year"
+                                    t-key="'compare2_year_' + year">
+
+                                    <option
+                                        t-att-value="year"
+                                        t-att-selected="state.compare2Anio == year">
+
+                                        <t t-esc="year"/>
+
+                                    </option>
+
+                                </t>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- PERFIL -->
+
+                <div class="o_eval_filter_section profile">
+
+                    <div class="o_eval_filter_section_title">
+                        Perfil
+                    </div>
+
+                    <div class="o_eval_filter_group wide">
+
+                        <select
+                            t-att-value="state.tipoOperativo"
+                            t-on-change="onChangeTipo">
+
+                            <option
+                                value="todos"
+                                t-att-selected="state.tipoOperativo == 'todos'">
+
+                                Todos los perfiles
+
+                            </option>
+
+                            <option
+                                value="taller"
+                                t-att-selected="state.tipoOperativo == 'taller'">
+
+                                Técnico de Taller
+
+                            </option>
+
+                            <option
+                                value="servicios"
+                                t-att-selected="state.tipoOperativo == 'servicios'">
+
+                                Servicios / Alquiler
+
+                            </option>
+
+                            <option
+                                value="mixto"
+                                t-att-selected="state.tipoOperativo == 'mixto'">
+
+                                Técnico Mixto
+
+                            </option>
+
+                        </select>
+
+                    </div>
+
                 </div>
 
 
@@ -168,20 +333,24 @@
 
                     <i class="fa fa-filter me-1"/>
                     Aplicar
+
                 </button>
 
             </div>
 
 
             <!-- ===================================================== -->
-            <!-- CARGANDO -->
+            <!-- LOADING -->
             <!-- ===================================================== -->
 
             <t t-if="state.loading">
 
                 <div class="o_eval_dash_loading">
+
                     <i class="fa fa-spinner fa-spin me-2"/>
+
                     Cargando información gerencial...
+
                 </div>
 
             </t>
@@ -190,15 +359,42 @@
             <t t-else="">
 
                 <!-- ================================================= -->
-                <!-- PERIODO -->
+                <!-- PERIODOS -->
                 <!-- ================================================= -->
 
                 <div class="o_eval_period_banner">
 
-                    <div>
+                    <div class="o_eval_period_main">
+
                         <span>Periodo evaluado</span>
-                        <strong t-esc="getSelectedPeriodLabel()"/>
+
+                        <strong>
+                            <t t-esc="getSelectedPeriodLabel()"/>
+                        </strong>
+
                     </div>
+
+
+                    <div class="o_eval_period_compare">
+
+                        <span>
+                            <i class="fa fa-exchange me-1"/>
+
+                            Comparando con
+
+                            <strong>
+                                <t t-esc="getCompare1Label()"/>
+                            </strong>
+
+                            y
+
+                            <strong>
+                                <t t-esc="getCompare2Label()"/>
+                            </strong>
+                        </span>
+
+                    </div>
+
 
                     <div class="o_eval_period_profiles">
 
@@ -223,25 +419,30 @@
 
 
                 <!-- ================================================= -->
-                <!-- KPI PRINCIPALES -->
+                <!-- KPI -->
                 <!-- ================================================= -->
 
                 <div class="o_eval_dash_kpi_grid">
 
                     <div class="o_eval_dash_kpi_card primary">
+
                         <div class="o_eval_dash_kpi_icon">
                             <i class="fa fa-users"/>
                         </div>
 
                         <div class="o_eval_kpi_content">
+
                             <span>Técnicos evaluados</span>
 
-                            <strong t-esc="state.kpis.totalTecnicos"/>
+                            <strong
+                                t-esc="state.kpis.totalTecnicos"/>
 
                             <small>
                                 Periodo seleccionado
                             </small>
+
                         </div>
+
                     </div>
 
 
@@ -254,18 +455,25 @@
                         </div>
 
                         <div class="o_eval_kpi_content">
+
                             <span>Cumplen meta</span>
 
                             <strong>
+
                                 <t t-esc="state.kpis.cumplenMeta"/>
+
                                 /
+
                                 <t t-esc="state.kpis.totalTecnicos"/>
+
                             </strong>
 
                             <small>
                                 Meta individual ajustada
                             </small>
+
                         </div>
+
                     </div>
 
 
@@ -278,54 +486,66 @@
                         </div>
 
                         <div class="o_eval_kpi_content">
+
                             <span>Con bono</span>
 
                             <strong>
+
                                 <t t-esc="state.kpis.conBono"/>
+
                                 /
+
                                 <t t-esc="state.kpis.totalTecnicos"/>
+
                             </strong>
 
                             <small>
-                                Bono mensual aprobado
+                                Bono mensual
                             </small>
+
                         </div>
+
                     </div>
 
 
                     <div class="o_eval_dash_kpi_card purple">
 
                         <div class="o_eval_dash_kpi_icon">
-                            <i class="fa fa-chart-bar"/>
+                            <i class="fa fa-line-chart"/>
                         </div>
 
                         <div class="o_eval_kpi_content">
-                            <span>Promedio producción</span>
+
+                            <span>Producción promedio</span>
 
                             <strong>
                                 <t t-esc="getPercent(state.kpis.promedioProduccion)"/>%
                             </strong>
 
                             <small
-                                t-attf-class="o_eval_kpi_variation #{state.kpis.variacionMes >= 0 ? 'positive' : 'negative'}">
+                                t-attf-class="o_eval_kpi_variation #{state.kpis.variacionCompare1 >= 0 ? 'positive' : 'negative'}">
 
-                                <i
-                                    t-attf-class="fa #{state.kpis.variacionMes >= 0 ? 'fa-arrow-up' : 'fa-arrow-down'} me-1"/>
+                                <t t-esc="getSigned(state.kpis.variacionCompare1)"/>
 
-                                <t t-esc="getSigned(state.kpis.variacionMes)"/>
-                                pts vs mes anterior
+                                pts vs
+
+                                <t t-esc="getCompare1Label()"/>
 
                             </small>
+
                         </div>
+
                     </div>
 
 
                     <div class="o_eval_dash_kpi_card blue">
+
                         <div class="o_eval_dash_kpi_icon">
                             <i class="fa fa-shield"/>
                         </div>
 
                         <div class="o_eval_kpi_content">
+
                             <span>Calidad promedio</span>
 
                             <strong>
@@ -335,16 +555,20 @@
                             <small>
                                 Calidad operativa
                             </small>
+
                         </div>
+
                     </div>
 
 
                     <div class="o_eval_dash_kpi_card info">
+
                         <div class="o_eval_dash_kpi_icon">
                             <i class="fa fa-bar-chart"/>
                         </div>
 
                         <div class="o_eval_kpi_content">
+
                             <span>Encuestas respondidas</span>
 
                             <strong>
@@ -354,9 +578,11 @@
                             </strong>
 
                             <small>
-                                Respondidas / mínimo requerido
+                                Respondidas / requeridas
                             </small>
+
                         </div>
+
                     </div>
 
 
@@ -367,14 +593,18 @@
                         </div>
 
                         <div class="o_eval_kpi_content">
+
                             <span>Reclamos procedentes</span>
 
-                            <strong t-esc="state.kpis.reclamos"/>
+                            <strong
+                                t-esc="state.kpis.reclamos"/>
 
                             <small>
-                                Reclamos que afectan calidad
+                                Impactan calidad
                             </small>
+
                         </div>
+
                     </div>
 
 
@@ -387,21 +617,25 @@
                         </div>
 
                         <div class="o_eval_kpi_content">
-                            <span>Requieren seguimiento</span>
 
-                            <strong t-esc="state.kpis.seguimiento"/>
+                            <span>Seguimiento</span>
+
+                            <strong
+                                t-esc="state.kpis.seguimiento"/>
 
                             <small>
                                 Revisión gerencial
                             </small>
+
                         </div>
+
                     </div>
 
                 </div>
 
 
                 <!-- ================================================= -->
-                <!-- NOTA -->
+                <!-- INFO -->
                 <!-- ================================================= -->
 
                 <div class="o_eval_dashboard_info">
@@ -409,32 +643,32 @@
                     <i class="fa fa-info-circle"/>
 
                     <span>
-                        La producción se calcula contra la
+                        La producción se calcula respecto a la
                         <strong>meta ajustada individual</strong>
-                        según el perfil y disponibilidad del técnico.
-                        No se compara a todos los trabajadores contra una
-                        misma cantidad genérica.
+                        de cada técnico según su perfil y disponibilidad.
                     </span>
 
                 </div>
 
 
                 <!-- ================================================= -->
-                <!-- TARJETAS POR TRABAJADOR -->
+                <!-- CARDS -->
                 <!-- ================================================= -->
 
                 <div class="o_eval_section_header">
 
                     <div>
+
                         <h2>
                             <i class="fa fa-address-card me-2"/>
                             Resultado por trabajador
                         </h2>
 
                         <p>
-                            Producción, calidad, encuestas, asistencia,
-                            bono y evolución individual.
+                            Producción, calidad, encuestas, bono
+                            y evolución mensual individual.
                         </p>
+
                     </div>
 
                 </div>
@@ -452,7 +686,7 @@
                             t-on-click="() => this.selectEvaluacion(ev)">
 
 
-                            <!-- CABECERA TRABAJADOR -->
+                            <!-- HEADER -->
 
                             <div class="o_eval_employee_head">
 
@@ -463,11 +697,16 @@
                                     </div>
 
                                     <div>
-                                        <h3 t-esc="getTecnicoName(ev)"/>
+
+                                        <h3
+                                            t-esc="getTecnicoName(ev)"/>
 
                                         <span class="o_eval_profile_badge">
+
                                             <t t-esc="ev.dashboard_tipo_operativo_texto || getTipoLabel(ev.tipo_operativo)"/>
+
                                         </span>
+
                                     </div>
 
                                 </div>
@@ -491,8 +730,11 @@
                             <section class="o_eval_employee_section">
 
                                 <div class="o_eval_employee_section_title">
+
                                     <i class="fa fa-cogs"/>
+
                                     <span>Producción</span>
+
                                 </div>
 
 
@@ -501,15 +743,27 @@
                                     <div class="o_eval_metric_rows">
 
                                         <div>
-                                            <span>Meta ajustada</span>
+
+                                            <span>
+                                                Meta ajustada
+                                            </span>
+
                                             <strong>
                                                 <t t-esc="getFloat(ev.meta_taller_ajustada)"/>
                                             </strong>
+
                                         </div>
 
+
                                         <div>
-                                            <span>Reparaciones válidas</span>
-                                            <strong t-esc="ev.reparaciones_validas_bono || 0"/>
+
+                                            <span>
+                                                Reparaciones válidas
+                                            </span>
+
+                                            <strong
+                                                t-esc="ev.reparaciones_validas_bono || 0"/>
+
                                         </div>
 
                                     </div>
@@ -522,15 +776,27 @@
                                     <div class="o_eval_metric_rows">
 
                                         <div>
-                                            <span>Meta ajustada</span>
+
+                                            <span>
+                                                Meta ajustada
+                                            </span>
+
                                             <strong>
                                                 <t t-esc="getFloat(ev.meta_servicios_ajustada)"/>
                                             </strong>
+
                                         </div>
 
+
                                         <div>
-                                            <span>Servicios válidos</span>
-                                            <strong t-esc="ev.tickets_validos_bono || 0"/>
+
+                                            <span>
+                                                Servicios válidos
+                                            </span>
+
+                                            <strong
+                                                t-esc="ev.tickets_validos_bono || 0"/>
+
                                         </div>
 
                                     </div>
@@ -543,31 +809,44 @@
                                     <div class="o_eval_mixed_grid">
 
                                         <div>
+
                                             <span>Taller</span>
 
                                             <strong>
+
                                                 <t t-esc="ev.reparaciones_validas_bono || 0"/>
+
                                                 /
+
                                                 <t t-esc="getFloat(ev.meta_taller_ajustada)"/>
+
                                             </strong>
 
                                             <small>
                                                 <t t-esc="getPercent(ev.porcentaje_produccion_taller)"/>%
                                             </small>
+
                                         </div>
 
+
                                         <div>
+
                                             <span>Servicios</span>
 
                                             <strong>
+
                                                 <t t-esc="ev.tickets_validos_bono || 0"/>
+
                                                 /
+
                                                 <t t-esc="getFloat(ev.meta_servicios_ajustada)"/>
+
                                             </strong>
 
                                             <small>
                                                 <t t-esc="getPercent(ev.porcentaje_produccion_servicios)"/>%
                                             </small>
+
                                         </div>
 
                                     </div>
@@ -578,7 +857,10 @@
                                 <div class="o_eval_production_total">
 
                                     <div>
-                                        <span>Producción total</span>
+
+                                        <span>
+                                            Producción total
+                                        </span>
 
                                         <strong
                                             t-attf-class="text-#{getProductionClass(ev.dashboard_porcentaje_produccion)}">
@@ -586,6 +868,7 @@
                                             <t t-esc="getPercent(ev.dashboard_porcentaje_produccion)"/>%
 
                                         </strong>
+
                                     </div>
 
 
@@ -620,36 +903,51 @@
                             </section>
 
 
-                            <!-- CALIDAD Y ENCUESTAS -->
+                            <!-- CALIDAD / ENCUESTAS -->
 
                             <div class="o_eval_employee_dual">
 
                                 <section class="o_eval_employee_section compact">
 
                                     <div class="o_eval_employee_section_title">
+
                                         <i class="fa fa-shield"/>
+
                                         <span>Calidad</span>
+
                                     </div>
 
+
                                     <div class="o_eval_big_value">
+
                                         <strong
                                             t-attf-class="text-#{getQualityClass(ev.dashboard_calidad)}">
 
                                             <t t-esc="getPercent(ev.dashboard_calidad)"/>%
 
                                         </strong>
+
                                     </div>
+
 
                                     <div class="o_eval_small_metrics">
 
                                         <span>
+
                                             Reclamos
-                                            <strong t-esc="ev.reclamos_procedentes_count || 0"/>
+
+                                            <strong
+                                                t-esc="ev.reclamos_procedentes_count || 0"/>
+
                                         </span>
 
                                         <span>
+
                                             Críticas
-                                            <strong t-esc="ev.evaluaciones_criticas_count || 0"/>
+
+                                            <strong
+                                                t-esc="ev.evaluaciones_criticas_count || 0"/>
+
                                         </span>
 
                                     </div>
@@ -660,8 +958,11 @@
                                 <section class="o_eval_employee_section compact">
 
                                     <div class="o_eval_employee_section_title">
+
                                         <i class="fa fa-bar-chart"/>
+
                                         <span>Encuestas</span>
+
                                     </div>
 
 
@@ -670,18 +971,38 @@
                                         <div class="o_eval_survey_numbers">
 
                                             <div>
-                                                <strong t-esc="ev.dashboard_encuestas_respondidas || 0"/>
-                                                <span>Respondidas</span>
+
+                                                <strong
+                                                    t-esc="ev.dashboard_encuestas_respondidas || 0"/>
+
+                                                <span>
+                                                    Respondidas
+                                                </span>
+
                                             </div>
 
-                                            <div>
-                                                <strong t-esc="ev.dashboard_encuestas_requeridas || 0"/>
-                                                <span>Requeridas</span>
-                                            </div>
 
                                             <div>
-                                                <strong t-esc="ev.dashboard_encuestas_no_respondidas || 0"/>
-                                                <span>Sin responder</span>
+
+                                                <strong
+                                                    t-esc="ev.dashboard_encuestas_requeridas || 0"/>
+
+                                                <span>
+                                                    Requeridas
+                                                </span>
+
+                                            </div>
+
+
+                                            <div>
+
+                                                <strong
+                                                    t-esc="ev.dashboard_encuestas_no_respondidas || 0"/>
+
+                                                <span>
+                                                    Sin responder
+                                                </span>
+
                                             </div>
 
                                         </div>
@@ -690,6 +1011,7 @@
                                         <div class="o_eval_survey_average">
 
                                             Promedio:
+
                                             <strong>
                                                 <t t-esc="getPercent(ev.promedio_evaluacion_servicio)"/>%
                                             </strong>
@@ -698,10 +1020,16 @@
 
                                     </t>
 
+
                                     <t t-else="">
+
                                         <div class="o_eval_not_apply">
-                                            No aplica para técnico de taller
+
+                                            No aplica para técnico
+                                            de taller
+
                                         </div>
+
                                     </t>
 
                                 </section>
@@ -709,31 +1037,44 @@
                             </div>
 
 
-                            <!-- ASISTENCIA Y BONO -->
+                            <!-- ASISTENCIA / BONO -->
 
                             <div class="o_eval_employee_dual">
 
                                 <section class="o_eval_employee_section compact">
 
                                     <div class="o_eval_employee_section_title">
-                                        <i class="fa fa-user-check"/>
-                                        <span>Asistencia y apoyo</span>
+
+                                        <i class="fa fa-user"/>
+
+                                        <span>
+                                            Asistencia y apoyo
+                                        </span>
+
                                     </div>
+
 
                                     <div class="o_eval_small_metrics vertical">
 
                                         <span>
+
                                             Asistencia
+
                                             <strong>
                                                 <t t-esc="getPercent(ev.dashboard_asistencia)"/>%
                                             </strong>
+
                                         </span>
 
+
                                         <span>
+
                                             Apoyo
+
                                             <strong>
                                                 <t t-esc="getPercent(ev.dashboard_apoyo)"/>%
                                             </strong>
+
                                         </span>
 
                                     </div>
@@ -744,14 +1085,20 @@
                                 <section class="o_eval_employee_section compact bonus">
 
                                     <div class="o_eval_employee_section_title">
+
                                         <i class="fa fa-gift"/>
+
                                         <span>Bono</span>
+
                                     </div>
 
+
                                     <div class="o_eval_bonus_amount">
+
                                         <strong>
                                             <t t-esc="getMoney(ev.bono_final)"/>
                                         </strong>
+
                                     </div>
 
 
@@ -760,6 +1107,7 @@
                                         class="o_eval_bonus_result success">
 
                                         <i class="fa fa-check-circle"/>
+
                                         Cumple bono
 
                                     </div>
@@ -770,6 +1118,7 @@
                                         class="o_eval_bonus_result danger">
 
                                         <i class="fa fa-times-circle"/>
+
                                         <t t-esc="ev.dashboard_motivo_bono_corto"/>
 
                                     </div>
@@ -780,6 +1129,7 @@
                                         class="o_eval_bonus_result warning">
 
                                         <i class="fa fa-info-circle"/>
+
                                         <t t-esc="ev.dashboard_motivo_bono_corto"/>
 
                                     </div>
@@ -789,28 +1139,165 @@
                             </div>
 
 
-                            <!-- EVOLUCIÓN -->
+                            <!-- ===================================== -->
+                            <!-- MINI GRÁFICO INDIVIDUAL -->
+                            <!-- ===================================== -->
 
                             <section class="o_eval_employee_section evolution">
 
                                 <div class="o_eval_employee_section_title">
 
                                     <i class="fa fa-line-chart"/>
-                                    <span>Evolución</span>
+
+                                    <span>
+                                        Evolución mensual
+                                    </span>
 
                                 </div>
 
 
-                                <div class="o_eval_evolution_grid">
+                                <t t-if="getMiniHistory(ev).length">
+
+                                    <div
+                                        t-attf-class="o_eval_mini_chart #{getMiniChartClass(ev)}">
+
+                                        <div class="o_eval_mini_chart_top">
+
+                                            <div>
+
+                                                <span>
+                                                    Últimos
+                                                    <t t-esc="getMiniHistory(ev).length"/>
+                                                    meses
+                                                </span>
+
+                                                <strong>
+
+                                                    <t t-esc="getPercent(ev.dashboard_porcentaje_produccion)"/>%
+
+                                                </strong>
+
+                                            </div>
+
+
+                                            <div
+                                                t-attf-class="o_eval_mini_variation #{getMiniChartClass(ev)}">
+
+                                                <i
+                                                    t-attf-class="fa #{getMiniTrendDifference(ev) > 0 ? 'fa-arrow-up' : getMiniTrendDifference(ev) &lt; 0 ? 'fa-arrow-down' : 'fa-minus'}"/>
+
+                                                <t t-esc="getSigned(getMiniTrendDifference(ev))"/>
+
+                                                pts
+
+                                            </div>
+
+                                        </div>
+
+
+                                        <div class="o_eval_mini_chart_canvas">
+
+                                            <div class="o_eval_mini_goal">
+                                                <span>100%</span>
+                                            </div>
+
+
+                                            <svg
+                                                viewBox="0 0 300 72"
+                                                preserveAspectRatio="none">
+
+                                                <polyline
+                                                    t-att-points="getMiniChartPoints(ev)"
+                                                    class="o_eval_mini_line"
+                                                    fill="none"/>
+
+
+                                                <t
+                                                    t-foreach="getMiniChartDots(ev)"
+                                                    t-as="point"
+                                                    t-key="'mini_point_' + ev.id + '_' + point_index">
+
+                                                    <circle
+                                                        t-att-cx="point.x"
+                                                        t-att-cy="point.y"
+                                                        r="3.2"
+                                                        class="o_eval_mini_point"/>
+
+                                                </t>
+
+                                            </svg>
+
+
+                                            <div class="o_eval_mini_labels">
+
+                                                <t
+                                                    t-foreach="getMiniChartDots(ev)"
+                                                    t-as="point"
+                                                    t-key="'mini_label_' + ev.id + '_' + point_index">
+
+                                                    <span>
+                                                        <t t-esc="point.label"/>
+                                                    </span>
+
+                                                </t>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </t>
+
+
+                                <t t-else="">
+
+                                    <div class="o_eval_mini_empty">
+                                        Sin historial mensual suficiente
+                                    </div>
+
+                                </t>
+
+
+                                <!-- COMPARACIONES SELECCIONADAS -->
+
+                                <div class="o_eval_selected_comparisons">
 
                                     <div>
+
                                         <span>
-                                            <t t-esc="getPreviousMonthLabel()"/>
+                                            <t t-esc="getCompare1Label()"/>
                                         </span>
 
-                                        <strong>
-                                            <t t-esc="getPercent(ev.dashboard_produccion_mes_anterior)"/>%
-                                        </strong>
+
+                                        <t t-if="ev.compare1Disponible">
+
+                                            <strong>
+                                                <t t-esc="getPercent(ev.compare1Produccion)"/>%
+                                            </strong>
+
+                                            <small
+                                                t-attf-class="#{getComparisonClass(ev.compare1Disponible, ev.compare1Variacion)}">
+
+                                                <t t-esc="getSigned(ev.compare1Variacion)"/>
+
+                                                pts
+
+                                            </small>
+
+                                        </t>
+
+
+                                        <t t-else="">
+
+                                            <strong>-</strong>
+
+                                            <small class="neutral">
+                                                Sin evaluación
+                                            </small>
+
+                                        </t>
+
                                     </div>
 
 
@@ -823,30 +1310,50 @@
                                         <strong>
                                             <t t-esc="getPercent(ev.dashboard_porcentaje_produccion)"/>%
                                         </strong>
+
+                                        <small>
+                                            Actual
+                                        </small>
+
                                     </div>
 
 
                                     <div>
+
                                         <span>
-                                            <t t-esc="getPreviousYearLabel()"/>
+                                            <t t-esc="getCompare2Label()"/>
                                         </span>
 
-                                        <strong>
-                                            <t t-esc="getPercent(ev.dashboard_produccion_anio_anterior)"/>%
-                                        </strong>
+
+                                        <t t-if="ev.compare2Disponible">
+
+                                            <strong>
+                                                <t t-esc="getPercent(ev.compare2Produccion)"/>%
+                                            </strong>
+
+                                            <small
+                                                t-attf-class="#{getComparisonClass(ev.compare2Disponible, ev.compare2Variacion)}">
+
+                                                <t t-esc="getSigned(ev.compare2Variacion)"/>
+
+                                                pts
+
+                                            </small>
+
+                                        </t>
+
+
+                                        <t t-else="">
+
+                                            <strong>-</strong>
+
+                                            <small class="neutral">
+                                                Sin evaluación
+                                            </small>
+
+                                        </t>
+
                                     </div>
-
-                                </div>
-
-
-                                <div
-                                    t-attf-class="o_eval_trend #{getTrendClass(ev)}">
-
-                                    <i
-                                        t-attf-class="fa #{getTrendIcon(ev)}"/>
-
-                                    <span
-                                        t-esc="ev.dashboard_tendencia_texto || 'Sin historial suficiente'"/>
 
                                 </div>
 
@@ -862,7 +1369,9 @@
                                     t-on-click.stop="() => this.openEvaluacion(ev)">
 
                                     <i class="fa fa-eye me-1"/>
+
                                     Evaluación
+
                                 </button>
 
 
@@ -871,7 +1380,9 @@
                                     t-on-click.stop="() => this.openHistorial(ev)">
 
                                     <i class="fa fa-history me-1"/>
+
                                     Historial
+
                                 </button>
 
 
@@ -881,6 +1392,7 @@
                                     t-on-click.stop="() => this.openEncuestas(ev)">
 
                                     Encuestas
+
                                 </button>
 
 
@@ -890,6 +1402,7 @@
                                     t-on-click.stop="() => this.openReclamos(ev)">
 
                                     Reclamos
+
                                 </button>
 
                             </div>
@@ -902,21 +1415,25 @@
 
 
                 <!-- ================================================= -->
-                <!-- COMPARACIÓN MENSUAL / ANUAL -->
+                <!-- GRÁFICO GENERAL -->
                 <!-- ================================================= -->
 
                 <div class="o_eval_section_header">
 
                     <div>
+
                         <h2>
+
                             <i class="fa fa-area-chart me-2"/>
-                            Comparación mensual y anual
+
+                            Evolución general del personal
+
                         </h2>
 
                         <p>
-                            Evolución del cumplimiento de la meta ajustada
-                            por trabajador.
+                            Comparación histórica de todos los técnicos.
                         </p>
+
                     </div>
 
                 </div>
@@ -924,18 +1441,20 @@
 
                 <div class="o_eval_comparison_grid">
 
-                    <!-- GRÁFICA -->
-
                     <div class="o_eval_comparison_chart">
 
                         <div class="o_eval_chart_header">
 
                             <div>
-                                <strong>Evolución de producción</strong>
+
+                                <strong>
+                                    Producción mensual
+                                </strong>
 
                                 <span>
                                     Últimos meses disponibles
                                 </span>
+
                             </div>
 
 
@@ -950,6 +1469,7 @@
                                         t-attf-class="series-#{series.index % 6}">
 
                                         <i/>
+
                                         <t t-esc="series.name"/>
 
                                     </span>
@@ -966,19 +1486,25 @@
                             <div class="o_eval_chart_wrapper">
 
                                 <div class="o_eval_chart_y_axis">
+
                                     <span>120%</span>
                                     <span>100%</span>
                                     <span>80%</span>
                                     <span>60%</span>
                                     <span>40%</span>
                                     <span>0%</span>
+
                                 </div>
 
 
                                 <div class="o_eval_chart_canvas">
 
                                     <div class="o_eval_goal_line">
-                                        <span>Meta 100%</span>
+
+                                        <span>
+                                            Meta 100%
+                                        </span>
+
                                     </div>
 
 
@@ -1023,7 +1549,8 @@
                                             t-as="month"
                                             t-key="'axis_' + month.key">
 
-                                            <span t-esc="getChartMonthLabel(month)"/>
+                                            <span
+                                                t-esc="getChartMonthLabel(month)"/>
 
                                         </t>
 
@@ -1039,8 +1566,9 @@
                         <t t-else="">
 
                             <div class="o_eval_empty_chart">
-                                No existe historial suficiente para mostrar
-                                la evolución.
+
+                                No existe historial suficiente.
+
                             </div>
 
                         </t>
@@ -1053,8 +1581,11 @@
                     <div class="o_eval_ranking_panel">
 
                         <div class="o_eval_panel_title">
+
                             <i class="fa fa-trophy"/>
+
                             Ranking del periodo
+
                         </div>
 
 
@@ -1070,24 +1601,39 @@
                                     t-on-click="() => this.selectEvaluacion(ev)">
 
                                     <div class="o_eval_ranking_position">
+
                                         <t t-esc="ev_index + 1"/>
+
                                     </div>
+
 
                                     <div class="o_eval_ranking_name">
-                                        <strong t-esc="getTecnicoName(ev)"/>
 
-                                        <span t-esc="ev.dashboard_tipo_operativo_texto"/>
+                                        <strong
+                                            t-esc="getTecnicoName(ev)"/>
+
+                                        <span
+                                            t-esc="ev.dashboard_tipo_operativo_texto"/>
+
                                     </div>
 
+
                                     <div class="o_eval_ranking_value">
+
                                         <strong>
+
                                             <t t-esc="getPercent(ev.dashboard_porcentaje_produccion)"/>%
+
                                         </strong>
 
                                         <span>
+
                                             Calidad
+
                                             <t t-esc="getPercent(ev.dashboard_calidad)"/>%
+
                                         </span>
+
                                     </div>
 
                                 </div>
@@ -1102,14 +1648,17 @@
 
 
                 <!-- ================================================= -->
-                <!-- TABLA COMPARATIVA -->
+                <!-- TABLA -->
                 <!-- ================================================= -->
 
                 <div class="o_eval_dash_panel full">
 
                     <div class="o_eval_panel_title">
+
                         <i class="fa fa-table"/>
+
                         Resumen comparativo
+
                     </div>
 
 
@@ -1118,7 +1667,9 @@
                         <table class="o_eval_dash_table">
 
                             <thead>
+
                                 <tr>
+
                                     <th>Técnico</th>
                                     <th>Perfil</th>
                                     <th>Meta</th>
@@ -1128,10 +1679,21 @@
                                     <th>Encuestas</th>
                                     <th>Reclamos</th>
                                     <th>Bono</th>
-                                    <th>vs mes</th>
-                                    <th>vs año</th>
+
+                                    <th>
+                                        vs
+                                        <t t-esc="getCompare1Label()"/>
+                                    </th>
+
+                                    <th>
+                                        vs
+                                        <t t-esc="getCompare2Label()"/>
+                                    </th>
+
                                     <th>Estado</th>
+
                                 </tr>
+
                             </thead>
 
 
@@ -1146,16 +1708,24 @@
                                         t-on-click="() => this.selectEvaluacion(ev)">
 
                                         <td>
-                                            <strong t-esc="getTecnicoName(ev)"/>
 
-                                            <small t-esc="ev.name"/>
+                                            <strong
+                                                t-esc="getTecnicoName(ev)"/>
+
+                                            <small
+                                                t-esc="ev.name"/>
+
                                         </td>
 
 
                                         <td>
+
                                             <span class="o_eval_profile_badge">
+
                                                 <t t-esc="ev.dashboard_tipo_operativo_texto"/>
+
                                             </span>
+
                                         </td>
 
 
@@ -1170,17 +1740,21 @@
 
 
                                         <td>
+
                                             <strong
                                                 t-attf-class="text-#{getProductionClass(ev.dashboard_porcentaje_produccion)}">
 
                                                 <t t-esc="getPercent(ev.dashboard_porcentaje_produccion)"/>%
 
                                             </strong>
+
                                         </td>
 
 
                                         <td>
+
                                             <t t-esc="getPercent(ev.dashboard_calidad)"/>%
+
                                         </td>
 
 
@@ -1189,7 +1763,9 @@
                                             <t t-if="ev.dashboard_encuestas_aplican">
 
                                                 <t t-esc="ev.dashboard_encuestas_respondidas"/>
+
                                                 /
+
                                                 <t t-esc="ev.dashboard_encuestas_requeridas"/>
 
                                             </t>
@@ -1201,33 +1777,62 @@
                                         </td>
 
 
-                                        <td t-esc="ev.reclamos_procedentes_count || 0"/>
+                                        <td
+                                            t-esc="ev.reclamos_procedentes_count || 0"/>
 
 
                                         <td>
+
                                             <strong
                                                 t-attf-class="#{(ev.bono_final || 0) > 0 ? 'text-success' : 'text-danger'}">
 
                                                 <t t-esc="getMoney(ev.bono_final)"/>
 
                                             </strong>
-                                        </td>
-
-
-                                        <td
-                                            t-attf-class="#{ev.dashboard_variacion_produccion_mes >= 0 ? 'text-success' : 'text-danger'}">
-
-                                            <t t-esc="getSigned(ev.dashboard_variacion_produccion_mes)"/>
-                                            pts
 
                                         </td>
 
 
-                                        <td
-                                            t-attf-class="#{ev.dashboard_variacion_produccion_anual >= 0 ? 'text-success' : 'text-danger'}">
+                                        <td>
 
-                                            <t t-esc="getSigned(ev.dashboard_variacion_produccion_anual)"/>
-                                            pts
+                                            <t t-if="ev.compare1Disponible">
+
+                                                <span
+                                                    t-attf-class="#{getComparisonClass(ev.compare1Disponible, ev.compare1Variacion)}">
+
+                                                    <t t-esc="getSigned(ev.compare1Variacion)"/>
+
+                                                    pts
+
+                                                </span>
+
+                                            </t>
+
+                                            <t t-else="">
+                                                -
+                                            </t>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <t t-if="ev.compare2Disponible">
+
+                                                <span
+                                                    t-attf-class="#{getComparisonClass(ev.compare2Disponible, ev.compare2Variacion)}">
+
+                                                    <t t-esc="getSigned(ev.compare2Variacion)"/>
+
+                                                    pts
+
+                                                </span>
+
+                                            </t>
+
+                                            <t t-else="">
+                                                -
+                                            </t>
 
                                         </td>
 
@@ -1257,28 +1862,37 @@
 
 
                 <!-- ================================================= -->
-                <!-- DETALLE DEL TÉCNICO SELECCIONADO -->
+                <!-- DETALLE SELECCIONADO -->
                 <!-- ================================================= -->
 
                 <div
                     class="o_eval_dash_panel full"
                     t-if="state.selectedEvaluacion">
 
-
                     <div class="o_eval_selected_header">
 
                         <div>
+
                             <h2>
-                                <i class="fa fa-user-cog me-2"/>
+
+                                <i class="fa fa-user me-2"/>
+
                                 Detalle:
+
                                 <t t-esc="getTecnicoName(state.selectedEvaluacion)"/>
+
                             </h2>
 
                             <p>
+
                                 <t t-esc="state.selectedEvaluacion.dashboard_tipo_operativo_texto"/>
+
                                 ·
+
                                 <t t-esc="state.selectedEvaluacion.dashboard_periodo"/>
+
                             </p>
+
                         </div>
 
 
@@ -1289,21 +1903,22 @@
                                 t-on-click="() => this.openEvaluacion(state.selectedEvaluacion)">
 
                                 Ver evaluación
+
                             </button>
+
 
                             <button
                                 class="btn btn-outline-secondary"
                                 t-on-click="() => this.openDetalleDiario(state.selectedEvaluacion)">
 
-                                Abrir detalle diario
+                                Detalle diario
+
                             </button>
 
                         </div>
 
                     </div>
 
-
-                    <!-- MOTIVOS BONO -->
 
                     <t t-if="state.selectedEvaluacion.dashboard_motivos_bloqueo_bono">
 
@@ -1312,12 +1927,14 @@
                             <i class="fa fa-exclamation-circle"/>
 
                             <div>
+
                                 <strong>
                                     Motivos por los que no accede al bono
                                 </strong>
 
                                 <pre
                                     t-esc="state.selectedEvaluacion.dashboard_motivos_bloqueo_bono"/>
+
                             </div>
 
                         </div>
@@ -1325,70 +1942,109 @@
                     </t>
 
 
-                    <!-- DÍAS -->
-
                     <div class="o_eval_availability_grid">
 
                         <div>
-                            <span>Días laborables</span>
+
+                            <span>
+                                Días laborables
+                            </span>
+
                             <strong>
                                 <t t-esc="getFloat(state.selectedEvaluacion.dashboard_dias_laborables)"/>
                             </strong>
+
                         </div>
 
+
                         <div>
-                            <span>Días descontados</span>
+
+                            <span>
+                                Días descontados
+                            </span>
+
                             <strong>
                                 <t t-esc="getFloat(state.selectedEvaluacion.dashboard_dias_ausencia)"/>
                             </strong>
+
                         </div>
 
+
                         <div>
-                            <span>Días en servicios</span>
+
+                            <span>
+                                Días en servicios
+                            </span>
+
                             <strong>
                                 <t t-esc="getFloat(state.selectedEvaluacion.dashboard_dias_servicio)"/>
                             </strong>
+
                         </div>
 
+
                         <div>
-                            <span>Días disponibles taller</span>
+
+                            <span>
+                                Disponibles taller
+                            </span>
+
                             <strong>
                                 <t t-esc="getFloat(state.selectedEvaluacion.dashboard_dias_taller)"/>
                             </strong>
+
                         </div>
 
+
                         <div>
-                            <span>Días con actividad</span>
+
+                            <span>
+                                Días con actividad
+                            </span>
+
                             <strong>
                                 <t t-esc="state.selectedEvaluacion.dashboard_dias_con_actividad || 0"/>
                             </strong>
+
                         </div>
 
+
                         <div>
-                            <span>Días sin actividad</span>
+
+                            <span>
+                                Sin actividad
+                            </span>
+
                             <strong>
                                 <t t-esc="state.selectedEvaluacion.dashboard_dias_sin_actividad || 0"/>
                             </strong>
+
                         </div>
 
                     </div>
 
 
-                    <!-- DETALLE DIARIO -->
-
                     <div class="o_eval_daily_title">
+
                         <h3>
+
                             <i class="fa fa-calendar me-2"/>
+
                             Actividad diaria
+
                         </h3>
+
                     </div>
 
 
                     <t t-if="state.loadingDetalle">
 
                         <div class="o_eval_dash_loading small">
+
                             <i class="fa fa-spinner fa-spin me-2"/>
+
                             Cargando detalle diario...
+
                         </div>
 
                     </t>
@@ -1409,18 +2065,23 @@
 
                                     <div class="o_eval_daily_head">
 
-                                        <strong t-esc="dia.dia_semana"/>
+                                        <strong
+                                            t-esc="dia.dia_semana"/>
 
-                                        <span t-esc="dia.fecha"/>
+                                        <span
+                                            t-esc="dia.fecha"/>
 
                                     </div>
 
 
                                     <div class="o_eval_daily_total">
 
-                                        <strong t-esc="dia.total_trabajos || 0"/>
+                                        <strong
+                                            t-esc="dia.total_trabajos || 0"/>
 
-                                        <span>trabajos</span>
+                                        <span>
+                                            trabajos
+                                        </span>
 
                                     </div>
 
@@ -1428,15 +2089,24 @@
                                     <div class="o_eval_daily_breakdown">
 
                                         <span>
+
                                             <i class="fa fa-wrench"/>
+
                                             <t t-esc="dia.cantidad_reparaciones || 0"/>
+
                                             reparaciones
+
                                         </span>
 
+
                                         <span>
+
                                             <i class="fa fa-ticket"/>
+
                                             <t t-esc="dia.cantidad_tickets || 0"/>
+
                                             servicios
+
                                         </span>
 
                                     </div>
@@ -1495,8 +2165,7 @@
                         </h3>
 
                         <p>
-                            Cambia el mes, año o tipo de técnico para
-                            consultar otro periodo.
+                            Cambia el mes, año o perfil.
                         </p>
 
                     </div>
