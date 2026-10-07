@@ -452,13 +452,43 @@ class TonerCounterSubmission(models.Model):
     )
 
     requires_evidence = fields.Boolean(
-        string="Requiere evidencia",
+        string="Requiere justificación por consumo anticipado",
         tracking=True,
+        help=(
+            "Indica que el consumo calculado está por debajo del umbral esperado y "
+            "que la asesora debe clasificar el motivo antes de enviarlo a gerencia. "
+            "Las fotografías son opcionales."
+        ),
+    )
+
+    early_request_type = fields.Selection(
+        [
+            ("client_stock", "Pedido para stock del cliente"),
+            ("previous_manual", "Pedido registrado manualmente anteriormente"),
+            ("defective_toner", "Tóner defectuoso / con falla"),
+            ("print_quality", "Cambio por calidad de impresión"),
+            ("real_early_consumption", "Consumo real anticipado"),
+            ("incorrect_history", "Contador o historial incorrecto"),
+            ("equipment_change", "Cambio de equipo / reinstalación / contingencia"),
+            ("other", "Otro"),
+        ],
+        string="Tipo de excepción por consumo anticipado",
+        tracking=True,
+        copy=False,
+        help=(
+            "Clasifica por qué el pedido aparece como consumo anticipado. "
+            "La foto del contador y la foto del tóner son siempre opcionales."
+        ),
     )
 
     early_request_reason = fields.Text(
-        string="Motivo de solicitud anticipada",
+        string="Detalle / justificación",
         tracking=True,
+        copy=False,
+        help=(
+            "Detalle adicional de la excepción. Solo es obligatorio cuando se "
+            "selecciona 'Otro'."
+        ),
     )
 
     duplicate_submission_id = fields.Many2one(
@@ -2386,7 +2416,7 @@ class TonerCounterSubmission(models.Model):
                     <b>Contador B/N:</b> %(bn)s<br/>
                     <b>Contador color:</b> %(color)s<br/>
                     <b>Resultado automático:</b> %(analysis)s<br/>
-                    <b>Requiere evidencia:</b> %(evidence)s<br/><br/>
+                    <b>Requiere justificación:</b> %(evidence)s<br/><br/>
                     <b>Análisis:</b><br/>%(summary)s
                     """
                 )
@@ -2423,7 +2453,7 @@ class TonerCounterSubmission(models.Model):
                 date_deadline=fields.Date.today() + timedelta(days=1),
                 summary=_("Evaluar solicitud de tóner %s") % self.secuencia,
                 note=_(
-                    "Revisar contadores, consumo, historial y evidencia antes de enviar a gerencia."
+                    "Revisar contadores, consumo, historial y clasificar la excepción antes de enviar a gerencia."
                 ),
             )
         except Exception:
@@ -3325,22 +3355,62 @@ class TonerCounterSubmission(models.Model):
         for record in self:
             if record.state != "evaluacion":
                 raise UserError(_("La solicitud debe estar en evaluación."))
-            if record.requires_evidence and not (
-                record.photo_counter or record.photo_toner or record.early_request_reason
-            ):
-                raise UserError(
-                    _(
-                        "El consumo es anticipado. Registre el motivo o adjunte evidencia antes de enviarlo a gerencia."
+
+            # Cuando el análisis detecta consumo anticipado, la asesora debe
+            # CLASIFICAR el motivo. Las fotografías son siempre opcionales.
+            if record.requires_evidence:
+                if not record.early_request_type:
+                    raise UserError(
+                        _(
+                            "El consumo es anticipado. Seleccione el tipo de "
+                            "excepción antes de enviarlo a gerencia."
+                        )
                     )
-                )
+
+                # Solo la opción "Otro" obliga a escribir una explicación.
+                if (
+                    record.early_request_type == "other"
+                    and not (record.early_request_reason or "").strip()
+                ):
+                    raise UserError(
+                        _(
+                            "Ha seleccionado 'Otro'. Ingrese el detalle o "
+                            "justificación antes de enviarlo a gerencia."
+                        )
+                    )
 
             # Comercial debe resolver cada color solicitado antes de que Gerencia vea la solicitud.
             record._validate_commercial_color_decisions()
 
             record.write({"state": "pendiente_gerencia"})
-            record.message_post(
-                body=_("Solicitud enviada a gerencia por %s.") % self.env.user.name
-            )
+
+            if record.requires_evidence:
+                reason_label = dict(
+                    record._fields["early_request_type"].selection
+                ).get(record.early_request_type, record.early_request_type or "")
+                detail = (record.early_request_reason or "").strip()
+                record.message_post(
+                    body=_(
+                        "Solicitud enviada a gerencia por %(user)s.<br/>"
+                        "<b>Excepción por consumo anticipado:</b> %(reason)s"
+                        "%(detail)s"
+                    )
+                    % {
+                        "user": self.env.user.name,
+                        "reason": reason_label,
+                        "detail": (
+                            "<br/><b>Detalle:</b> %s" % detail
+                            if detail
+                            else ""
+                        ),
+                    }
+                )
+            else:
+                record.message_post(
+                    body=_("Solicitud enviada a gerencia por %s.")
+                    % self.env.user.name
+                )
+
             record._notify_management()
 
     def action_management_approve(self):

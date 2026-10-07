@@ -26,7 +26,7 @@
                     <field name="days_since_last_delivery" string="Días"/>
                     <field name="last_delivery_date" string="Última Entrega" optional="hide"/>
                     <field name="analysis_result" string="Análisis" widget="badge" decoration-success="analysis_result == 'normal'" decoration-warning="analysis_result == 'early_consumption'" decoration-info="analysis_result == 'no_history'" decoration-danger="analysis_result == 'duplicate'"/>
-                    <field name="requires_evidence" string="Evidencia" widget="boolean_toggle" optional="show"/>
+                    <field name="requires_evidence" string="Revisión anticipada" widget="boolean_toggle" optional="show"/>
                     <field name="state" string="Estado" widget="badge" decoration-info="state in ['recibida', 'evaluacion', 'pendiente_gerencia', 'confirmacion_ventas']" decoration-success="state in ['aprobada_gerencia', 'lista_despacho', 'entregada']" decoration-warning="state in ['devuelta', 'en_despacho']" decoration-danger="state in ['rechazada_gerencia', 'cancelada']"/>
                 </list>
             </field>
@@ -111,9 +111,10 @@
                         </div>
                         <!-- Avisos para comercial -->
                         <div class="alert alert-warning o_toner_notice" role="alert" invisible="not requires_evidence">
-                            <strong>Revisión obligatoria:</strong>
-                            el consumo detectado es menor al esperado.
-                            Antes de enviarlo a gerencia, registre el motivo o adjunte evidencia.
+                            <strong>Consumo anticipado detectado:</strong>
+                            el rendimiento consumido es menor al esperado.
+                            Antes de enviarlo a gerencia, seleccione el motivo de la excepción.
+                            Las fotografías son opcionales.
                         </div>
                         <div class="alert alert-info o_toner_notice" role="alert" invisible="analysis_result != 'no_history'">
                             <strong>Sin historial suficiente:</strong>
@@ -431,7 +432,7 @@
                                     </p>
                                     <p>
                                         <strong>3. Si el consumo es anticipado:</strong>
-                                        solicite explicación, foto del tóner o foto del contador.
+                                        seleccione el motivo de la excepción. Las fotos del tóner y del contador son opcionales.
                                     </p>
                                     <p>
                                         <strong>4. Evalúe cada color:</strong>
@@ -474,23 +475,78 @@
                                     <i aria-hidden="true" class="fa fa-clipboard"/>
                                     <span>Evaluación Comercial</span>
                                 </div>
+
                                 <group class="o_toner_panel">
                                     <group string="Responsable de Evaluación" class="o_toner_inner_group">
                                         <field name="reviewer_id" readonly="1"/>
                                         <field name="review_date" readonly="1"/>
                                     </group>
                                     <group string="Control" class="o_toner_inner_group">
-                                        <field name="requires_evidence" readonly="1"/>
-                                        <field name="early_request_reason"/>
+                                        <field name="requires_evidence" string="Requiere revisión por consumo anticipado" readonly="1"/>
                                     </group>
                                 </group>
-                                <group string="Evaluación y Recomendación" class="o_toner_panel">
-                                    <field name="review_notes" nolabel="1" placeholder="Explique si el consumo es razonable, si existe una incidencia, qué cantidad recomienda y por qué..." readonly="state not in ['evaluacion', 'devuelta']"/>
+
+                                <div class="alert alert-warning o_toner_notice"
+                                     role="alert"
+                                     invisible="not requires_evidence">
+                                    <strong>Debe clasificar el motivo del consumo anticipado.</strong>
+                                    Esto permite diferenciar un pedido para stock, un registro manual previo,
+                                    una incidencia real de tóner u otra excepción.
+                                    Las fotografías son opcionales.
+                                </div>
+
+                                <group string="Clasificación de la excepción"
+                                       class="o_toner_panel"
+                                       invisible="not requires_evidence">
+                                    <group class="o_toner_inner_group">
+                                        <field name="early_request_type"
+                                               string="Motivo del consumo anticipado"
+                                               readonly="state not in ['evaluacion', 'devuelta']"
+                                               required="requires_evidence"
+                                               options="{'horizontal': false}"/>
+                                    </group>
+                                    <group class="o_toner_inner_group">
+                                        <field name="early_request_reason"
+                                               string="Detalle / justificación"
+                                               placeholder="Agregue una explicación adicional si corresponde..."
+                                               readonly="state not in ['evaluacion', 'devuelta']"/>
+                                    </group>
                                 </group>
+
+                                <div class="alert alert-info o_toner_notice"
+                                     role="alert"
+                                     invisible="not requires_evidence or early_request_type != 'client_stock'">
+                                    <strong>Pedido para stock:</strong>
+                                    esta solicitud puede procesarse aunque el rendimiento consumido sea bajo,
+                                    porque el tóner fue solicitado como reserva para el cliente.
+                                </div>
+
+                                <div class="alert alert-info o_toner_notice"
+                                     role="alert"
+                                     invisible="not requires_evidence or early_request_type != 'previous_manual'">
+                                    <strong>Pedido registrado manualmente:</strong>
+                                    la diferencia de rendimiento puede deberse a que el pedido manual se registró
+                                    antes de que el proceso automático realizara la evaluación.
+                                </div>
+
+                                <div class="alert alert-warning o_toner_notice"
+                                     role="alert"
+                                     invisible="not requires_evidence or early_request_type != 'other'">
+                                    <strong>Detalle obligatorio:</strong>
+                                    al seleccionar "Otro" debe indicar la justificación antes de enviar a gerencia.
+                                </div>
+
+                                <group string="Evaluación y Recomendación" class="o_toner_panel">
+                                    <field name="review_notes"
+                                           nolabel="1"
+                                           placeholder="Explique si corresponde aprobar, qué cantidad recomienda y cualquier observación comercial..."
+                                           readonly="state not in ['evaluacion', 'devuelta']"/>
+                                </group>
+
                                 <div class="alert alert-info o_toner_notice" role="alert">
-                                    Comercial debe dejar una recomendación clara:
-                                    aprobar, solicitar evidencia, tratar como incidencia
-                                    o no recomendar el envío.
+                                    Comercial debe revisar cada color, seleccionar si procede o no procede
+                                    y definir la cantidad propuesta. Si existe consumo anticipado,
+                                    también debe clasificar el motivo antes de enviar a gerencia.
                                 </div>
                             </page>
                             <page string="Gerencia" name="management">
@@ -629,18 +685,35 @@
                                     <i aria-hidden="true" class="fa fa-camera"/>
                                     <span>Evidencia y Observaciones</span>
                                 </div>
+
+                                <div class="alert alert-info o_toner_notice" role="alert">
+                                    <strong>Las fotografías son opcionales.</strong>
+                                    Puede adjuntarlas como respaldo del análisis, pero no son requisito para enviar
+                                    la solicitud a gerencia.
+                                </div>
+
                                 <group class="o_toner_panel">
-                                    <group string="Foto del Contador" class="o_toner_inner_group">
-                                        <field name="photo_counter" widget="image" class="o_toner_evidence_image"/>
+                                    <group string="Foto del Contador (opcional)" class="o_toner_inner_group">
+                                        <field name="photo_counter"
+                                               widget="image"
+                                               class="o_toner_evidence_image"
+                                               readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
                                         <field name="photo_counter_filename" invisible="1"/>
                                     </group>
-                                    <group string="Foto del Tóner" class="o_toner_inner_group">
-                                        <field name="photo_toner" widget="image" class="o_toner_evidence_image"/>
+                                    <group string="Foto del Tóner (opcional)" class="o_toner_inner_group">
+                                        <field name="photo_toner"
+                                               widget="image"
+                                               class="o_toner_evidence_image"
+                                               readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
                                         <field name="photo_toner_filename" invisible="1"/>
                                     </group>
                                 </group>
+
                                 <group string="Observaciones del Cliente" class="o_toner_panel">
-                                    <field name="notes" nolabel="1" placeholder="Observaciones recibidas desde el portal..."/>
+                                    <field name="notes"
+                                           nolabel="1"
+                                           placeholder="Observaciones recibidas desde el portal..."
+                                           readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
                                 </group>
                             </page>
                         </notebook>
@@ -668,6 +741,7 @@
                     <field name="state"/>
                     <field name="analysis_result"/>
                     <field name="requires_evidence"/>
+                    <field name="early_request_type"/>
                     <field name="consumed_copies"/>
                     <field name="expected_yield"/>
                     <field name="consumption_percent"/>
@@ -806,14 +880,14 @@
                                 <t t-if="record.requires_evidence.raw_value">
                                     <div class="o_toner_evidence_alert">
                                         <div class="o_toner_evidence_alert_icon">
-                                            <i class="fa fa-camera" aria-hidden="true"/>
+                                            <i class="fa fa-exclamation-triangle" aria-hidden="true"/>
                                         </div>
                                         <div>
-                                            <strong>Evidencia requerida</strong>
+                                            <strong>Revisión de consumo anticipado</strong>
                                             <span>
-                                            Se deben adjuntar fotografías o
-                                            documentos de validación.
-                                        </span>
+                                                Debe clasificarse el motivo antes de enviarlo a gerencia.
+                                                Las fotografías son opcionales.
+                                            </span>
                                         </div>
                                     </div>
                                 </t>
@@ -880,6 +954,7 @@
                     <field name="client_name"/>
                     <field name="client_phone"/>
                     <field name="analysis_result"/>
+                    <field name="early_request_type"/>
                     <separator/>
                     <filter string="Recibidas" name="received" domain="[('state', '=', 'recibida')]"/>
                     <filter string="En evaluación" name="review" domain="[('state', '=', 'evaluacion')]"/>
@@ -889,7 +964,8 @@
                     <filter string="En despacho" name="dispatch" domain="[('state', '=', 'en_despacho')]"/>
                     <separator/>
                     <filter string="Consumo anticipado" name="early" domain="[('analysis_result', '=', 'early_consumption')]"/>
-                    <filter string="Requiere evidencia" name="evidence" domain="[('requires_evidence', '=', True)]"/>
+                    <filter string="Requiere revisión" name="evidence" domain="[('requires_evidence', '=', True)]"/>
+                    <filter string="Pedido para stock" name="stock_exception" domain="[('early_request_type', '=', 'client_stock')]"/>
                     <filter string="Sin historial" name="no_history" domain="[('analysis_result', '=', 'no_history')]"/>
                     <filter string="Duplicadas" name="duplicates" domain="[('analysis_result', '=', 'duplicate')]"/>
                     <separator/>
@@ -899,6 +975,7 @@
                     <group expand="0" string="Agrupar por">
                         <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
                         <filter string="Resultado" name="group_analysis" context="{'group_by': 'analysis_result'}"/>
+                        <filter string="Motivo anticipado" name="group_early_type" context="{'group_by': 'early_request_type'}"/>
                         <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
                         <filter string="Equipo" name="group_equipment" context="{'group_by': 'equipment_id'}"/>
                         <filter string="Fecha" name="group_date" context="{'group_by': 'submission_date:day'}"/>
