@@ -46,6 +46,7 @@ class ModeloToner(models.Model):
             ('cyan', 'Cian'),
             ('magenta', 'Magenta'),
             ('yellow', 'Amarillo'),
+            ('white', 'Blanco'),
         ],
         string='Color',
         required=True,
