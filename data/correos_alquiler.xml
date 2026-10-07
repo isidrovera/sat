@@ -1632,7 +1632,7 @@
             <field name="model_id" ref="model_toner_counter_submission"/>
             <field name="subject">✅ {{ object.secuencia }} aprobada - Pendiente confirmar stock</field>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">comercial1@andescopiers.com.pe, comercial@andescopiers.com.pe</field>
+            <field name="email_to">comercial1@andescopiers.com.pe, comercial@andescopiers.com.pe, logistica@corapsac.com</field>
             <field name="auto_delete" eval="True"/>
             <field name="body_html"><![CDATA[
 <div style="background:#f1f5f9;padding:24px;font-family:Arial;color:#1e293b;">
