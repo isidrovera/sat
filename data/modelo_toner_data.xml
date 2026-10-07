@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <odoo>
-  <data noupdate="1">
+  <data >
     <!-- CANON - modelos de tóner de la tabla indicada por el usuario -->
     <record id="toner_canon_canon_104" model="modelo.toner">
       <field name="name">Canon 104</field>
@@ -258,8 +258,8 @@
       <field name="name">TN629K</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">86000</field>
+      <field name="duracion_referencial">86000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -267,8 +267,8 @@
       <field name="name">TN227K</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">25000</field>
+      <field name="duracion_referencial">25000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -276,8 +276,8 @@
       <field name="name">TNP90</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">20000</field>
+      <field name="duracion_referencial">20000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -285,8 +285,8 @@
       <field name="name">TN627K</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">173800</field>
+      <field name="duracion_referencial">173800</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -294,8 +294,8 @@
       <field name="name">TN627EK</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">208400</field>
+      <field name="duracion_referencial">208400</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -303,8 +303,8 @@
       <field name="name">TN714</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">45000</field>
+      <field name="duracion_referencial">45000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -312,8 +312,8 @@
       <field name="name">TN714A</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">45000</field>
+      <field name="duracion_referencial">45000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -321,8 +321,8 @@
       <field name="name">TN628</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">24000</field>
+      <field name="duracion_referencial">24000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -330,8 +330,8 @@
       <field name="name">TN628A</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">24000</field>
+      <field name="duracion_referencial">24000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -339,8 +339,8 @@
       <field name="name">TN330</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">25000</field>
+      <field name="duracion_referencial">25000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -348,8 +348,8 @@
       <field name="name">TN330A</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">25000</field>
+      <field name="duracion_referencial">25000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -357,8 +357,8 @@
       <field name="name">TN715K</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">45000</field>
+      <field name="duracion_referencial">45000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -366,8 +366,8 @@
       <field name="name">TN715AK</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">45000</field>
+      <field name="duracion_referencial">45000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -375,8 +375,8 @@
       <field name="name">TN626K</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">28000</field>
+      <field name="duracion_referencial">28000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -384,8 +384,8 @@
       <field name="name">TN626AK</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">28000</field>
+      <field name="duracion_referencial">28000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -393,8 +393,8 @@
       <field name="name">TN328K</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">28000</field>
+      <field name="duracion_referencial">28000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -402,8 +402,8 @@
       <field name="name">TN328AK</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">28000</field>
+      <field name="duracion_referencial">28000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
@@ -411,8 +411,8 @@
       <field name="name">TNP79K</field>
       <field name="marca_id" ref="marca_konica_minolta"/>
       <field name="color">black</field>
-      <field name="duracion_fabricante">0</field>
-      <field name="duracion_referencial">0</field>
+      <field name="duracion_fabricante">13000</field>
+      <field name="duracion_referencial">13000</field>
       <field name="fuente_informacion">fabricante</field>
       <field name="observaciones">Producto/color confirmado en la página oficial SDS APAC de Konica Minolta. La SDS no publica rendimiento de páginas; duración pendiente de fuente de rendimiento.</field>
     </record>
