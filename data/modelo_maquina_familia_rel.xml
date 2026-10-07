@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- ========================================================= -->
+        <!-- CANON                                                     -->
+        <!-- ========================================================= -->
+
+        <record id="familia_canon_ir_adv_400_500" model="modelo.maquina.familia">
+            <field name="name">imageRUNNER ADVANCE 400 / 500</field>
+            <field name="codigo_tecnico">ir_adv_400_500</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática imageRUNNER ADVANCE de formato compacto, series 400 y 500.</field>
+        </record>
+
+        <record id="familia_canon_ir_adv_4500" model="modelo.maquina.familia">
+            <field name="name">imageRUNNER ADVANCE 4500</field>
+            <field name="codigo_tecnico">ir_adv_4500</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática imageRUNNER ADVANCE 4525, 4535, 4545, 4551 y variantes relacionadas.</field>
+        </record>
+
+        <record id="familia_canon_ir_adv_6500" model="modelo.maquina.familia">
+            <field name="name">imageRUNNER ADVANCE 6500</field>
+            <field name="codigo_tecnico">ir_adv_6500</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática imageRUNNER ADVANCE de producción/oficina, serie 6500.</field>
+        </record>
+
+        <record id="familia_canon_ir_adv_8500" model="modelo.maquina.familia">
+            <field name="name">imageRUNNER ADVANCE 8500</field>
+            <field name="codigo_tecnico">ir_adv_8500</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática imageRUNNER ADVANCE 8505, 8585, 8595 y variantes relacionadas.</field>
+        </record>
+
+        <record id="familia_canon_ir_adv_c250_c350" model="modelo.maquina.familia">
+            <field name="name">imageRUNNER ADVANCE C250 / C350</field>
+            <field name="codigo_tecnico">ir_adv_c250_c350</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color imageRUNNER ADVANCE compacta C250/C350 y variantes relacionadas.</field>
+        </record>
+
+        <record id="familia_canon_ir_adv_c3500" model="modelo.maquina.familia">
+            <field name="name">imageRUNNER ADVANCE C3500</field>
+            <field name="codigo_tecnico">ir_adv_c3500</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color imageRUNNER ADVANCE C3525/C3530 y variantes relacionadas.</field>
+        </record>
+
+        <record id="familia_canon_ir_adv_c5500" model="modelo.maquina.familia">
+            <field name="name">imageRUNNER ADVANCE C5500</field>
+            <field name="codigo_tecnico">ir_adv_c5500</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color imageRUNNER ADVANCE C5535/C5540/C5550/C5560 y variantes relacionadas.</field>
+        </record>
+
+        <record id="familia_canon_imagepress_color" model="modelo.maquina.familia">
+            <field name="name">imagePRESS Color</field>
+            <field name="codigo_tecnico">imagepress_color</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia de equipos Canon imagePRESS a color.</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- KONICA MINOLTA                                            -->
+        <!-- ========================================================= -->
+
+        <record id="familia_konica_bizhub_227_287_367" model="modelo.maquina.familia">
+            <field name="name">bizhub 227 / 287 / 367</field>
+            <field name="codigo_tecnico">bizhub_227_287_367</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática bizhub 227, 287 y 367.</field>
+        </record>
+
+        <record id="familia_konica_bizhub_454e_554e" model="modelo.maquina.familia">
+            <field name="name">bizhub 454e / 554e</field>
+            <field name="codigo_tecnico">bizhub_454e_554e</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática bizhub 454e y 554e.</field>
+        </record>
+
+        <record id="familia_konica_bizhub_458_558_658" model="modelo.maquina.familia">
+            <field name="name">bizhub 458 / 558 / 658</field>
+            <field name="codigo_tecnico">bizhub_458_558_658</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática bizhub 458, 558 y 658.</field>
+        </record>
+
+        <record id="familia_konica_bizhub_758_808_958" model="modelo.maquina.familia">
+            <field name="name">bizhub 758 / 808 / 958</field>
+            <field name="codigo_tecnico">bizhub_758_808_958</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática bizhub 758, 808, 958 y PRO 958.</field>
+        </record>
+
+        <record id="familia_konica_bizhub_c258_c308_c368" model="modelo.maquina.familia">
+            <field name="name">bizhub C258 / C308 / C368</field>
+            <field name="codigo_tecnico">bizhub_c258_c308_c368</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color bizhub C258, C308 y C368.</field>
+        </record>
+
+        <record id="familia_konica_bizhub_c458_c558_c658" model="modelo.maquina.familia">
+            <field name="name">bizhub C458 / C558 / C658</field>
+            <field name="codigo_tecnico">bizhub_c458_c558_c658</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color bizhub C458, C558 y C658.</field>
+        </record>
+
+        <record id="familia_konica_bizhub_c250i_c300i_c360i" model="modelo.maquina.familia">
+            <field name="name">bizhub i-Series C250i / C300i / C360i</field>
+            <field name="codigo_tecnico">bizhub_i_c250i_c300i_c360i</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color bizhub i-Series C250i, C300i y C360i.</field>
+        </record>
+
+        <record id="familia_konica_bizhub_450i_550i_650i" model="modelo.maquina.familia">
+            <field name="name">bizhub i-Series 450i / 550i / 650i</field>
+            <field name="codigo_tecnico">bizhub_i_450i_550i_650i</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática bizhub i-Series 450i, 550i y 650i.</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- RICOH                                                     -->
+        <!-- ========================================================= -->
+
+        <record id="familia_ricoh_mp_2554_3555" model="modelo.maquina.familia">
+            <field name="name">MP 2554 / 3054 / 3554 - MP 2555 / 3055 / 3555</field>
+            <field name="codigo_tecnico">mp_2554_3555</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia monocromática Ricoh MP 25/30/35 ppm de generaciones 54 y 55.</field>
+        </record>
+
+        <record id="familia_ricoh_mp_c3003_c3504" model="modelo.maquina.familia">
+            <field name="name">MP C3003 / C3503 / C3004 / C3504</field>
+            <field name="codigo_tecnico">mp_c3003_c3504</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color Ricoh MP C3003/C3503 y MP C3004/C3504.</field>
+        </record>
+
+        <record id="familia_ricoh_mp_c4503_c6004" model="modelo.maquina.familia">
+            <field name="name">MP C4503 / C5503 / C6003 - MP C4504 / C5504 / C6004</field>
+            <field name="codigo_tecnico">mp_c4503_c6004</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color Ricoh MP C4503/C5503/C6003 y MP C4504/C5504/C6004.</field>
+        </record>
+
+        <record id="familia_ricoh_im_mono" model="modelo.maquina.familia">
+            <field name="name">IM Monocromática</field>
+            <field name="codigo_tecnico">im_mono</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="tipo_id">monocromatica</field>
+            <field name="descripcion">Familia Ricoh IM monocromática: IM 2500, 3000, 3500, 4000, 5000, 6000 y variantes relacionadas.</field>
+        </record>
+
+        <record id="familia_ricoh_im_c3000_c3500" model="modelo.maquina.familia">
+            <field name="name">IM C3000 / C3500</field>
+            <field name="codigo_tecnico">im_c3000_c3500</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color Ricoh IM C3000 e IM C3500.</field>
+        </record>
+
+        <record id="familia_ricoh_im_c4500_c6000" model="modelo.maquina.familia">
+            <field name="name">IM C4500 / C5500 / C6000</field>
+            <field name="codigo_tecnico">im_c4500_c6000</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="tipo_id">color</field>
+            <field name="descripcion">Familia color Ricoh IM C4500, C5500 y C6000.</field>
+        </record>
+
+    </data>
+</odoo>

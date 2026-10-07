@@ -563,6 +563,12 @@
       <field name="view_id" ref="view_reparacion_comp_eval_tree_v18"/>
       <field name="search_view_id" ref="view_reparacion_comp_eval_search_v18"/>
     </record>
+    <record id="action_modelo_toner" model="ir.actions.act_window">
+        <field name="name">Modelos de tóner</field>
+        <field name="res_model">modelo.toner</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="modelo_toner_search_view"/>
+    </record>
     <!-- ===================================================== -->
     <!-- ACCIONES MOBILE: EVALUACIONES DE TICKETS              -->
     <!-- Estas acciones son usadas por mobile_ticket_layout.js  -->
@@ -931,10 +937,11 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
     <menuitem id="menu_mdm_command_log" name="Historial de Comandos" sequence="20" parent="menu_mdm_root" action="action_mdm_command_log"/>
     <menuitem id="menu_tracking_diagnostico" name="Diagnóstico GPS" sequence="30" parent="menu_mdm_root" action="action_tracking_diagnostico"/>
     <menuitem id="menu_config_equipos_root" name="Equipos" sequence="10" parent="sat.ajustes"/>
-    <menuitem id="sat.menu_marca" name="Marcas" sequence="10" parent="menu_config_equipos_root" action="sat.action_marca_window"/>
-    <menuitem id="menu_modelo_maquina_familia" name="Familias de modelos" sequence="20" parent="menu_config_equipos_root" action="action_modelo_maquina_familia"/>
-    <menuitem id="sat.menu_modelo" name="Modelos" sequence="30" parent="menu_config_equipos_root" action="sat.action_modelo_window"/>
-    <menuitem id="sat.menu_tipo" name="Tipos de máquina" sequence="40" parent="menu_config_equipos_root" action="sat.action_tipo_window"/>
+<menuitem id="sat.menu_marca" name="Marcas" sequence="10" parent="menu_config_equipos_root" action="sat.action_marca_window"/>
+<menuitem id="menu_modelo_maquina_familia" name="Familias de modelos" sequence="20" parent="menu_config_equipos_root" action="action_modelo_maquina_familia"/>
+<menuitem id="sat.menu_modelo" name="Modelos" sequence="30" parent="menu_config_equipos_root" action="sat.action_modelo_window"/>
+<menuitem id="menu_modelo_toner" name="Modelos de tóner" sequence="40" parent="menu_config_equipos_root" action="action_modelo_toner"/>
+<menuitem id="sat.menu_tipo" name="Tipos de máquina" sequence="50" parent="menu_config_equipos_root" action="sat.action_tipo_window"/>
     <menuitem id="menu_config_automation_root" name="Automatización" sequence="20" parent="sat.ajustes" groups="base.group_system"/>
     <menuitem id="menu_config_automation_general" name="Configuración General" sequence="10" parent="menu_config_automation_root" action="action_sat_automation_config" groups="base.group_system"/>
     <menuitem id="menu_config_automation_rules" name="Reglas" sequence="20" parent="menu_config_automation_root" action="action_sat_automation_rule" groups="base.group_system"/>

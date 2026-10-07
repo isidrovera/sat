@@ -69,131 +69,101 @@ class ModelosMaquin(models.Model):
     ]
 
     # =========================================================
-    # REFERENCIAS DE TÓNER NEGRO
+    # CATÁLOGO MAESTRO DE TÓNER
+    # =========================================================
+
+    toner_black_id = fields.Many2one(
+        'modelo.toner',
+        string='Tóner negro',
+        ondelete='restrict',
+        index=True,
+        tracking=True,
+        domain="[('marca_id', '=', marca_id), ('color', '=', 'black'), ('active', '=', True)]",
+    )
+
+    toner_cyan_id = fields.Many2one(
+        'modelo.toner',
+        string='Tóner cian',
+        ondelete='restrict',
+        index=True,
+        tracking=True,
+        domain="[('marca_id', '=', marca_id), ('color', '=', 'cyan'), ('active', '=', True)]",
+    )
+
+    toner_magenta_id = fields.Many2one(
+        'modelo.toner',
+        string='Tóner magenta',
+        ondelete='restrict',
+        index=True,
+        tracking=True,
+        domain="[('marca_id', '=', marca_id), ('color', '=', 'magenta'), ('active', '=', True)]",
+    )
+
+    toner_yellow_id = fields.Many2one(
+        'modelo.toner',
+        string='Tóner amarillo',
+        ondelete='restrict',
+        index=True,
+        tracking=True,
+        domain="[('marca_id', '=', marca_id), ('color', '=', 'yellow'), ('active', '=', True)]",
+    )
+
+    # =========================================================
+    # CAMPOS EXISTENTES - SE MANTIENEN SIN CAMBIAR NOMBRES/TIPOS
     # =========================================================
 
     toner_modelo_black = fields.Char(
         string='Modelo de tóner negro',
         index=True,
-        help=(
-            'Referencia comercial del tóner negro indicado por el fabricante. '
-            'Ejemplo: TN-324K, MP 6054 Black o T-302K.'
-        ),
     )
-
     toner_codigo_parte_black = fields.Char(
         string='Código de parte negro',
         index=True,
-        help=(
-            'Código OEM o número de parte del tóner negro. '
-            'Ejemplo: A8DA130.'
-        ),
     )
-
-    # =========================================================
-    # REFERENCIAS DE TÓNER CIAN
-    # =========================================================
 
     toner_modelo_cyan = fields.Char(
         string='Modelo de tóner cian',
         index=True,
-        help=(
-            'Referencia comercial del tóner cian indicada por el fabricante. '
-            'Ejemplo: TN-324C.'
-        ),
     )
-
     toner_codigo_parte_cyan = fields.Char(
         string='Código de parte cian',
         index=True,
-        help='Código OEM o número de parte del tóner cian.',
     )
-
-    # =========================================================
-    # REFERENCIAS DE TÓNER MAGENTA
-    # =========================================================
 
     toner_modelo_magenta = fields.Char(
         string='Modelo de tóner magenta',
         index=True,
-        help=(
-            'Referencia comercial del tóner magenta indicada por el '
-            'fabricante. Ejemplo: TN-324M.'
-        ),
     )
-
     toner_codigo_parte_magenta = fields.Char(
         string='Código de parte magenta',
         index=True,
-        help='Código OEM o número de parte del tóner magenta.',
     )
-
-    # =========================================================
-    # REFERENCIAS DE TÓNER AMARILLO
-    # =========================================================
 
     toner_modelo_yellow = fields.Char(
         string='Modelo de tóner amarillo',
         index=True,
-        help=(
-            'Referencia comercial del tóner amarillo indicada por el '
-            'fabricante. Ejemplo: TN-324Y.'
-        ),
     )
-
     toner_codigo_parte_yellow = fields.Char(
         string='Código de parte amarillo',
         index=True,
-        help='Código OEM o número de parte del tóner amarillo.',
     )
-
-    # =========================================================
-    # DURACIÓN DE FABRICANTE
-    #
-    # IMPORTANTE:
-    # No cambiar estos nombres técnicos porque ya son utilizados
-    # por pedidos, cálculos y alertas existentes.
-    # =========================================================
 
     durabilidad_toner_black = fields.Integer(
         string='Durabilidad tóner negro (páginas)',
         default=0,
-        help=(
-            'Rendimiento oficial indicado por el fabricante para el '
-            'tóner negro.'
-        ),
     )
-
     durabilidad_toner_cyan = fields.Integer(
         string='Durabilidad tóner cian (páginas)',
         default=0,
-        help=(
-            'Rendimiento oficial indicado por el fabricante para el '
-            'tóner cian.'
-        ),
     )
-
     durabilidad_toner_magenta = fields.Integer(
         string='Durabilidad tóner magenta (páginas)',
         default=0,
-        help=(
-            'Rendimiento oficial indicado por el fabricante para el '
-            'tóner magenta.'
-        ),
     )
-
     durabilidad_toner_yellow = fields.Integer(
         string='Durabilidad tóner amarillo (páginas)',
         default=0,
-        help=(
-            'Rendimiento oficial indicado por el fabricante para el '
-            'tóner amarillo.'
-        ),
     )
-
-    # =========================================================
-    # INFORMACIÓN DE LA FUENTE
-    # =========================================================
 
     toner_fuente_informacion = fields.Selection(
         [
@@ -206,152 +176,253 @@ class ModelosMaquin(models.Model):
         ],
         string='Fuente de información',
         default='pendiente',
-        help=(
-            'Origen utilizado para registrar códigos y duraciones '
-            'oficiales de los tóners.'
-        ),
     )
 
     toner_fecha_verificacion = fields.Date(
         string='Fecha de verificación',
-        help='Fecha en que se verificaron las referencias del fabricante.',
     )
 
     toner_observaciones = fields.Text(
         string='Observaciones de tóner',
-        help=(
-            'Notas sobre referencias regionales, códigos alternativos '
-            'o datos pendientes de confirmación.'
-        ),
     )
-
-    # =========================================================
-    # STOCK MÍNIMO RECOMENDADO
-    # =========================================================
 
     stock_minimo_black = fields.Integer(
         string='Stock mínimo tóner negro',
         default=1,
-        help=(
-            'Cantidad mínima de tóner negro que debe tener el cliente '
-            'entre instalado y disponible.'
-        ),
     )
-
     stock_minimo_cyan = fields.Integer(
         string='Stock mínimo tóner cian',
         default=1,
-        help=(
-            'Cantidad mínima de tóner cian que debe tener el cliente '
-            'entre instalado y disponible.'
-        ),
     )
-
     stock_minimo_magenta = fields.Integer(
         string='Stock mínimo tóner magenta',
         default=1,
-        help=(
-            'Cantidad mínima de tóner magenta que debe tener el cliente '
-            'entre instalado y disponible.'
-        ),
     )
-
     stock_minimo_yellow = fields.Integer(
         string='Stock mínimo tóner amarillo',
         default=1,
-        help=(
-            'Cantidad mínima de tóner amarillo que debe tener el cliente '
-            'entre instalado y disponible.'
-        ),
     )
-
-    # =========================================================
-    # TIEMPOS DE ENTREGA
-    # =========================================================
 
     tiempo_entrega_dias = fields.Integer(
         string='Tiempo de entrega (días)',
         default=2,
-        help='Días estimados para entregar tóner al cliente.',
     )
 
     margen_seguridad_dias = fields.Integer(
         string='Margen de seguridad (días)',
         default=3,
-        help='Días adicionales para evitar que el cliente quede sin tóner.',
     )
 
     tiempo_total_prevencion = fields.Integer(
         string='Tiempo total de prevención',
         compute='_compute_tiempo_total_prevencion',
         store=True,
-        help='Suma del tiempo de entrega y el margen de seguridad.',
     )
-
-    # =========================================================
-    # ALERTAS Y GESTIÓN
-    # =========================================================
 
     alerta_stock_critico = fields.Boolean(
         string='Alertas de stock crítico',
         default=True,
-        help='Generar alertas cuando el stock del cliente esté crítico.',
     )
 
     alerta_consumo_alto = fields.Boolean(
         string='Alertas de consumo alto',
         default=True,
-        help=(
-            'Generar alertas cuando el rendimiento real del pedido sea '
-            'menor al rendimiento del fabricante.'
-        ),
     )
 
     gestionar_toner_automatico = fields.Boolean(
         string='Gestión automática de tóner',
         default=True,
-        help='Activar la gestión automática de tóner para este modelo.',
     )
-
-    # =========================================================
-    # CAMPOS CALCULADOS
-    # =========================================================
 
     mostrar_toner_color = fields.Boolean(
         string='Mostrar tóner color',
         compute='_compute_mostrar_toner_color',
-        help='Indica si deben mostrarse las referencias C/M/Y.',
     )
 
     resumen_configuracion_toner = fields.Html(
         string='Resumen de configuración',
         compute='_compute_resumen_configuracion_toner',
-        help='Resumen de referencias, duraciones y configuración del tóner.',
     )
 
     equipos_activos_count = fields.Integer(
         string='Equipos activos',
         compute='_compute_equipos_activos_count',
         store=True,
-        help='Cantidad de equipos activos que usan este modelo.',
     )
 
     # =========================================================
-    # MÉTODOS AUXILIARES
+    # MAPEO Y SINCRONIZACIÓN CON modelo.toner
     # =========================================================
+
+    TONER_COLOR_CONFIG = {
+        'black': {
+            'relation': 'toner_black_id',
+            'legacy_model': 'toner_modelo_black',
+            'legacy_part': 'toner_codigo_parte_black',
+            'legacy_duration': 'durabilidad_toner_black',
+        },
+        'cyan': {
+            'relation': 'toner_cyan_id',
+            'legacy_model': 'toner_modelo_cyan',
+            'legacy_part': 'toner_codigo_parte_cyan',
+            'legacy_duration': 'durabilidad_toner_cyan',
+        },
+        'magenta': {
+            'relation': 'toner_magenta_id',
+            'legacy_model': 'toner_modelo_magenta',
+            'legacy_part': 'toner_codigo_parte_magenta',
+            'legacy_duration': 'durabilidad_toner_magenta',
+        },
+        'yellow': {
+            'relation': 'toner_yellow_id',
+            'legacy_model': 'toner_modelo_yellow',
+            'legacy_part': 'toner_codigo_parte_yellow',
+            'legacy_duration': 'durabilidad_toner_yellow',
+        },
+    }
 
     @api.model
     def _toner_display_value(self, value):
         return value or 'No configurado'
 
+    @api.model
+    def _get_toner_duration(self, toner):
+        if not toner:
+            return 0
+
+        if 'duracion_referencial' in toner._fields:
+            value = int(toner.duracion_referencial or 0)
+            if value > 0:
+                return value
+
+        if 'duracion_fabricante' in toner._fields:
+            value = int(toner.duracion_fabricante or 0)
+            if value > 0:
+                return value
+
+        if 'duracion_aplicable' in toner._fields:
+            return int(toner.duracion_aplicable or 0)
+
+        return 0
+
+    @api.model
+    def _get_legacy_values_from_toner(self, toner, color):
+        config = self.TONER_COLOR_CONFIG[color]
+
+        if not toner:
+            return {
+                config['legacy_model']: False,
+                config['legacy_part']: False,
+                config['legacy_duration']: 0,
+            }
+
+        return {
+            config['legacy_model']: toner.name or False,
+            config['legacy_part']: toner.codigo_parte or False,
+            config['legacy_duration']: self._get_toner_duration(toner),
+        }
+
+    @api.model
+    def _inject_toner_values(self, vals):
+        vals = dict(vals)
+
+        for color, config in self.TONER_COLOR_CONFIG.items():
+            relation_field = config['relation']
+
+            if relation_field not in vals:
+                continue
+
+            toner_id = vals.get(relation_field)
+            toner = (
+                self.env['modelo.toner'].browse(toner_id).exists()
+                if toner_id
+                else self.env['modelo.toner']
+            )
+
+            vals.update(
+                self._get_legacy_values_from_toner(
+                    toner,
+                    color,
+                )
+            )
+
+        return vals
+
+    def _apply_toner_to_legacy_fields(self, color):
+        self.ensure_one()
+
+        config = self.TONER_COLOR_CONFIG[color]
+        toner = self[config['relation']]
+        values = self._get_legacy_values_from_toner(toner, color)
+
+        for field_name, value in values.items():
+            self[field_name] = value
+
     # =========================================================
-    # MÉTODOS COMPUTE
+    # ONCHANGE
     # =========================================================
 
-    @api.depends(
-        'tiempo_entrega_dias',
-        'margen_seguridad_dias',
-    )
+    @api.onchange('toner_black_id')
+    def _onchange_toner_black_id(self):
+        for record in self:
+            record._apply_toner_to_legacy_fields('black')
+
+    @api.onchange('toner_cyan_id')
+    def _onchange_toner_cyan_id(self):
+        for record in self:
+            record._apply_toner_to_legacy_fields('cyan')
+
+    @api.onchange('toner_magenta_id')
+    def _onchange_toner_magenta_id(self):
+        for record in self:
+            record._apply_toner_to_legacy_fields('magenta')
+
+    @api.onchange('toner_yellow_id')
+    def _onchange_toner_yellow_id(self):
+        for record in self:
+            record._apply_toner_to_legacy_fields('yellow')
+
+    @api.onchange('marca_id')
+    def _onchange_marca_toners(self):
+        for record in self:
+            for config in self.TONER_COLOR_CONFIG.values():
+                toner = record[config['relation']]
+                if (
+                    toner
+                    and record.marca_id
+                    and toner.marca_id != record.marca_id
+                ):
+                    record[config['relation']] = False
+
+    @api.onchange('tipo_id')
+    def _onchange_tipo_id_toners(self):
+        for record in self:
+            if record.tipo_id == 'monocromatica':
+                record.toner_cyan_id = False
+                record.toner_magenta_id = False
+                record.toner_yellow_id = False
+
+    # =========================================================
+    # CREATE / WRITE
+    # =========================================================
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        vals_list = [
+            self._inject_toner_values(vals)
+            for vals in vals_list
+        ]
+        return super().create(vals_list)
+
+    def write(self, vals):
+        vals = self._inject_toner_values(vals)
+        return super().write(vals)
+
+    # =========================================================
+    # COMPUTES EXISTENTES
+    # =========================================================
+
+    @api.depends('tiempo_entrega_dias', 'margen_seguridad_dias')
     def _compute_tiempo_total_prevencion(self):
         for record in self:
             record.tiempo_total_prevencion = (
@@ -366,6 +437,10 @@ class ModelosMaquin(models.Model):
 
     @api.depends(
         'tipo_id',
+        'toner_black_id',
+        'toner_cyan_id',
+        'toner_magenta_id',
+        'toner_yellow_id',
         'toner_modelo_black',
         'toner_codigo_parte_black',
         'toner_modelo_cyan',
@@ -404,35 +479,19 @@ class ModelosMaquin(models.Model):
             )
 
             html = (
-                '<div style="font-family: Arial, sans-serif; '
-                'line-height: 1.5;">'
+                '<div style="font-family: Arial, sans-serif; line-height: 1.5;">'
+                f'<h4 style="margin: 0 0 14px 0;">'
+                f'Configuración de tóner — {tipo_display}</h4>'
             )
 
-            html += (
-                '<h4 style="margin: 0 0 14px 0;">'
-                f'Configuración de tóner — {tipo_display}'
-                '</h4>'
-            )
-
-            # Negro
             html += '<div style="margin-bottom: 12px;">'
             html += '<strong>Tóner negro</strong><br/>'
+            if record.toner_black_id:
+                html += f'Catálogo maestro: {record.toner_black_id.display_name}<br/>'
             html += (
-                f'Referencia: '
-                f'{record._toner_display_value(record.toner_modelo_black)}'
-                '<br/>'
-            )
-            html += (
-                f'Código de parte: '
-                f'{record._toner_display_value(record.toner_codigo_parte_black)}'
-                '<br/>'
-            )
-            html += (
-                f'Duración fabricante: '
-                f'{record.durabilidad_toner_black or 0:,} páginas'
-                '<br/>'
-            )
-            html += (
+                f'Referencia: {record._toner_display_value(record.toner_modelo_black)}<br/>'
+                f'Código de parte: {record._toner_display_value(record.toner_codigo_parte_black)}<br/>'
+                f'Duración aplicable: {record.durabilidad_toner_black or 0:,} páginas<br/>'
                 f'Stock mínimo: {record.stock_minimo_black or 0} unidad(es)'
             )
             html += '</div>'
@@ -441,6 +500,7 @@ class ModelosMaquin(models.Model):
                 color_data = [
                     (
                         'Cian',
+                        record.toner_cyan_id,
                         record.toner_modelo_cyan,
                         record.toner_codigo_parte_cyan,
                         record.durabilidad_toner_cyan,
@@ -448,6 +508,7 @@ class ModelosMaquin(models.Model):
                     ),
                     (
                         'Magenta',
+                        record.toner_magenta_id,
                         record.toner_modelo_magenta,
                         record.toner_codigo_parte_magenta,
                         record.durabilidad_toner_magenta,
@@ -455,6 +516,7 @@ class ModelosMaquin(models.Model):
                     ),
                     (
                         'Amarillo',
+                        record.toner_yellow_id,
                         record.toner_modelo_yellow,
                         record.toner_codigo_parte_yellow,
                         record.durabilidad_toner_yellow,
@@ -462,50 +524,26 @@ class ModelosMaquin(models.Model):
                     ),
                 ]
 
-                for (
-                    color_name,
-                    toner_model,
-                    part_code,
-                    duration,
-                    minimum_stock,
-                ) in color_data:
+                for color_name, toner, model_name, part, duration, stock in color_data:
                     html += '<div style="margin-bottom: 12px;">'
                     html += f'<strong>Tóner {color_name}</strong><br/>'
+                    if toner:
+                        html += f'Catálogo maestro: {toner.display_name}<br/>'
                     html += (
-                        f'Referencia: '
-                        f'{record._toner_display_value(toner_model)}'
-                        '<br/>'
-                    )
-                    html += (
-                        f'Código de parte: '
-                        f'{record._toner_display_value(part_code)}'
-                        '<br/>'
-                    )
-                    html += (
-                        f'Duración fabricante: '
-                        f'{duration or 0:,} páginas'
-                        '<br/>'
-                    )
-                    html += (
-                        f'Stock mínimo: {minimum_stock or 0} unidad(es)'
+                        f'Referencia: {record._toner_display_value(model_name)}<br/>'
+                        f'Código de parte: {record._toner_display_value(part)}<br/>'
+                        f'Duración aplicable: {duration or 0:,} páginas<br/>'
+                        f'Stock mínimo: {stock or 0} unidad(es)'
                     )
                     html += '</div>'
 
             html += '<hr/>'
-
             html += '<div style="margin-bottom: 12px;">'
             html += '<strong>Configuración logística</strong><br/>'
             html += (
-                f'Tiempo de entrega: '
-                f'{record.tiempo_entrega_dias or 0} día(s)<br/>'
-            )
-            html += (
-                f'Margen de seguridad: '
-                f'{record.margen_seguridad_dias or 0} día(s)<br/>'
-            )
-            html += (
-                f'Total de prevención: '
-                f'{record.tiempo_total_prevencion or 0} día(s)'
+                f'Tiempo de entrega: {record.tiempo_entrega_dias or 0} día(s)<br/>'
+                f'Margen de seguridad: {record.margen_seguridad_dias or 0} día(s)<br/>'
+                f'Total de prevención: {record.tiempo_total_prevencion or 0} día(s)'
             )
             html += '</div>'
 
@@ -513,13 +551,11 @@ class ModelosMaquin(models.Model):
                 record.toner_fuente_informacion,
                 'Pendiente de verificar',
             )
-
             html += '<div style="margin-bottom: 12px;">'
             html += '<strong>Verificación</strong><br/>'
-            html += f'Fuente: {source_label}<br/>'
             html += (
-                f'Fecha: '
-                f'{record.toner_fecha_verificacion or "Sin verificar"}'
+                f'Fuente: {source_label}<br/>'
+                f'Fecha: {record.toner_fecha_verificacion or "Sin verificar"}'
             )
             html += '</div>'
 
@@ -527,30 +563,20 @@ class ModelosMaquin(models.Model):
             html += '<strong>Alertas</strong><br/>'
             html += (
                 'Stock crítico: '
-                f'{"Activo" if record.alerta_stock_critico else "Inactivo"}'
-                '<br/>'
-            )
-            html += (
+                f'{"Activo" if record.alerta_stock_critico else "Inactivo"}<br/>'
                 'Consumo alto: '
-                f'{"Activo" if record.alerta_consumo_alto else "Inactivo"}'
-                '<br/>'
-            )
-            html += (
+                f'{"Activo" if record.alerta_consumo_alto else "Inactivo"}<br/>'
                 'Gestión automática: '
                 f'{"Activo" if record.gestionar_toner_automatico else "Inactivo"}'
             )
-            html += '</div>'
-
-            html += '</div>'
+            html += '</div></div>'
 
             record.resumen_configuracion_toner = html
 
     @api.depends('name')
     def _compute_equipos_activos_count(self):
         for record in self:
-            record.equipos_activos_count = self.env[
-                'alquiler'
-            ].search_count(
+            record.equipos_activos_count = self.env['alquiler'].search_count(
                 [
                     ('name', '=', record.id),
                     ('estado_alquiler_id', '=', 'alquilada'),
@@ -562,6 +588,65 @@ class ModelosMaquin(models.Model):
     # =========================================================
 
     @api.constrains(
+        'toner_black_id',
+        'toner_cyan_id',
+        'toner_magenta_id',
+        'toner_yellow_id',
+        'marca_id',
+        'tipo_id',
+    )
+    def _check_toner_catalog_relations(self):
+        labels = {
+            'black': _('Negro'),
+            'cyan': _('Cian'),
+            'magenta': _('Magenta'),
+            'yellow': _('Amarillo'),
+        }
+
+        for record in self:
+            for color, config in self.TONER_COLOR_CONFIG.items():
+                toner = record[config['relation']]
+
+                if not toner:
+                    continue
+
+                if toner.color != color:
+                    raise ValidationError(
+                        _(
+                            'El tóner "%(toner)s" no corresponde al color %(color)s.'
+                        )
+                        % {
+                            'toner': toner.display_name,
+                            'color': labels[color],
+                        }
+                    )
+
+                if record.marca_id and toner.marca_id != record.marca_id:
+                    raise ValidationError(
+                        _(
+                            'El tóner "%(toner)s" pertenece a la marca '
+                            '"%(toner_brand)s", pero el modelo pertenece a "%(machine_brand)s".'
+                        )
+                        % {
+                            'toner': toner.display_name,
+                            'toner_brand': toner.marca_id.name,
+                            'machine_brand': record.marca_id.name,
+                        }
+                    )
+
+            if record.tipo_id == 'monocromatica' and (
+                record.toner_cyan_id
+                or record.toner_magenta_id
+                or record.toner_yellow_id
+            ):
+                raise ValidationError(
+                    _(
+                        'Un modelo monocromático no puede tener asociados '
+                        'tóners Cian, Magenta o Amarillo.'
+                    )
+                )
+
+    @api.constrains(
         'durabilidad_toner_black',
         'durabilidad_toner_cyan',
         'durabilidad_toner_magenta',
@@ -569,26 +654,13 @@ class ModelosMaquin(models.Model):
     )
     def _check_durabilidad_toner(self):
         for record in self:
-            durations = [
-                (
-                    record.durabilidad_toner_black,
-                    _('La durabilidad del tóner negro no puede ser negativa.'),
-                ),
-                (
-                    record.durabilidad_toner_cyan,
-                    _('La durabilidad del tóner cian no puede ser negativa.'),
-                ),
-                (
-                    record.durabilidad_toner_magenta,
-                    _('La durabilidad del tóner magenta no puede ser negativa.'),
-                ),
-                (
-                    record.durabilidad_toner_yellow,
-                    _('La durabilidad del tóner amarillo no puede ser negativa.'),
-                ),
+            values = [
+                (record.durabilidad_toner_black, _('La durabilidad del tóner negro no puede ser negativa.')),
+                (record.durabilidad_toner_cyan, _('La durabilidad del tóner cian no puede ser negativa.')),
+                (record.durabilidad_toner_magenta, _('La durabilidad del tóner magenta no puede ser negativa.')),
+                (record.durabilidad_toner_yellow, _('La durabilidad del tóner amarillo no puede ser negativa.')),
             ]
-
-            for duration, message in durations:
+            for duration, message in values:
                 if duration < 0:
                     raise ValidationError(message)
 
@@ -600,44 +672,23 @@ class ModelosMaquin(models.Model):
     )
     def _check_stock_minimo(self):
         for record in self:
-            minimum_stocks = [
-                (
-                    record.stock_minimo_black,
-                    _('El stock mínimo negro no puede ser negativo.'),
-                ),
-                (
-                    record.stock_minimo_cyan,
-                    _('El stock mínimo cian no puede ser negativo.'),
-                ),
-                (
-                    record.stock_minimo_magenta,
-                    _('El stock mínimo magenta no puede ser negativo.'),
-                ),
-                (
-                    record.stock_minimo_yellow,
-                    _('El stock mínimo amarillo no puede ser negativo.'),
-                ),
+            values = [
+                (record.stock_minimo_black, _('El stock mínimo negro no puede ser negativo.')),
+                (record.stock_minimo_cyan, _('El stock mínimo cian no puede ser negativo.')),
+                (record.stock_minimo_magenta, _('El stock mínimo magenta no puede ser negativo.')),
+                (record.stock_minimo_yellow, _('El stock mínimo amarillo no puede ser negativo.')),
             ]
-
-            for minimum_stock, message in minimum_stocks:
-                if minimum_stock < 0:
+            for value, message in values:
+                if value < 0:
                     raise ValidationError(message)
 
-    @api.constrains(
-        'tiempo_entrega_dias',
-        'margen_seguridad_dias',
-    )
+    @api.constrains('tiempo_entrega_dias', 'margen_seguridad_dias')
     def _check_tiempos(self):
         for record in self:
             if record.tiempo_entrega_dias < 0:
-                raise ValidationError(
-                    _('El tiempo de entrega no puede ser negativo.')
-                )
-
+                raise ValidationError(_('El tiempo de entrega no puede ser negativo.'))
             if record.margen_seguridad_dias < 0:
-                raise ValidationError(
-                    _('El margen de seguridad no puede ser negativo.')
-                )
+                raise ValidationError(_('El margen de seguridad no puede ser negativo.'))
 
     @api.constrains(
         'tipo_id',
@@ -646,13 +697,6 @@ class ModelosMaquin(models.Model):
         'durabilidad_toner_black',
     )
     def _check_toner_black_configuration(self):
-        """
-        No obliga a tener la información completa porque existen más de
-        500 modelos antiguos pendientes de actualización.
-
-        Solo evita registrar una duración de fabricante sin ninguna
-        referencia del tóner.
-        """
         for record in self:
             if (
                 record.durabilidad_toner_black > 0
@@ -665,9 +709,41 @@ class ModelosMaquin(models.Model):
                         'pero no registró su modelo ni su código de parte.'
                     )
                 )
+
     # =========================================================
     # ACCIONES
     # =========================================================
+
+    def action_actualizar_desde_modelos_toner(self):
+        for record in self:
+            values = {}
+
+            for color, config in self.TONER_COLOR_CONFIG.items():
+                toner = record[config['relation']]
+                if toner:
+                    values.update(
+                        record._get_legacy_values_from_toner(
+                            toner,
+                            color,
+                        )
+                    )
+
+            if values:
+                record.write(values)
+
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Tóner actualizado'),
+                'message': _(
+                    'Se actualizaron referencias, códigos de parte y '
+                    'duraciones desde el catálogo maestro de tóner.'
+                ),
+                'type': 'success',
+                'sticky': False,
+            },
+        }
 
     def action_view_equipos_modelo(self):
         self.ensure_one()
@@ -685,12 +761,6 @@ class ModelosMaquin(models.Model):
         }
 
     def action_configurar_valores_predeterminados(self):
-        """
-        Conserva la acción existente.
-
-        Los valores se mantienen únicamente como apoyo inicial. Deben ser
-        reemplazados por los valores oficiales del fabricante.
-        """
         self.ensure_one()
 
         if self.tipo_id == 'monocromatica':
@@ -737,8 +807,8 @@ class ModelosMaquin(models.Model):
             'params': {
                 'title': _('Configuración aplicada'),
                 'message': _(
-                    'Se aplicaron valores iniciales. Revise y reemplace '
-                    'las duraciones con la información oficial del fabricante.'
+                    'Se aplicaron valores iniciales. Revise las duraciones '
+                    'y reemplácelas con la información oficial/referencial.'
                 ),
                 'type': 'success',
                 'sticky': False,
@@ -762,8 +832,7 @@ class ModelosMaquin(models.Model):
                 'params': {
                     'title': _('Sin equipos'),
                     'message': _(
-                        'No hay equipos alquilados de este modelo '
-                        'para actualizar.'
+                        'No hay equipos alquilados de este modelo para actualizar.'
                     ),
                     'type': 'warning',
                     'sticky': False,

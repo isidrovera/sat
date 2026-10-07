@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <!-- ========================================================= -->
+        <!-- LISTA                                                     -->
+        <!-- ========================================================= -->
+
+        <record id="modelo_toner_list_view" model="ir.ui.view">
+            <field name="name">modelo.toner.list</field>
+            <field name="model">modelo.toner</field>
+            <field name="arch" type="xml">
+                <list string="Modelos de tóner" default_order="marca_id, name, color">
+                    <field name="marca_id"/>
+                    <field name="name" string="Modelo de tóner"/>
+                    <field name="color"/>
+                    <field name="codigo_parte"/>
+                    <field name="codigo_parte_alternativo" optional="hide"/>
+                    <field name="duracion_fabricante" string="Duración fabricante" optional="show"/>
+                    <field name="duracion_referencial" string="Duración referencial" optional="show"/>
+                    <field name="duracion_aplicable" string="Duración aplicable" optional="show"/>
+                    <field name="fuente_informacion" optional="hide"/>
+                    <field name="fecha_verificacion" optional="hide"/>
+                    <field name="validado_internamente" widget="boolean_toggle" optional="show"/>
+                    <field name="modelo_maquina_count" string="Modelos" optional="show"/>
+                    <field name="active" optional="hide"/>
+                </list>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- FORMULARIO                                                -->
+        <!-- ========================================================= -->
+
+        <record id="modelo_toner_form_view" model="ir.ui.view">
+            <field name="name">modelo.toner.form</field>
+            <field name="model">modelo.toner</field>
+            <field name="arch" type="xml">
+                <form string="Modelo de tóner">
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box">
+                            <button name="action_view_modelos_maquina" type="object" class="oe_stat_button" icon="fa-print" invisible="not id">
+                                <field name="modelo_maquina_count" string="Modelos compatibles" widget="statinfo"/>
+                            </button>
+                        </div>
+
+                        <div class="oe_title">
+                            <label for="name"/>
+                            <h1>
+                                <field name="name" placeholder="Ejemplo: TN-324K"/>
+                            </h1>
+                        </div>
+
+                        <group>
+                            <group string="Identificación">
+                                <field name="marca_id"/>
+                                <field name="color"/>
+                                <field name="codigo_parte"/>
+                                <field name="codigo_parte_alternativo"/>
+                                <field name="codigo_fabricante"/>
+                                <field name="referencia_alternativa"/>
+                                <field name="active" widget="boolean_toggle"/>
+                            </group>
+
+                            <group string="Rendimiento">
+                                <field name="duracion_fabricante"/>
+                                <field name="duracion_referencial"/>
+                                <field name="duracion_aplicable" readonly="1"/>
+                                <field name="cobertura_referencia"/>
+                            </group>
+                        </group>
+
+                        <notebook>
+
+                            <page string="Compatibilidad" name="compatibilidad">
+                                <field name="modelo_maquina_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                            </page>
+
+                            <page string="Presentación" name="presentacion">
+                                <group>
+                                    <group>
+                                        <field name="tipo_presentacion"/>
+                                        <field name="capacidad_gramos"/>
+                                    </group>
+                                    <group>
+                                        <field name="descripcion_presentacion"/>
+                                    </group>
+                                </group>
+                            </page>
+
+                            <page string="Información técnica" name="informacion_tecnica">
+                                <group>
+                                    <group>
+                                        <field name="fuente_informacion"/>
+                                        <field name="fecha_verificacion"/>
+                                        <field name="url_referencia" widget="url"/>
+                                    </group>
+
+                                    <group>
+                                        <field name="usar_para_analisis_consumo" widget="boolean_toggle"/>
+                                        <field name="validado_internamente" widget="boolean_toggle"/>
+                                        <field name="fecha_validacion_interna" readonly="1" invisible="not validado_internamente"/>
+                                        <field name="usuario_validacion_id" readonly="1" invisible="not validado_internamente"/>
+                                    </group>
+                                </group>
+
+                                <group string="Observaciones">
+                                    <field name="observaciones" nolabel="1" placeholder="Notas técnicas, equivalencias, referencias regionales o información pendiente..."/>
+                                </group>
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- BÚSQUEDA                                                  -->
+        <!-- ========================================================= -->
+
+        <record id="modelo_toner_search_view" model="ir.ui.view">
+            <field name="name">modelo.toner.search</field>
+            <field name="model">modelo.toner</field>
+            <field name="arch" type="xml">
+                <search string="Buscar modelos de tóner">
+                    <field name="name"/>
+                    <field name="marca_id"/>
+                    <field name="color"/>
+                    <field name="codigo_parte"/>
+                    <field name="codigo_parte_alternativo"/>
+                    <field name="codigo_fabricante"/>
+                    <field name="modelo_maquina_ids"/>
+
+                    <separator/>
+
+                    <filter string="Activos" name="active_toner" domain="[('active', '=', True)]"/>
+                    <filter string="Pendientes de verificar" name="pending_verification" domain="[('fuente_informacion', '=', 'pendiente')]"/>
+                    <filter string="Validados internamente" name="validated" domain="[('validado_internamente', '=', True)]"/>
+                    <filter string="Negro" name="black" domain="[('color', '=', 'black')]"/>
+                    <filter string="Cian" name="cyan" domain="[('color', '=', 'cyan')]"/>
+                    <filter string="Magenta" name="magenta" domain="[('color', '=', 'magenta')]"/>
+                    <filter string="Amarillo" name="yellow" domain="[('color', '=', 'yellow')]"/>
+
+                    <group expand="1" string="Agrupar por">
+                        <filter string="Marca" name="group_brand" context="{'group_by': 'marca_id'}"/>
+                        <filter string="Color" name="group_color" context="{'group_by': 'color'}"/>
+                        <filter string="Fuente" name="group_source" context="{'group_by': 'fuente_informacion'}"/>
+                    </group>
+                </search>
+            </field>
+        </record>
+
+    </data>
+</odoo>

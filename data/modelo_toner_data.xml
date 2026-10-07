@@ -1,0 +1,358 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- ========================================================= -->
+        <!-- CANON                                                     -->
+        <!-- ========================================================= -->
+
+        <record id="toner_canon_gpr53_black" model="modelo.toner">
+            <field name="name">GPR-53 Black</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="codigo_parte">8524B003AA</field>
+            <field name="color">black</field>
+            <field name="duracion_fabricante">36000</field>
+            <field name="duracion_referencial">36000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.usa.canon.com/support/p/imagerunner-advance-c3525i</field>
+            <field name="observaciones">Rendimiento estimado por Canon a 5% de cobertura.</field>
+        </record>
+
+        <record id="toner_canon_gpr53_cyan" model="modelo.toner">
+            <field name="name">GPR-53 Cyan</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="codigo_parte">8525B003AA</field>
+            <field name="color">cyan</field>
+            <field name="duracion_fabricante">19000</field>
+            <field name="duracion_referencial">19000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.usa.canon.com/support/p/imagerunner-advance-c3525i</field>
+            <field name="observaciones">Rendimiento estimado por Canon a 5% de cobertura.</field>
+        </record>
+
+        <record id="toner_canon_gpr53_magenta" model="modelo.toner">
+            <field name="name">GPR-53 Magenta</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="codigo_parte">8526B003AA</field>
+            <field name="color">magenta</field>
+            <field name="duracion_fabricante">19000</field>
+            <field name="duracion_referencial">19000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.usa.canon.com/support/p/imagerunner-advance-c3525i</field>
+            <field name="observaciones">Rendimiento estimado por Canon a 5% de cobertura.</field>
+        </record>
+
+        <record id="toner_canon_gpr53_yellow" model="modelo.toner">
+            <field name="name">GPR-53 Yellow</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="codigo_parte">8527B003AA</field>
+            <field name="color">yellow</field>
+            <field name="duracion_fabricante">19000</field>
+            <field name="duracion_referencial">19000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.usa.canon.com/support/p/imagerunner-advance-c3525i</field>
+            <field name="observaciones">Rendimiento estimado por Canon a 5% de cobertura.</field>
+        </record>
+
+        <record id="toner_canon_gpr57_black" model="modelo.toner">
+            <field name="name">GPR-57 Toner</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="color">black</field>
+            <field name="duracion_fabricante">42100</field>
+            <field name="duracion_referencial">42100</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-08-04</field>
+            <field name="observaciones">Referencia y duración tomadas de la base actual de modelos Canon.</field>
+        </record>
+
+        <record id="toner_canon_gpr37_black" model="modelo.toner">
+            <field name="name">GPR-37 Black Toner</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="color">black</field>
+            <field name="duracion_fabricante">70000</field>
+            <field name="duracion_referencial">70000</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-08-04</field>
+            <field name="observaciones">Referencia y duración tomadas de la base actual de modelos Canon.</field>
+        </record>
+
+        <record id="toner_canon_npg58_black" model="modelo.toner">
+            <field name="name">NPG-58 Toner BK</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="color">black</field>
+            <field name="duracion_fabricante">23000</field>
+            <field name="duracion_referencial">23000</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-08-04</field>
+        </record>
+
+        <record id="toner_canon_npg58_cyan" model="modelo.toner">
+            <field name="name">NPG-58 Toner C</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="color">cyan</field>
+            <field name="duracion_fabricante">18000</field>
+            <field name="duracion_referencial">18000</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-08-04</field>
+        </record>
+
+        <record id="toner_canon_npg58_magenta" model="modelo.toner">
+            <field name="name">NPG-58 Toner M</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="color">magenta</field>
+            <field name="duracion_fabricante">18000</field>
+            <field name="duracion_referencial">18000</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-08-04</field>
+        </record>
+
+        <record id="toner_canon_npg58_yellow" model="modelo.toner">
+            <field name="name">NPG-58 Toner Y</field>
+            <field name="marca_id" search="[('name', '=', 'Canon')]"/>
+            <field name="color">yellow</field>
+            <field name="duracion_fabricante">18000</field>
+            <field name="duracion_referencial">18000</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-08-04</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- KONICA MINOLTA                                            -->
+        <!-- Rendimiento pendiente donde la fuente oficial consultada  -->
+        <!-- confirma modelo/color/compatibilidad pero no rendimiento.  -->
+        <!-- ========================================================= -->
+
+        <record id="toner_konica_tn323_black" model="modelo.toner">
+            <field name="name">TN323</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">black</field>
+            <field name="duracion_fabricante">0</field>
+            <field name="duracion_referencial">0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub 367/287/227. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn324k" model="modelo.toner">
+            <field name="name">TN324K</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">black</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub C368/C308/C258. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn324c" model="modelo.toner">
+            <field name="name">TN324C</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">cyan</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub C368/C308/C258. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn324m" model="modelo.toner">
+            <field name="name">TN324M</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">magenta</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub C368/C308/C258. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn324y" model="modelo.toner">
+            <field name="name">TN324Y</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">yellow</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub C368/C308/C258. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn514k" model="modelo.toner">
+            <field name="name">TN514K</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">black</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub C658/C558/C458. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn514c" model="modelo.toner">
+            <field name="name">TN514C</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">cyan</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub C658/C558/C458. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn514m" model="modelo.toner">
+            <field name="name">TN514M</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">magenta</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub C658/C558/C458. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn514y" model="modelo.toner">
+            <field name="name">TN514Y</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">yellow</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub C658/C558/C458. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <record id="toner_konica_tn812_black" model="modelo.toner">
+            <field name="name">TN812</field>
+            <field name="marca_id" search="[('name', '=', 'Konica Minolta')]"/>
+            <field name="color">black</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.konicaminolta.com/about/csr/environment/communication/msds-apac/msds_toner.html</field>
+            <field name="observaciones">Modelo oficial para bizhub 758/808/958 y bizhub PRO 958. Rendimiento pendiente de registrar.</field>
+        </record>
+
+        <!-- ========================================================= -->
+        <!-- RICOH                                                     -->
+        <!-- ========================================================= -->
+
+        <record id="toner_ricoh_mp_c3503_black" model="modelo.toner">
+            <field name="name">MP C3503 Black Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">841813</field>
+            <field name="color">black</field>
+            <field name="duracion_fabricante">29500</field>
+            <field name="duracion_referencial">29500</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/toner/mp-c3503-black-print-cartridge</field>
+        </record>
+
+        <record id="toner_ricoh_mp_c3503_cyan" model="modelo.toner">
+            <field name="name">MP C3503 Cyan Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">841816</field>
+            <field name="color">cyan</field>
+            <field name="duracion_fabricante">18000</field>
+            <field name="duracion_referencial">18000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/toner/mp-c3503-cyan-print-cartridge</field>
+        </record>
+
+        <record id="toner_ricoh_mp_c3503_magenta" model="modelo.toner">
+            <field name="name">MP C3503 Magenta Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">841815</field>
+            <field name="color">magenta</field>
+            <field name="duracion_fabricante">18000</field>
+            <field name="duracion_referencial">18000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/toner/mp-c3503-magenta-print-cartridge</field>
+        </record>
+
+        <record id="toner_ricoh_mp_c3503_yellow" model="modelo.toner">
+            <field name="name">MP C3503 Yellow Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">841814</field>
+            <field name="color">yellow</field>
+            <field name="duracion_fabricante">18000</field>
+            <field name="duracion_referencial">18000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/toner/mp-c3503-yellow-print-cartridge</field>
+        </record>
+
+        <record id="toner_ricoh_im_c3500_black" model="modelo.toner">
+            <field name="name">IM C3500 Black Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">842251</field>
+            <field name="color">black</field>
+            <field name="duracion_fabricante">31000</field>
+            <field name="duracion_referencial">31000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/toner/im-c3500-black-print-cartridge</field>
+        </record>
+
+        <record id="toner_ricoh_im_c3500_cyan" model="modelo.toner">
+            <field name="name">IM C3500 Cyan Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">842254</field>
+            <field name="color">cyan</field>
+            <field name="duracion_fabricante">19000</field>
+            <field name="duracion_referencial">19000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/toner/im-c3500-cyan-print-cartridge</field>
+        </record>
+
+        <record id="toner_ricoh_im_c3500_magenta" model="modelo.toner">
+            <field name="name">IM C3500 Magenta Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">842253</field>
+            <field name="color">magenta</field>
+            <field name="duracion_fabricante">19000</field>
+            <field name="duracion_referencial">19000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/toner/im-c3500-magenta-print-cartridge</field>
+        </record>
+
+        <record id="toner_ricoh_im_c3500_yellow" model="modelo.toner">
+            <field name="name">IM C3500 Yellow Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">842252</field>
+            <field name="color">yellow</field>
+            <field name="duracion_fabricante">19000</field>
+            <field name="duracion_referencial">19000</field>
+            <field name="cobertura_referencia">5.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/toner/im-c3500-yellow-print-cartridge</field>
+        </record>
+
+        <record id="toner_ricoh_mp_3554_black" model="modelo.toner">
+            <field name="name">MP 3554 Black Print Cartridge</field>
+            <field name="marca_id" search="[('name', '=', 'Ricoh')]"/>
+            <field name="codigo_parte">842124</field>
+            <field name="color">black</field>
+            <field name="duracion_fabricante">24000</field>
+            <field name="duracion_referencial">24000</field>
+            <field name="cobertura_referencia">6.0</field>
+            <field name="fuente_informacion">fabricante</field>
+            <field name="fecha_verificacion">2026-10-07</field>
+            <field name="url_referencia">https://www.ricoh-usa.com/en/products/pd/supplies/ink-and-toner/ink/mp-3554-black-print-cartridge</field>
+            <field name="observaciones">Compatible con MP 2554/3054/3554 y MP 2555/3055/3555 según Ricoh.</field>
+        </record>
+
+    </data>
+</odoo>
