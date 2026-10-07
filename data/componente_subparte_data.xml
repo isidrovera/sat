@@ -28,7 +28,7 @@
     <field name="tipo_id" ref="comp_tipo_ui"/>
 </record>
   <record id="sub_ui_pcr_cleaning_sponge" model="componente.subparte">
-    <field name="name">Rodillo de esponja de limpieza del PCR</field>
+    <field name="name">Rodillo de limpieza del rodillo de carga PCR</field>
     <field name="code">UI_PCR_CLEAN_SPONGE</field>
     <field name="tipo_id" ref="comp_tipo_ui"/>
 </record>
@@ -260,7 +260,7 @@
 
   <!-- ====== FAJA (ITB) ====== -->
   <record id="sub_itb_belt" model="componente.subparte">
-    <field name="name">Faja ITB</field>
+    <field name="name">Faja de Transferencia / ITB</field>
     <field name="code">ITB_BELT</field>
     <field name="tipo_id" ref="comp_tipo_faja"/>
   </record>
