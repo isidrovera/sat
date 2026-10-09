@@ -1,6 +1,6 @@
 # ================================================================================================
 # MODELO: printtracker_alert.py - Sistema de Alertas PrintTracker
-# Email configurable vía ir.config_parameter: printtracker.alert.email_destino
+# Modo silencioso: no se generan correos ni notificaciones automáticas desde alertas PrintTracker.
 # Timestamps naive para Odoo, campos alineados con API real PrintTracker
 # ================================================================================================
 
@@ -1162,8 +1162,8 @@ class PrintTrackerAlert(models.Model):
     # ==========================================
     # NOTIFICACIONES
     # ==========================================
-    notificar_email = fields.Boolean('Notificar por Email', default=True)
-    notificar_chatter = fields.Boolean('Notificar en Chatter', default=True)
+    notificar_email = fields.Boolean('Notificar por Email', default=False)
+    notificar_chatter = fields.Boolean('Notificar en Chatter', default=False)
     email_enviado = fields.Boolean('Email Enviado', readonly=True)
     chatter_enviado = fields.Boolean('Chatter Enviado', readonly=True)
 
@@ -1926,168 +1926,41 @@ class PrintTrackerAlert(models.Model):
         }
 
     def procesar_notificaciones(self):
-        """
-        Envía email a soporte + chatter en equipo.
+        """Procesa estados y acciones sin utilizar canales que generen correo.
 
-        Una alerta solo pasa de 'nueva' a 'notificada' cuando todos los
-        canales configurados que correspondan fueron procesados con éxito.
-        Si el correo falla, permanece pendiente para que el cron lo reintente.
+        Aplica a alertas existentes aun cuando notificar_email o
+        notificar_chatter continúen almacenados como True.
         """
         resultado = True
-
         for alert in self:
             try:
-                # Protección para API Events: si la máquina fue retirada o ya
-                # no está alquilada, no enviar email, chatter ni acciones.
-                if (
-                    alert.origen_datos == 'api_events'
-                    and not alert._equipo_esta_alquilado_actualmente()
-                ):
+                if (alert.origen_datos == 'api_events'
+                        and not alert._equipo_esta_alquilado_actualmente()):
                     alert._cerrar_por_equipo_no_alquilado(
-                        motivo=(
-                            'Auto-cerrada antes de procesar notificaciones: '
-                            'el equipo ya no se encuentra en estado de alquiler activo.'
-                        )
+                        motivo='Auto-cerrada: el equipo ya no se encuentra alquilado.'
                     )
                     continue
 
-                email_ok = True
-                chatter_ok = True
-
-                if alert.notificar_email and not alert.email_enviado:
-                    email_ok = bool(alert._enviar_notificacion_email())
-
-                if alert.notificar_chatter and not alert.chatter_enviado:
-                    chatter_ok = bool(alert._enviar_notificacion_chatter())
-
-                # Ejecutar acción automática
+                # No invocar email, chatter ni sus reintentos.
+                # Conservar la marca histórica email_enviado sin falsificar envíos.
                 if alert.accion_automatica != 'ninguna' and not alert.accion_ejecutada:
                     alert._ejecutar_accion_automatica()
 
-                email_completo = (
-                    not alert.notificar_email
-                    or alert.email_enviado
-                    or email_ok
-                )
-                chatter_completo = (
-                    not alert.notificar_chatter
-                    or alert.chatter_enviado
-                    or chatter_ok
-                )
-
-                if alert.estado == 'nueva' and email_completo and chatter_completo:
+                if alert.estado == 'nueva':
                     alert.estado = 'notificada'
-
-                if not (email_completo and chatter_completo):
-                    resultado = False
-                    _logger.warning(
-                        "⚠️ Alerta pendiente de notificación id=%s serie=%s "
-                        "email_ok=%s chatter_ok=%s",
-                        alert.id,
-                        alert.serie_equipo,
-                        email_completo,
-                        chatter_completo,
-                    )
-
-            except Exception as e:
+            except Exception:
                 resultado = False
-                _logger.error(
-                    f"❌ Error notificación {alert.display_name}: "
-                    f"{e}\n{traceback.format_exc()}"
+                _logger.exception(
+                    'Error procesando alerta PrintTracker id=%s serie=%s',
+                    alert.id, alert.serie_equipo,
                 )
-
         return resultado
 
     def _enviar_notificacion_email(self):
-        """
-        Envía email a soporte (configurable).
-        SIEMPRE a soporte, NUNCA al cliente/entidad.
-
-        Retorna True únicamente cuando Odoo pudo ejecutar el envío.
-        """
+        """Canal deshabilitado globalmente, incluso para registros antiguos."""
         self.ensure_one()
-
-        try:
-            # Última barrera: aunque otro método invoque directamente este
-            # envío, una alerta API de un equipo retirado no debe generar correo.
-            if (
-                self.origen_datos == 'api_events'
-                and not self._equipo_esta_alquilado_actualmente()
-            ):
-                self._cerrar_por_equipo_no_alquilado(
-                    motivo=(
-                        'Auto-cerrada antes de enviar email: el equipo ya no '
-                        'se encuentra en estado de alquiler activo.'
-                    )
-                )
-                _logger.info(
-                    "⏭️ Email omitido: equipo no alquilado alerta=%s serie=%s",
-                    self.id,
-                    self.serie_equipo,
-                )
-                return False
-
-            email_destino = self._get_email_soporte()
-            if not email_destino:
-                _logger.warning(
-                    "⚠️ Email soporte no configurado para alerta=%s serie=%s",
-                    self.id,
-                    self.serie_equipo,
-                )
-                return False
-
-            # Construir HTML del email
-            html_body = self._construir_email_html()
-
-            prioridad_label = dict(
-                self._fields['prioridad'].selection
-            ).get(
-                self.prioridad,
-                self.prioridad,
-            )
-            tipo_label = dict(
-                self._fields['tipo_alerta'].selection
-            ).get(
-                self.tipo_alerta,
-                self.tipo_alerta,
-            )
-
-            mail_values = {
-                'subject': (
-                    f"[{prioridad_label.upper()}] Alerta PrintTracker - "
-                    f"{self.serie_equipo} - {tipo_label}"
-                ),
-                'body_html': html_body,
-                'email_from': (
-                    self.env.company.email
-                    or 'noreply@andescopiers.com.pe'
-                ),
-                'email_to': email_destino,
-                'auto_delete': False,
-            }
-
-            mail = self.env['mail.mail'].sudo().create(mail_values)
-            mail.send()
-
-            self.write({
-                'email_enviado': True,
-                'ultima_revision': fields.Datetime.now(),
-            })
-
-            _logger.info(
-                "📧 Email enviado a %s para %s alerta=%s",
-                email_destino,
-                self.serie_equipo,
-                self.id,
-            )
-            return True
-
-        except Exception as e:
-            _logger.error(
-                f"❌ Error email alerta={self.id} serie={self.serie_equipo}: "
-                f"{e}\n{traceback.format_exc()}"
-            )
-            return False
+        _logger.debug('Correo PrintTracker suprimido para alerta=%s', self.id)
+        return False
 
     def _construir_email_html(self):
         """Construye HTML profesional para email."""
@@ -2151,33 +2024,10 @@ class PrintTrackerAlert(models.Model):
         return html
 
     def _enviar_notificacion_chatter(self):
-        """Publica notificación en el chatter del equipo."""
+        """No publicar notificaciones: los seguidores podrían recibir correos."""
         self.ensure_one()
-        try:
-            if not self.equipo_id:
-                return
-
-            prioridad_label = dict(self._fields['prioridad'].selection).get(self.prioridad, self.prioridad)
-            tipo_label = dict(self._fields['tipo_alerta'].selection).get(self.tipo_alerta, self.tipo_alerta)
-
-            body = f"""
-            <p><strong>🚨 Alerta PrintTracker [{prioridad_label}]</strong></p>
-            <p><strong>Tipo:</strong> {tipo_label}</p>
-            <p>{self.descripcion or ''}</p>
-            """
-
-            self.equipo_id.message_post(
-                body=body,
-                subject=f"Alerta: {tipo_label}",
-                message_type='notification',
-                subtype_xmlid='mail.mt_note',
-            )
-
-            self.chatter_enviado = True
-            _logger.info(f"💬 Chatter en equipo {self.serie_equipo}")
-
-        except Exception as e:
-            _logger.error(f"❌ Error chatter: {e}")
+        _logger.debug('Chatter automático PrintTracker suprimido alerta=%s', self.id)
+        return False
 
     # ==========================================
     # ACCIONES AUTOMÁTICAS
@@ -2246,16 +2096,12 @@ class PrintTrackerAlert(models.Model):
             self.resultado_accion = f"Error tarea: {e}"
 
     def _accion_notificar_tecnico(self):
-        """Envía email al equipo de soporte (no a todos los usuarios)."""
+        """Completa la acción legada sin enviar correo al técnico."""
         self.ensure_one()
-        try:
-            email_soporte = self._get_email_soporte()
-            if email_soporte:
-                self._enviar_notificacion_email()
-                self.accion_ejecutada = True
-                self.resultado_accion = f"Notificación enviada a {email_soporte}"
-        except Exception as e:
-            self.resultado_accion = f"Error notificación: {e}"
+        self.write({
+            'accion_ejecutada': True,
+            'resultado_accion': 'Aviso por correo desactivado; alerta disponible en Odoo.',
+        })
 
     # ==========================================
     # ACCIONES MANUALES
@@ -2279,11 +2125,50 @@ class PrintTrackerAlert(models.Model):
             alert.estado = 'ignorada'
 
     def action_reenviar_email(self):
+        """Mantiene compatibilidad con botones antiguos sin permitir envíos."""
         self.ensure_one()
-        self.email_enviado = False
-        self._enviar_notificacion_email()
-        return {'type': 'ir.actions.client', 'tag': 'display_notification',
-                'params': {'message': f'Email reenviado a {self._get_email_soporte()}', 'type': 'success'}}
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Correo desactivado',
+                'message': 'Las alertas PrintTracker se procesan solo dentro de Odoo.',
+                'type': 'warning',
+                'sticky': False,
+            },
+        }
+
+    @api.model
+    def desactivar_correos_alertas_existentes(self):
+        """Migración manual de flags históricos sin alterar eventos ni estados.
+
+        Ejecutar una vez después de actualizar el archivo, desde odoo shell:
+        env['printtracker.alert'].desactivar_correos_alertas_existentes()
+        """
+        alerts = self.sudo().search([
+            '|', ('notificar_email', '=', True),
+                 ('notificar_chatter', '=', True),
+        ])
+        total = len(alerts)
+        if alerts:
+            alerts.write({'notificar_email': False, 'notificar_chatter': False})
+
+        # Cancelar únicamente mensajes pendientes generados por el antiguo
+        # método _enviar_notificacion_email, sin tocar otros correos de Odoo.
+        # Ese método usaba el asunto «[...] Alerta PrintTracker - SERIE - TIPO».
+        pending = self.env['mail.mail'].sudo().search([
+            ('subject', 'ilike', 'Alerta PrintTracker -'),
+            ('state', 'in', ['outgoing', 'exception']),
+        ])
+        pending_count = len(pending)
+        if pending:
+            pending.unlink()
+        _logger.info(
+            'PrintTracker: flags desactivados en %s alertas; %s correos '
+            'pendientes antiguos eliminados de la cola.',
+            total, pending_count,
+        )
+        return total
 
     def action_resolver(self):
         """Botón 'Resolver' en la vista form."""
