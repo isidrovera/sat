@@ -5909,24 +5909,30 @@
       <field name="durabilidad_toner_yellow">0</field>
       <field name="toner_fuente_informacion">pendiente</field>
     </record>
-      <record id="modelo_lanier_mp_c307" model="modelo.maquina">
-      <field name="name">LANIER MP C307</field>
-      <field name="codigo_tecnico">lanier_mp_c307</field>
-      <field name="tipo_id">color</field>
-      <field name="toner_modelo_black">PENDIENTE DE VALIDAR</field>
-      <field name="toner_codigo_parte_black">PENDIENTE</field>
-      <field name="durabilidad_toner_black">0</field>
-      <field name="toner_modelo_cyan">PENDIENTE DE VALIDAR</field>
-      <field name="toner_codigo_parte_cyan">PENDIENTE</field>
-      <field name="durabilidad_toner_cyan">0</field>
-      <field name="toner_modelo_magenta">PENDIENTE DE VALIDAR</field>
-      <field name="toner_codigo_parte_magenta">PENDIENTE</field>
-      <field name="durabilidad_toner_magenta">0</field>
-      <field name="toner_modelo_yellow">PENDIENTE DE VALIDAR</field>
-      <field name="toner_codigo_parte_yellow">PENDIENTE</field>
-      <field name="durabilidad_toner_yellow">0</field>
-      <field name="toner_fuente_informacion">pendiente</field>
-    </record>
+    <record id="modelo_lanier_mp_c307" model="modelo.maquina">
+    <field name="name">LANIER MP C307</field>
+    <field name="marca_id" ref="sat.marca_lanier"/>
+    <field name="codigo_tecnico">lanier_mp_c307</field>
+    <field name="tipo_id">color</field>
+
+    <field name="toner_modelo_black">PENDIENTE DE VALIDAR</field>
+    <field name="toner_codigo_parte_black">PENDIENTE</field>
+    <field name="durabilidad_toner_black">0</field>
+
+    <field name="toner_modelo_cyan">PENDIENTE DE VALIDAR</field>
+    <field name="toner_codigo_parte_cyan">PENDIENTE</field>
+    <field name="durabilidad_toner_cyan">0</field>
+
+    <field name="toner_modelo_magenta">PENDIENTE DE VALIDAR</field>
+    <field name="toner_codigo_parte_magenta">PENDIENTE</field>
+    <field name="durabilidad_toner_magenta">0</field>
+
+    <field name="toner_modelo_yellow">PENDIENTE DE VALIDAR</field>
+    <field name="toner_codigo_parte_yellow">PENDIENTE</field>
+    <field name="durabilidad_toner_yellow">0</field>
+
+    <field name="toner_fuente_informacion">pendiente</field>
+</record>
     <record id="modelo_savin_mpc_4502" model="modelo.maquina">
       <field name="name">MPC 4502</field>
       <field name="codigo_tecnico">mpc_4502</field>
