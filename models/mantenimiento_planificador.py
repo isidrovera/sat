@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError, ValidationError
 from datetime import datetime, date, time, timedelta
@@ -7,36 +6,31 @@ from dateutil.relativedelta import relativedelta
 from pytz import timezone, UTC
 import calendar
 import logging
-
+import re
+import unicodedata
 _logger = logging.getLogger(__name__)
-
-
 class MantenimientoPlanificador(models.Model):
     _name = 'mantenimiento.planificador'
     _description = 'Planificador inteligente de mantenimientos'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'fecha_inicio desc, name'
-
     name = fields.Char(
         string='Nombre',
         required=True,
         tracking=True,
         default='Planificación mensual'
     )
-
     fecha_inicio = fields.Date(
         string='Fecha inicio',
         required=True,
         tracking=True,
         default=fields.Date.context_today
     )
-
     fecha_fin = fields.Date(
         string='Fecha fin',
         required=True,
         tracking=True
     )
-
     estado = fields.Selection([
         ('borrador', 'Borrador'),
         ('generado', 'Generado'),
@@ -44,7 +38,6 @@ class MantenimientoPlanificador(models.Model):
         ('finalizado', 'Finalizado'),
         ('cancelado', 'Cancelado'),
     ], string='Estado', default='borrador', tracking=True)
-
     tecnico_ids = fields.Many2many(
         'res.users',
         'mantenimiento_planificador_tecnico_rel',
@@ -54,7 +47,6 @@ class MantenimientoPlanificador(models.Model):
         domain=[('share', '=', False)],
         tracking=True
     )
-
     zona_ids = fields.Many2many(
         'mantenimiento.zona',
         'mantenimiento_planificador_zona_rel',
@@ -63,81 +55,66 @@ class MantenimientoPlanificador(models.Model):
         string='Zonas incluidas',
         tracking=True
     )
-
     line_ids = fields.One2many(
         'mantenimiento.planificador.linea',
         'planificador_id',
         string='Líneas de planificación'
     )
-
     total_maquinas = fields.Integer(
         string='Máquinas',
         compute='_compute_totales',
         store=False
     )
-
     total_pendientes = fields.Integer(
         string='Pendientes',
         compute='_compute_totales',
         store=False
     )
-
     total_confirmadas = fields.Integer(
         string='Confirmadas',
         compute='_compute_totales',
         store=False
     )
-
     total_programadas = fields.Integer(
         string='Programadas',
         compute='_compute_totales',
         store=False
     )
-
     total_sin_cupo = fields.Integer(
         string='Sin cupo',
         compute='_compute_totales',
         store=False
     )
-
     total_reasignar = fields.Integer(
         string='Por reasignar',
         compute='_compute_totales',
         store=False
     )
-
     resumen_html = fields.Html(
         string='Resumen',
         compute='_compute_resumen_html',
         sanitize=False
     )
-
     observacion = fields.Text(
         string='Observaciones'
     )
-
     # ============================================================
     # DEFAULTS / ONCHANGE
     # ============================================================
-
     @api.model
     def default_get(self, fields_list):
         vals = super().default_get(fields_list)
-
         today = fields.Date.context_today(self)
         inicio = today.replace(day=1)
         ultimo_dia = calendar.monthrange(inicio.year, inicio.month)[1]
         fin = inicio.replace(day=ultimo_dia)
-
         vals.setdefault('fecha_inicio', inicio)
         vals.setdefault('fecha_fin', fin)
         vals.setdefault('name', 'Planificación %s/%s' % (
             str(inicio.month).zfill(2),
             inicio.year
         ))
-
         return vals
-
     @api.onchange('fecha_inicio')
     def _onchange_fecha_inicio(self):
         for rec in self:
@@ -147,17 +124,14 @@ class MantenimientoPlanificador(models.Model):
                     rec.fecha_inicio.month
                 )[1]
                 rec.fecha_fin = rec.fecha_inicio.replace(day=ultimo_dia)
-
             if rec.fecha_inicio:
                 rec.name = 'Planificación %s/%s' % (
                     str(rec.fecha_inicio.month).zfill(2),
                     rec.fecha_inicio.year
                 )
-
     # ============================================================
     # COMPUTES
     # ============================================================
-
     @api.depends('line_ids.estado')
     def _compute_totales(self):
         for rec in self:
@@ -167,7 +141,6 @@ class MantenimientoPlanificador(models.Model):
             rec.total_programadas = len(rec.line_ids.filtered(lambda l: l.estado == 'programado'))
             rec.total_sin_cupo = len(rec.line_ids.filtered(lambda l: l.estado == 'sin_cupo'))
             rec.total_reasignar = len(rec.line_ids.filtered(lambda l: l.estado == 'reasignar'))
-
     @api.depends(
         'total_maquinas',
         'total_pendientes',
@@ -213,115 +186,126 @@ class MantenimientoPlanificador(models.Model):
                 rec.total_sin_cupo,
                 rec.total_reasignar,
             )
-
     # ============================================================
     # VALIDACIONES
     # ============================================================
-
     @api.constrains('fecha_inicio', 'fecha_fin')
     def _check_fechas(self):
         for rec in self:
             if rec.fecha_inicio and rec.fecha_fin and rec.fecha_fin < rec.fecha_inicio:
                 raise ValidationError(_("La fecha fin no puede ser menor que la fecha inicio."))
-
     # ============================================================
     # HELPERS DE ZONA HORARIA
     # ============================================================
-
     def _agenda_to_local_dt(self, agenda_value):
         """
         Convierte un Datetime UTC (como se almacena en la BD) al timezone del usuario.
-
         Devuelve un datetime naive en hora local, listo para comparar con
         horas locales (hora_inicio, hora_fin del perfil del técnico) y para
         cálculos con timedelta.
         """
         if not agenda_value:
             return False
-
         user_tz = self.env.user.tz or 'America/Lima'
         local_tz = timezone(user_tz)
-
         agenda_utc = fields.Datetime.to_datetime(agenda_value)
         return UTC.localize(agenda_utc).astimezone(local_tz).replace(tzinfo=None)
-
     # ============================================================
     # HELPERS GENERALES
     # ============================================================
+    @api.model
+    def _direccion_operativa_equipo(self, equipo):
+        """Usa solamente campos confirmados del equipo; sin llamadas a Google."""
+        partes = []
+        for campo in ('direccion', 'direccion_calle', 'direccion_completa'):
+            if campo in equipo._fields:
+                valor = getattr(equipo, campo, False)
+                if isinstance(valor, str) and valor.strip() and valor not in partes:
+                    partes.append(valor.strip())
+        return ', '.join(partes)
 
-    def _get_zona_por_distrito(self, distrito):
-        if not distrito:
+    @api.model
+    def _get_zona_por_distrito(self, distrito, direccion=False, mapa=None):
+        """Usa el mismo catálogo del modelo mantenimiento.zona.
+
+        Una coincidencia ambigua no produce ninguna asignación. Nunca se
+        asigna una zona por defecto ni por la palabra genérica «Lima».
+        """
+        Zonas = self.env['mantenimiento.zona']
+        mapa = mapa if mapa is not None else Zonas._mapa_distritos()
+        zona = Zonas._resolver_zona_por_distrito(distrito, mapa=mapa)
+        if zona:
+            return zona
+        clave = self._normalizar_nombre_zona(distrito)
+        if len(mapa.get(clave, set())) > 1:
+            _logger.warning('[ZONAS] Distrito ambiguo: %s', distrito)
             return False
-
-        distrito = distrito.strip()
-        ZonaDistrito = self.env['mantenimiento.zona.distrito']
-
-        exacto = ZonaDistrito.search([
-            ('name', '=ilike', distrito),
-            ('active', '=', True),
-            ('zona_id.active', '=', True),
-        ], limit=1)
-
-        if exacto:
-            return exacto.zona_id
-
-        candidatos = ZonaDistrito.search([
-            ('active', '=', True),
-            ('zona_id.active', '=', True),
-            ('alias', '!=', False),
-        ])
-
-        distrito_lower = distrito.lower()
-
-        for item in candidatos:
-            alias_list = []
-            if item.alias:
-                alias_list = [a.strip().lower() for a in item.alias.split(',') if a.strip()]
-            if distrito_lower in alias_list:
-                return item.zona_id
-
+        sugerido = Zonas._extraer_distrito_de_direccion(direccion, mapa=mapa)
+        if sugerido:
+            zona = Zonas._resolver_zona_por_distrito(sugerido, mapa=mapa)
+            return zona if zona else False
         return False
+
+    @api.model
+    def _normalizar_nombre_zona(self, valor):
+        valor = unicodedata.normalize('NFKD', str(valor or ''))
+        valor = ''.join(c for c in valor if not unicodedata.combining(c))
+        return re.sub(r'\s+', ' ', re.sub(r'[^a-z0-9]+', ' ', valor.casefold())).strip()
+
+    def action_recalcular_zonas_pendientes(self):
+        """Sincroniza solamente líneas no programadas ni asignadas."""
+        Zonas = self.env['mantenimiento.zona']
+        mapa = Zonas._mapa_distritos()
+        actualizadas = 0
+        for plan in self:
+            for linea in plan.line_ids:
+                if (linea.estado not in ('pendiente', 'confirmado', 'sin_cupo', 'reasignar')
+                        or linea.ticket_id or linea.fecha_programada or linea.tecnico_id):
+                    continue
+                equipo = linea.equipo_id
+                if not equipo:
+                    continue
+                zona = plan._get_zona_por_distrito(
+                    equipo.distrito, plan._direccion_operativa_equipo(equipo), mapa=mapa
+                )
+                vals = {
+                    'distrito': equipo.distrito or False,
+                    'zona_id': zona.id if zona else False,
+                }
+                if (linea.distrito != vals['distrito']
+                        or linea.zona_id.id != vals['zona_id']):
+                    linea.write(vals)
+                    actualizadas += 1
+        return actualizadas
 
     def _get_perfiles_tecnicos(self):
         self.ensure_one()
-
         Perfil = self.env['mantenimiento.tecnico.perfil']
-
         domain = [('active', '=', True)]
-
         if self.tecnico_ids:
             domain.append(('tecnico_id', 'in', self.tecnico_ids.ids))
-
         return Perfil.search(domain)
-
     def _float_to_time(self, value):
         value = value or 0.0
         hours = int(value)
         minutes = int(round((value - hours) * 60))
-
         if minutes >= 60:
             hours += 1
             minutes -= 60
-
         hours = min(max(hours, 0), 23)
         minutes = min(max(minutes, 0), 59)
-
         return time(hour=hours, minute=minutes)
-
     def _make_datetime(self, fecha, hora_float):
         """
         Construye un datetime local (naive) a partir de una fecha y una hora float.
-
         El resultado se compara contra los datetimes locales devueltos por
         _agenda_to_local_dt, por lo que ambos deben estar en la misma escala
         (hora local naive).
         """
         return datetime.combine(fecha, self._float_to_time(hora_float))
-
     def _ticket_ocupa_tecnico(self, tecnico_id, inicio_dt, fin_dt, excluir_ticket_id=False):
         """
         Verifica si el técnico tiene tickets que se cruzan con el rango dado.
-
         inicio_dt y fin_dt deben venir en hora local naive. Los tickets en BD
         tienen agenda en UTC, así que se convierten a hora local antes de
         comparar.
@@ -331,27 +315,20 @@ class MantenimientoPlanificador(models.Model):
             ('agenda', '!=', False),
             ('estado', 'not in', ['finalizado']),
         ]
-
         if excluir_ticket_id:
             domain.append(('id', '!=', excluir_ticket_id))
-
         tickets = self.env['ticket.alquiler'].search(domain)
-
         for ticket in tickets:
             ticket_inicio = self._agenda_to_local_dt(ticket.agenda)
             if not ticket_inicio:
                 continue
             ticket_fin = ticket_inicio + timedelta(hours=2)
-
             if ticket_inicio < fin_dt and ticket_fin > inicio_dt:
                 return True
-
         return False
-
     def _contar_tickets_tecnico_fecha(self, tecnico_id, fecha):
         """
         Cuenta tickets del técnico en una fecha local específica.
-
         Como agenda se almacena en UTC, hay que considerar la conversión:
         un ticket a las 23:00 hora Lima (= 04:00 UTC del día siguiente) debe
         contarse en el día Lima correcto. Se construye el rango UTC equivalente
@@ -359,20 +336,16 @@ class MantenimientoPlanificador(models.Model):
         """
         user_tz = self.env.user.tz or 'America/Lima'
         local_tz = timezone(user_tz)
-
         inicio_local = local_tz.localize(datetime.combine(fecha, time.min))
         fin_local = local_tz.localize(datetime.combine(fecha + timedelta(days=1), time.min))
-
         inicio_utc = inicio_local.astimezone(UTC).replace(tzinfo=None)
         fin_utc = fin_local.astimezone(UTC).replace(tzinfo=None)
-
         return self.env['ticket.alquiler'].search_count([
             ('responsable', '=', tecnico_id),
             ('agenda', '>=', inicio_utc),
             ('agenda', '<', fin_utc),
             ('estado', 'not in', ['finalizado']),
         ])
-
     def _get_horas_ocupadas_lineas(self, tecnico_id, fecha):
         lineas = self.env['mantenimiento.planificador.linea'].search([
             ('tecnico_id', '=', tecnico_id),
@@ -381,30 +354,21 @@ class MantenimientoPlanificador(models.Model):
             ('hora_inicio', '!=', False),
             ('hora_fin', '!=', False),
         ])
-
         return lineas
-
     def _linea_ocupa_tecnico(self, tecnico_id, fecha, hora_inicio, hora_fin):
         lineas = self._get_horas_ocupadas_lineas(tecnico_id, fecha)
-
         for linea in lineas:
             if linea.hora_inicio < hora_fin and linea.hora_fin > hora_inicio:
                 return True
-
         return False
-
     def _perfil_compatible_zona(self, perfil, zona, permitir_flexible=True):
         if not zona:
             return True
-
         if zona in perfil.zona_preferida_ids:
             return True
-
         if permitir_flexible and zona.flexible:
             return True
-
         return False
-
     def _buscar_tecnicos_disponibles(
         self,
         fecha,
@@ -416,52 +380,40 @@ class MantenimientoPlanificador(models.Model):
         excluir_ticket_id=False,
     ):
         self.ensure_one()
-
         perfiles = self._get_perfiles_tecnicos()
         candidatos = []
-
         hora_fin = hora_inicio + duracion_horas
         inicio_dt = self._make_datetime(fecha, hora_inicio)
         fin_dt = self._make_datetime(fecha, hora_fin)
-
         for perfil in perfiles:
             tecnico = perfil.tecnico_id
-
             disp = perfil.get_disponibilidad_fecha(fecha)
-
             # Si el técnico está bloqueado/no disponible, nunca se asigna.
             if not disp.get('disponible'):
                 continue
-
             permite_asignaciones_multiples = bool(
                 disp.get('permite_asignaciones_multiples')
             )
-
             # Si NO está activado el modo múltiple, se respeta el horario normal.
             # Si está activado, se permite asignar incluso fuera del rango horario,
             # siempre que la disponibilidad de ese día esté aprobada y disponible=True.
             if not permite_asignaciones_multiples:
                 if hora_inicio < disp.get('hora_inicio') or hora_fin > disp.get('hora_fin'):
                     continue
-
             # Validación de zona.
             # El modo múltiple no debe saltarse la zona, salvo que ignorar_zona=True.
             if not ignorar_zona:
                 if not self._perfil_compatible_zona(perfil, zona, permitir_flexible=True):
                     continue
-
             ocupados_dia = self._contar_tickets_tecnico_fecha(tecnico.id, fecha)
             ocupados_lineas = len(self._get_horas_ocupadas_lineas(tecnico.id, fecha))
-
             capacidad = disp.get('capacidad') or 0
             total_ocupados = ocupados_dia + ocupados_lineas
-
             # En modo normal se valida capacidad y cruces.
             # En modo múltiple se permite varias asignaciones el mismo día/hora.
             if not permite_asignaciones_multiples:
                 if total_ocupados >= capacidad:
                     continue
-
                 if self._ticket_ocupa_tecnico(
                     tecnico.id,
                     inicio_dt,
@@ -469,7 +421,6 @@ class MantenimientoPlanificador(models.Model):
                     excluir_ticket_id=excluir_ticket_id
                 ):
                     continue
-
                 if self._linea_ocupa_tecnico(
                     tecnico.id,
                     fecha,
@@ -477,19 +428,15 @@ class MantenimientoPlanificador(models.Model):
                     hora_fin
                 ):
                     continue
-
             score = 0
-
             if zona and zona in perfil.zona_preferida_ids:
                 score += 50
-
             if permite_asignaciones_multiples:
                 # Se prioriza al técnico que tiene la excepción manual activa.
                 score += 1000
             else:
                 score += max(0, capacidad - total_ocupados) * 10
                 score -= total_ocupados * 5
-
             candidatos.append({
                 'perfil': perfil,
                 'tecnico': tecnico,
@@ -498,14 +445,10 @@ class MantenimientoPlanificador(models.Model):
                 'ocupados': total_ocupados,
                 'permite_asignaciones_multiples': permite_asignaciones_multiples,
             })
-
         candidatos = sorted(candidatos, key=lambda x: x['score'], reverse=True)
-
         if len(candidatos) < cantidad:
             return []
-
         return candidatos[:cantidad]
-
     def _buscar_horario_disponible(
         self,
         fecha,
@@ -516,7 +459,6 @@ class MantenimientoPlanificador(models.Model):
         ignorar_zona=False,
     ):
         self.ensure_one()
-
         if hora_preferida:
             tecnicos = self._buscar_tecnicos_disponibles(
                 fecha=fecha,
@@ -533,7 +475,6 @@ class MantenimientoPlanificador(models.Model):
                     'hora_fin': hora_preferida + duracion_horas,
                     'tecnicos': tecnicos,
                 }
-
         bloques = [
             8.0,
             10.0,
@@ -541,7 +482,6 @@ class MantenimientoPlanificador(models.Model):
             14.0,
             16.0,
         ]
-
         for hora in bloques:
             tecnicos = self._buscar_tecnicos_disponibles(
                 fecha=fecha,
@@ -558,9 +498,7 @@ class MantenimientoPlanificador(models.Model):
                     'hora_fin': hora + duracion_horas,
                     'tecnicos': tecnicos,
                 }
-
         return False
-
     def _buscar_slot_desde_fecha(
         self,
         fecha_base,
@@ -572,16 +510,12 @@ class MantenimientoPlanificador(models.Model):
         dias_busqueda=20,
     ):
         self.ensure_one()
-
         if not fecha_base:
             fecha_base = fields.Date.context_today(self)
-
         for offset in range(0, dias_busqueda + 1):
             fecha = fecha_base + timedelta(days=offset)
-
             if fecha < self.fecha_inicio or fecha > self.fecha_fin:
                 continue
-
             slot = self._buscar_horario_disponible(
                 fecha=fecha,
                 zona=zona,
@@ -590,41 +524,46 @@ class MantenimientoPlanificador(models.Model):
                 hora_preferida=hora_preferida if offset == 0 else False,
                 ignorar_zona=ignorar_zona,
             )
-
             if slot:
                 return slot
-
         return False
-
     # ============================================================
     # GENERACIÓN DE LÍNEAS
     # ============================================================
-
     def action_generar_lineas(self):
+        Zona = self.env['mantenimiento.zona']
+        mapa = Zona._mapa_distritos()
         for rec in self:
             if rec.estado not in ('borrador', 'generado'):
                 raise UserError(_("Solo puede generar líneas en estado borrador o generado."))
-
-            rec.line_ids.unlink()
-
+            # La regeneración original eliminaba todas las líneas, incluso las ya
+            # confirmadas. Evitamos pérdidas accidentales de trabajo o tickets.
+            if rec.line_ids.filtered(lambda l: (
+                l.ticket_id or l.fecha_programada or l.tecnico_id
+                or l.estado not in ('pendiente', 'sin_cupo')
+            )):
+                raise UserError(_(
+                    "Hay líneas confirmadas, asignadas o con ticket. "
+                    "No es seguro regenerar esta planificación."
+                ))
             domain = [
                 ('control_mantenimiento', '=', True),
                 ('estado_alquiler_id', '=', 'alquilada'),
                 ('fecha_recurrente', '>=', rec.fecha_inicio),
                 ('fecha_recurrente', '<=', rec.fecha_fin),
             ]
-
             equipos = self.env['alquiler'].search(domain, order='distrito, cliente_id, serie')
-
-            creadas = 0
-
+            nuevas = []
+            sin_zona = 0
             for equipo in equipos:
-                zona = rec._get_zona_por_distrito(equipo.distrito)
-
-                if rec.zona_ids and zona and zona not in rec.zona_ids:
+                zona = rec._get_zona_por_distrito(
+                    equipo.distrito, rec._direccion_operativa_equipo(equipo), mapa=mapa
+                )
+                if rec.zona_ids and (not zona or zona not in rec.zona_ids):
                     continue
-
-                self.env['mantenimiento.planificador.linea'].create({
+                if not zona:
+                    sin_zona += 1
+                nuevas.append({
                     'planificador_id': rec.id,
                     'equipo_id': equipo.id,
                     'cliente_id': equipo.cliente_id.id if equipo.cliente_id else False,
@@ -635,12 +574,13 @@ class MantenimientoPlanificador(models.Model):
                     'cantidad_tecnicos': 1,
                     'duracion_horas': 2.0,
                 })
-                creadas += 1
-
+            rec.line_ids.unlink()
+            if nuevas:
+                self.env['mantenimiento.planificador.linea'].create(nuevas)
             rec.estado = 'generado'
-
             rec.message_post(
-                body=_("Se generaron %s líneas de planificación.") % creadas,
+                body=_("Se generaron %s líneas de planificación. Sin zona identificada: %s.")
+                     % (len(nuevas), sin_zona),
                 message_type='notification'
             )
 
@@ -648,12 +588,9 @@ class MantenimientoPlanificador(models.Model):
         for rec in self:
             if not rec.line_ids:
                 raise UserError(_("Primero debe generar las líneas de planificación."))
-
             lineas = rec.line_ids.filtered(lambda l: l.estado in ('pendiente', 'confirmado', 'reasignar'))
-
             asignadas = 0
             sin_cupo = 0
-
             for linea in lineas.sorted(lambda l: (
                 l.fecha_confirmada or l.fecha_ideal or rec.fecha_inicio,
                 l.zona_id.name or '',
@@ -664,9 +601,7 @@ class MantenimientoPlanificador(models.Model):
                     asignadas += 1
                 else:
                     sin_cupo += 1
-
             rec.estado = 'en_proceso'
-
             rec.message_post(
                 body=_(
                     "Auto-asignación finalizada.<br/>"
@@ -675,7 +610,6 @@ class MantenimientoPlanificador(models.Model):
                 ) % (asignadas, sin_cupo),
                 message_type='notification'
             )
-
     def action_ver_lineas_sin_cupo(self):
         self.ensure_one()
         return {
@@ -688,7 +622,6 @@ class MantenimientoPlanificador(models.Model):
                 ('estado', '=', 'sin_cupo'),
             ],
         }
-
     def action_ver_lineas_reasignar(self):
         self.ensure_one()
         return {
@@ -701,14 +634,11 @@ class MantenimientoPlanificador(models.Model):
                 ('estado', '=', 'reasignar'),
             ],
         }
-
-
 class MantenimientoPlanificadorLinea(models.Model):
     _name = 'mantenimiento.planificador.linea'
     _description = 'Línea de planificación de mantenimiento'
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'fecha_programada asc, zona_id, distrito, cliente_id'
-
     planificador_id = fields.Many2one(
         'mantenimiento.planificador',
         string='Planificador',
@@ -716,7 +646,6 @@ class MantenimientoPlanificadorLinea(models.Model):
         ondelete='cascade',
         index=True
     )
-
     equipo_id = fields.Many2one(
         'alquiler',
         string='Máquina',
@@ -724,68 +653,57 @@ class MantenimientoPlanificadorLinea(models.Model):
         index=True,
         tracking=True
     )
-
     cliente_id = fields.Many2one(
         'res.partner',
         string='Cliente',
         tracking=True,
         index=True
     )
-
     distrito = fields.Char(
         string='Distrito',
         tracking=True,
         index=True
     )
-
     zona_id = fields.Many2one(
         'mantenimiento.zona',
         string='Zona',
         tracking=True,
         index=True
     )
-
     fecha_ideal = fields.Date(
         string='Fecha ideal',
         tracking=True,
         index=True
     )
-
     fecha_confirmada = fields.Date(
         string='Fecha confirmada por cliente',
         tracking=True,
         index=True
     )
-
     hora_confirmada = fields.Float(
         string='Hora confirmada',
         tracking=True,
         help='Hora confirmada por el cliente. Ej: 14.0 = 2:00 pm.'
     )
-
     fecha_programada = fields.Date(
         string='Fecha programada',
         tracking=True,
         index=True
     )
-
     hora_inicio = fields.Float(
         string='Hora inicio',
         tracking=True
     )
-
     hora_fin = fields.Float(
         string='Hora fin',
         tracking=True
     )
-
     tecnico_id = fields.Many2one(
         'res.users',
         string='Técnico principal',
         tracking=True,
         index=True
     )
-
     tecnico_apoyo_ids = fields.Many2many(
         'res.users',
         'mantenimiento_planificador_linea_apoyo_rel',
@@ -794,33 +712,28 @@ class MantenimientoPlanificadorLinea(models.Model):
         string='Técnicos de apoyo',
         tracking=True
     )
-
     cantidad_tecnicos = fields.Integer(
         string='Cantidad de técnicos requeridos',
         default=1,
         tracking=True
     )
-
     duracion_horas = fields.Float(
         string='Duración estimada',
         default=2.0,
         tracking=True
     )
-
     ignorar_zona = fields.Boolean(
         string='Ignorar zona',
         default=False,
         tracking=True,
         help='Si está activo, puede asignarse cualquier técnico disponible sin priorizar zona.'
     )
-
     prioridad = fields.Selection([
         ('0', 'Baja'),
         ('1', 'Normal'),
         ('2', 'Alta'),
         ('3', 'Crítica'),
     ], string='Prioridad', default='1', tracking=True)
-
     estado = fields.Selection([
         ('pendiente', 'Pendiente'),
         ('confirmado', 'Confirmado sin asignar'),
@@ -830,24 +743,20 @@ class MantenimientoPlanificadorLinea(models.Model):
         ('ticket_creado', 'Ticket creado'),
         ('cancelado', 'Cancelado'),
     ], string='Estado', default='pendiente', tracking=True, index=True)
-
     ticket_id = fields.Many2one(
         'ticket.alquiler',
         string='Ticket generado',
         readonly=True,
         copy=False
     )
-
     nota = fields.Text(
         string='Notas'
     )
-
     resumen = fields.Char(
         string='Resumen',
         compute='_compute_resumen',
         store=True
     )
-
     @api.depends('equipo_id', 'cliente_id', 'distrito', 'fecha_programada', 'tecnico_id')
     def _compute_resumen(self):
         for rec in self:
@@ -863,7 +772,6 @@ class MantenimientoPlanificadorLinea(models.Model):
             if rec.tecnico_id:
                 partes.append(rec.tecnico_id.name)
             rec.resumen = ' · '.join(partes)
-
     @api.onchange('equipo_id')
     def _onchange_equipo_id(self):
         for rec in self:
@@ -871,19 +779,18 @@ class MantenimientoPlanificadorLinea(models.Model):
                 rec.cliente_id = rec.equipo_id.cliente_id.id if rec.equipo_id.cliente_id else False
                 rec.distrito = rec.equipo_id.distrito
                 rec.fecha_ideal = rec.equipo_id.fecha_recurrente
-
-                zona = rec.planificador_id._get_zona_por_distrito(rec.equipo_id.distrito) if rec.planificador_id else False
+                zona = rec.planificador_id._get_zona_por_distrito(
+                    rec.equipo_id.distrito,
+                    rec.planificador_id._direccion_operativa_equipo(rec.equipo_id)
+                ) if rec.planificador_id else False
                 rec.zona_id = zona.id if zona else False
-
     @api.constrains('cantidad_tecnicos', 'duracion_horas')
     def _check_valores(self):
         for rec in self:
             if rec.cantidad_tecnicos < 1:
                 raise ValidationError(_("La cantidad de técnicos debe ser mínimo 1."))
-
             if rec.duracion_horas <= 0:
                 raise ValidationError(_("La duración debe ser mayor a 0."))
-
     def action_confirmar_cliente(self):
         for rec in self:
             rec.estado = 'confirmado'
@@ -891,7 +798,6 @@ class MantenimientoPlanificadorLinea(models.Model):
                 body=_("Cliente confirmado. Pendiente de asignar técnico."),
                 message_type='notification'
             )
-
     def action_marcar_reasignar(self):
         for rec in self:
             rec.estado = 'reasignar'
@@ -899,14 +805,19 @@ class MantenimientoPlanificadorLinea(models.Model):
                 body=_("Marcado para reasignación."),
                 message_type='notification'
             )
-
     def action_buscar_y_asignar_slot(self, silent=False):
         self.ensure_one()
-
         plan = self.planificador_id
+        if not self.zona_id and not self.ignorar_zona:
+            self.write({
+                'estado': 'sin_cupo',
+                'nota': _("No se identificó una zona operativa. Revise el distrito del equipo."),
+            })
+            if not silent:
+                raise UserError(_("No se identificó la zona del equipo. Corrija el distrito o utilice Ignorar zona de forma explícita."))
+            return False
 
         fecha_base = self.fecha_confirmada or self.fecha_ideal or plan.fecha_inicio
-
         slot = plan._buscar_slot_desde_fecha(
             fecha_base=fecha_base,
             zona=self.zona_id,
@@ -916,22 +827,17 @@ class MantenimientoPlanificadorLinea(models.Model):
             ignorar_zona=self.ignorar_zona,
             dias_busqueda=30,
         )
-
         if not slot:
             self.write({
                 'estado': 'sin_cupo',
                 'nota': _("No se encontró disponibilidad para la fecha/hora solicitada."),
             })
-
             if not silent:
                 raise UserError(_("No se encontró cupo disponible para esta línea."))
-
             return False
-
         tecnicos = slot['tecnicos']
         tecnico_principal = tecnicos[0]['tecnico']
         tecnicos_apoyo = [t['tecnico'].id for t in tecnicos[1:]]
-
         self.write({
             'fecha_programada': slot['fecha'],
             'hora_inicio': slot['hora_inicio'],
@@ -941,7 +847,6 @@ class MantenimientoPlanificadorLinea(models.Model):
             'estado': 'programado',
             'nota': False,
         })
-
         if not silent:
             self.message_post(
                 body=_(
@@ -954,53 +859,39 @@ class MantenimientoPlanificadorLinea(models.Model):
                 ),
                 message_type='notification'
             )
-
         return True
-
     def _get_agenda_datetime(self):
         """
         Construye el valor Datetime (UTC) para asignar al campo agenda del ticket.
-
         La línea guarda hora_inicio en hora local. Para que Odoo almacene
         correctamente en UTC, primero localizamos el datetime en el tz del
         usuario y luego convertimos a UTC naive (que es lo que espera Odoo
         al escribir en un Datetime).
         """
         self.ensure_one()
-
         if not self.fecha_programada:
             return False
-
         hora = self.hora_inicio or 8.0
         hours = int(hora)
         minutes = int(round((hora - hours) * 60))
-
         dt_local_naive = datetime.combine(
             self.fecha_programada,
             time(hour=hours, minute=minutes)
         )
-
         user_tz = self.env.user.tz or 'America/Lima'
         local_tz = timezone(user_tz)
-
         dt_local = local_tz.localize(dt_local_naive)
         dt_utc = dt_local.astimezone(UTC).replace(tzinfo=None)
-
         return dt_utc
-
     def action_crear_ticket(self):
         for rec in self:
             if rec.ticket_id:
                 continue
-
             if rec.estado != 'programado':
                 raise UserError(_("Solo se puede crear ticket para líneas programadas."))
-
             if not rec.tecnico_id:
                 raise UserError(_("Debe tener técnico asignado."))
-
             agenda_dt = rec._get_agenda_datetime()
-
             ticket_vals = {
                 'partner_id': rec.cliente_id.id if rec.cliente_id else False,
                 'product_alquiler': rec.equipo_id.id,
@@ -1016,35 +907,27 @@ class MantenimientoPlanificadorLinea(models.Model):
                 'responsable': rec.tecnico_id.id,
                 'agenda': agenda_dt,
             }
-
             ticket = self.env['ticket.alquiler'].create(ticket_vals)
-
             if hasattr(ticket, 'crear_evento_calendario'):
                 ticket.crear_evento_calendario()
-
             rec.write({
                 'ticket_id': ticket.id,
                 'estado': 'ticket_creado',
             })
-
             rec.equipo_id.write({
                 'estado_programacion': 'confirmado',
                 'fecha_confirmacion': fields.Datetime.now(),
                 'fecha_programada_mantenimiento': rec.fecha_programada,
                 'tecnico_mantenimiento_id': rec.tecnico_id.id,
             })
-
             rec.message_post(
                 body=_("🎫 Ticket creado: %s") % ticket.name,
                 message_type='notification'
             )
-
     def action_ver_ticket(self):
         self.ensure_one()
-
         if not self.ticket_id:
             raise UserError(_("Esta línea aún no tiene ticket."))
-
         return {
             'type': 'ir.actions.act_window',
             'name': _('Ticket de mantenimiento'),
