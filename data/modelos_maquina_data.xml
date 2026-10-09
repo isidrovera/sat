@@ -5915,7 +5915,7 @@
     <field name="tipo_maquina_id" eval="1"/>
     <field name="codigo_tecnico">lanier_mp_c307</field>
     <field name="tipo_id">color</field>
-
+    <field name="precio_venta">0.00</field>
     <field name="toner_modelo_black">PENDIENTE DE VALIDAR</field>
     <field name="toner_codigo_parte_black">PENDIENTE</field>
     <field name="durabilidad_toner_black">0</field>
