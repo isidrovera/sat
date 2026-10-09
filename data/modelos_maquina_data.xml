@@ -5909,7 +5909,7 @@
       <field name="durabilidad_toner_yellow">0</field>
       <field name="toner_fuente_informacion">pendiente</field>
     </record>
-      <record id="modelo_lanier_mp_c307spf" model="modelo.maquina">
+      <record id="modelo_lanier_mp_c307" model="modelo.maquina">
       <field name="name">LANIER MP C307</field>
       <field name="codigo_tecnico">lanier_mp_c307</field>
       <field name="tipo_id">color</field>
