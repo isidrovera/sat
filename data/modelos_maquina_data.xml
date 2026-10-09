@@ -5912,6 +5912,7 @@
     <record id="modelo_lanier_mp_c307" model="modelo.maquina">
     <field name="name">LANIER MP C307</field>
     <field name="marca_id" ref="sat.marca_lanier"/>
+    <field name="tipo_maquina_id" ref="sat.tipo_maquina_fotocopiadora"/>
     <field name="codigo_tecnico">lanier_mp_c307</field>
     <field name="tipo_id">color</field>
 
