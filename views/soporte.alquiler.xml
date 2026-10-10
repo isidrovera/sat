@@ -804,6 +804,15 @@
                 <!-- Logística entrega -->
                 <button string="🚚 Confirmar Entrega al Técnico" name="action_confirmar_entrega" type="object" class="btn-success oe_highlight" invisible="estado != 'stock_completo'" confirm="¿Confirmar que los repuestos fueron entregados físicamente al técnico?"/>
 
+                <!-- Instalación manual: únicamente pedidos entregados sin ticket de instalación -->
+                <button name="action_instalar_manualmente"
+                        string="Marcar instalado manualmente"
+                        type="object"
+                        icon="fa-check-circle"
+                        class="btn-success oe_highlight"
+                        invisible="estado != 'entregado' or ticket_instalacion_id"
+                        confirm="¿Confirma que los repuestos de este pedido ya fueron instalados? Se registrará su historial de durabilidad usando los contómetros del pedido. Esta acción no requiere un ticket de instalación."/>
+
                 <!-- Cancelar -->
                 <button string="❌ Cancelar" name="action_cancelar" type="object" class="btn-danger" invisible="estado in ('instalado', 'entregado', 'en_camino', 'cancelado')" confirm="¿Cancelar este pedido?"/>
 
