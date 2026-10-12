@@ -1627,6 +1627,53 @@ class TonerMonitoringEvent(models.Model):
             return True
 
         # --------------------------------------------------------
+        # Validar nivel REAL antes de crear una solicitud nueva.
+        # Las alertas LOW/CRITICAL/EMPTY pueden provenir de PrintTracker
+        # aunque el nivel actual informado siga siendo alto.
+        # No confundir 0% real con porcentaje ausente.
+        # --------------------------------------------------------
+        threshold_percent = 15.0
+        prefix = (final_message_prefix + " ") if final_message_prefix else ""
+
+        if not self.level_available:
+            self._mark_pending(
+                prefix
+                + _(
+                    "El evento fue registrado, pero no contiene un porcentaje "
+                    "de tóner verificable. No se creó solicitud automática."
+                )
+            )
+            return False
+
+        level_percent = float(self.level_percent)
+        if not (0.0 <= level_percent <= 100.0):
+            self._mark_pending(
+                prefix
+                + _(
+                    "Porcentaje de tóner fuera de rango (%.2f%%). "
+                    "No se creó solicitud automática."
+                ) % level_percent
+            )
+            return False
+
+        if level_percent >= threshold_percent:
+            self.write({"submission_created": False})
+            self._mark_processed(
+                prefix
+                + _(
+                    "Evento registrado sin generar solicitud: nivel de tóner "
+                    "%(level).2f%%, superior o igual al umbral de %(limit).0f%%."
+                ) % {"level": level_percent, "limit": threshold_percent}
+            )
+            _logger.info(
+                "[TONER EVENT] Solicitud omitida por nivel alto "
+                "event=%s equipo=%s color=%s nivel=%.2f umbral=%.2f",
+                self.id, self.equipment_serial, self.color,
+                level_percent, threshold_percent,
+            )
+            return True
+
+        # --------------------------------------------------------
         # Contador B/N obligatorio por el modelo actual
         # --------------------------------------------------------
 
