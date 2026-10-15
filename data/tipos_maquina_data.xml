@@ -1,0 +1,20 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<odoo>
+  <data noupdate="1">
+    <record id="tipo_maquina_fotocopiadora" model="tipo.maquina">
+      <field name="name">Fotocopiadora</field>
+    </record>
+    <record id="tipo_maquina_impresora" model="tipo.maquina">
+      <field name="name">Impresora</field>
+    </record>
+    <record id="tipo_maquina_duplicadora" model="tipo.maquina">
+      <field name="name">Duplicadora</field>
+    </record>
+    <record id="tipo_maquina_ploter" model="tipo.maquina">
+      <field name="name">Ploter</field>
+    </record>
+    <record id="tipo_maquina_scanner" model="tipo.maquina">
+      <field name="name">Scanner</field>
+    </record>
+  </data>
+</odoo>
