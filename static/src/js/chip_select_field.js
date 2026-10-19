@@ -27,11 +27,7 @@ const ODOO_COLOR_MAP = {
 };
 
 function toBool(value, defaultValue = false) {
-    if (
-        value === undefined ||
-        value === null ||
-        value === ""
-    ) {
+    if (value === undefined || value === null || value === "") {
         return defaultValue;
     }
 
@@ -60,12 +56,7 @@ function normalizeStringProp(value) {
     if (
         value === undefined ||
         value === null ||
-        value === ""
-    ) {
-        return undefined;
-    }
-
-    if (
+        value === "" ||
         value === false ||
         value === "false" ||
         value === "False"
@@ -142,7 +133,6 @@ export class ChipSelectField extends Many2OneField {
             recordModel: this.recordModel,
             recordResId: this.recordResId,
             currentId: this.currentId,
-            recordData: this.props.record?.data,
         });
 
         this.loadOptions();
@@ -153,6 +143,7 @@ export class ChipSelectField extends Many2OneField {
             if (newTypeId !== this._lastTypeId) {
                 this._lastTypeId = newTypeId;
                 this.uiState.expanded = false;
+                this.uiState.localSelectedId = null;
                 this.loadOptions(nextProps);
             }
         });
@@ -285,8 +276,8 @@ export class ChipSelectField extends Many2OneField {
                 "[ChipSelect][loadOptions] Cargando opciones",
                 {
                     fieldName: props.name,
-                    relation: relation,
-                    domain: domain,
+                    relation,
+                    domain,
                 }
             );
 
@@ -418,8 +409,11 @@ export class ChipSelectField extends Many2OneField {
     toggleOptions(ev = null) {
         this._stopEvent(ev);
 
-        this.uiState.expanded =
-            !this.uiState.expanded;
+        if (this.props.readonly || this.uiState.saving) {
+            return;
+        }
+
+        this.uiState.expanded = !this.uiState.expanded;
 
         console.log("[ChipSelect][toggleOptions]", {
             expanded: this.uiState.expanded,
@@ -465,14 +459,13 @@ export class ChipSelectField extends Many2OneField {
         this._stopEvent(ev);
 
         console.log("[ChipSelect][selectOption] INICIO", {
-            option: option,
+            option,
             fieldName: this.props.name,
             relation: this.relation,
             readonly: this.props.readonly,
             autoSave: this.props.autoSave,
             recordModel: this.recordModel,
             recordResId: this.recordResId,
-            recordDataBefore: this.props.record?.data,
         });
 
         if (!option || !option.id) {
@@ -483,9 +476,9 @@ export class ChipSelectField extends Many2OneField {
             return;
         }
 
-        if (this.props.readonly) {
+        if (this.props.readonly || this.uiState.saving) {
             console.warn(
-                "[ChipSelect][selectOption] Campo de solo lectura"
+                "[ChipSelect][selectOption] Campo bloqueado"
             );
             return;
         }
@@ -544,16 +537,13 @@ export class ChipSelectField extends Many2OneField {
                 this.notification.add(
                     "No se pudo guardar automáticamente. " +
                     "Usa Guardar cambios antes de salir.",
-                    {
-                        type: "warning",
-                    }
+                    { type: "warning" }
                 );
             }
         }
 
         console.log("[ChipSelect][selectOption] FIN", {
-            localSelectedId:
-                this.uiState.localSelectedId,
+            localSelectedId: this.uiState.localSelectedId,
             currentId: this.currentId,
             selectedOption: this.selectedOption,
         });
@@ -567,8 +557,8 @@ export class ChipSelectField extends Many2OneField {
             console.warn(
                 "[ChipSelect][_autoSaveOption] Sin modelo o ID real",
                 {
-                    model: model,
-                    resId: resId,
+                    model,
+                    resId,
                     record: this.props.record,
                 }
             );
@@ -580,9 +570,7 @@ export class ChipSelectField extends Many2OneField {
             this.notification.add(
                 "Cambio pendiente. " +
                 "Usa Guardar cambios antes de salir.",
-                {
-                    type: "warning",
-                }
+                { type: "warning" }
             );
 
             return;
@@ -603,8 +591,8 @@ export class ChipSelectField extends Many2OneField {
         console.log(
             "[ChipSelect][_autoSaveOption] Guardado en BD",
             {
-                model: model,
-                resId: resId,
+                model,
+                resId,
                 fieldName: this.props.name,
                 selectedId: option.id,
             }
@@ -664,7 +652,6 @@ export const chipSelectField = {
             ),
         };
 
-        // Omitir propiedades String vacías para Owl.
         if (filterByField !== undefined) {
             finalProps.filterByField = filterByField;
         }
@@ -682,7 +669,7 @@ export const chipSelectField = {
     },
 
     supportedOptions: [
-        ...m2oSupportedOptions,
+        ...(m2oSupportedOptions || []),
 
         {
             label: "Filter by field",
