@@ -242,7 +242,7 @@ class LeaveRequestController(http.Controller):
     # API AJAX
     # ============================================================
 
-    @http.route('/leave/request/get_leave_types', type='json', auth='user')
+    @http.route('/leave/request/get_leave_types', type='jsonrpc', auth='user')
     def get_available_leave_types(self):
         """
         Retorna tipos de ausencia del modelo personalizado.
@@ -266,7 +266,7 @@ class LeaveRequestController(http.Controller):
                 'error': str(e),
             }
 
-    @http.route('/leave/request/validate_dates', type='json', auth='user')
+    @http.route('/leave/request/validate_dates', type='jsonrpc', auth='user')
     def validate_leave_dates(self, date_from=None, date_to=None, tipo=None):
         """
         Valida fechas desde JS antes de enviar el formulario.
@@ -315,7 +315,7 @@ class LeaveRequestController(http.Controller):
                 'error': 'Las fechas ingresadas no son válidas.',
             }
 
-    @http.route('/leave/request/check_overlap', type='json', auth='user')
+    @http.route('/leave/request/check_overlap', type='jsonrpc', auth='user')
     def check_leave_overlap(self, date_from=None, date_to=None):
         """
         Verifica solapamiento desde JS.

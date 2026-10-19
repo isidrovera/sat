@@ -1209,13 +1209,12 @@ class SatReservaSolicitudLinea(models.Model):
         string='Comentario',
     )
 
-    _sql_constraints = [
-        (
-            'solicitud_maquina_unique',
-            'unique(solicitud_id, maquina_id)',
-            'La máquina ya está incluida en esta solicitud.',
-        ),
-    ]
+    
+    _solicitud_maquina_unique = models.Constraint(
+        'UNIQUE(solicitud_id, maquina_id)',
+        'La máquina ya está incluida en esta solicitud.',
+    )
+
 
     @api.model_create_multi
     def create(self, vals_list):

@@ -4,15 +4,11 @@
 
     <data>
 
-
-
         <!-- ===================================================== -->
 
         <!-- FORMULARIO                                            -->
 
         <!-- ===================================================== -->
-
-
 
         <record id="modelos_maquina_form_view" model="ir.ui.view">
 
@@ -22,15 +18,9 @@
 
             <field name="arch" type="xml">
 
-
-
                 <form string="Modelo de máquina">
 
-
-
                     <header>
-
-
 
                         <button
 
@@ -48,8 +38,6 @@
 
                         />
 
-
-
                         <button
 
                             name="action_export_models_xml"
@@ -66,15 +54,9 @@
 
                         />
 
-
-
                     </header>
 
-
-
                     <sheet>
-
-
 
                         <!-- ===================================== -->
 
@@ -82,11 +64,7 @@
 
                         <!-- ===================================== -->
 
-
-
                         <div class="oe_button_box" name="button_box">
-
-
 
                             <button
 
@@ -112,8 +90,6 @@
 
                             </button>
 
-
-
                             <button
 
                                 class="oe_stat_button"
@@ -137,8 +113,6 @@
                                 />
 
                             </button>
-
-
 
                             <button
 
@@ -164,19 +138,13 @@
 
                             </button>
 
-
-
                         </div>
-
-
 
                         <!-- ===================================== -->
 
                         <!-- TÍTULO                                -->
 
                         <!-- ===================================== -->
-
-
 
                         <div class="oe_title">
 
@@ -196,27 +164,17 @@
 
                         </div>
 
-
-
                         <!-- ===================================== -->
 
                         <!-- INFORMACIÓN PRINCIPAL                 -->
 
                         <!-- ===================================== -->
 
-
-
                         <group>
-
-
 
                             <group string="Información básica">
 
-
-
                                 <field name="marca_id"/>
-
-
 
                                 <field
 
@@ -226,8 +184,6 @@
 
                                 />
 
-
-
                                 <field
 
                                     name="codigo_tecnico"
@@ -236,15 +192,9 @@
 
                                 />
 
-
-
                                 <field name="tipo_id"/>
 
-
-
                                 <field name="tipo_maquina_id"/>
-
-
 
                                 <field
 
@@ -254,8 +204,6 @@
 
                                 />
 
-
-
                                 <field
 
                                     name="gestionar_toner_automatico"
@@ -264,15 +212,9 @@
 
                                 />
 
-
-
                             </group>
 
-
-
                             <group string="Identificación XML">
-
-
 
                                 <field
 
@@ -290,8 +232,6 @@
 
                                 />
 
-
-
                                 <field
 
                                     name="external_id_display"
@@ -301,8 +241,6 @@
                                     placeholder="Pendiente de generar"
 
                                 />
-
-
 
                                 <field
 
@@ -314,8 +252,6 @@
 
                                 />
 
-
-
                                 <field
 
                                     name="external_id_generated_by"
@@ -326,23 +262,13 @@
 
                                 />
 
-
-
                             </group>
-
-
 
                         </group>
 
-
-
                         <group>
 
-
-
                             <group string="Información comercial">
-
-
 
                                 <field
 
@@ -351,8 +277,6 @@
                                     string="Moneda"
 
                                 />
-
-
 
                                 <field
 
@@ -364,15 +288,9 @@
 
                                 />
 
-
-
                             </group>
 
-
-
                             <group string="Configuración técnica">
-
-
 
                                 <field
 
@@ -382,8 +300,6 @@
 
                                 />
 
-
-
                                 <field
 
                                     name="total_accesorios"
@@ -391,8 +307,6 @@
                                     readonly="1"
 
                                 />
-
-
 
                                 <field
 
@@ -402,23 +316,15 @@
 
                                 />
 
-
-
                             </group>
 
-
-
                         </group>
-
-
 
                         <!-- ===================================== -->
 
                         <!-- MENSAJES XML                          -->
 
                         <!-- ===================================== -->
-
-
 
                         <div
 
@@ -435,8 +341,6 @@
                             de exportarlo a XML.
 
                         </div>
-
-
 
                         <div
 
@@ -462,8 +366,6 @@
 
                         </div>
 
-
-
                         <div
 
                             class="alert alert-danger"
@@ -478,19 +380,13 @@
 
                         </div>
 
-
-
                         <notebook>
-
-
 
                             <!-- ================================= -->
 
                             <!-- CONFIGURACIÓN GENERAL             -->
 
                             <!-- ================================= -->
-
-
 
                             <page
 
@@ -500,11 +396,7 @@
 
                             >
 
-
-
                                 <group>
-
-
 
                                     <group
 
@@ -513,8 +405,6 @@
                                         invisible="not id"
 
                                     >
-
-
 
                                         <field
 
@@ -532,8 +422,6 @@
 
                                         />
 
-
-
                                         <button
 
                                             name="action_copiar_desde_modelo"
@@ -550,11 +438,7 @@
 
                                         />
 
-
-
                                     </group>
-
-
 
                                     <group
 
@@ -563,8 +447,6 @@
                                         invisible="not id"
 
                                     >
-
-
 
                                         <button
 
@@ -580,8 +462,6 @@
 
                                         />
 
-
-
                                         <button
 
                                             name="action_ver_accesorios"
@@ -596,15 +476,9 @@
 
                                         />
 
-
-
                                     </group>
 
-
-
                                 </group>
-
-
 
                                 <div class="alert alert-info">
 
@@ -618,197 +492,349 @@
 
                                 </div>
 
-
-
                             </page>
+
                             <!-- ================================= -->
+
                             <!-- CONFIGURACIÓN DE TÓNER             -->
+
                             <!-- ================================= -->
 
                             <page string="Configuración de tóner" name="toner_config">
 
                                 <div class="alert alert-info">
+
                                     Seleccione el modelo de tóner desde el catálogo maestro.
+
                                     Al seleccionarlo se completan automáticamente la referencia,
+
                                     el código de parte y la duración utilizada por los procesos
+
                                     actuales. Los campos existentes se mantienen para compatibilidad
+
                                     con pedidos, cálculos y alertas.
+
                                 </div>
 
                                 <!-- NEGRO -->
+
                                 <div class="card border-dark mb-3">
+
                                     <div class="card-header">
+
                                         <strong>Tóner negro</strong>
+
                                     </div>
+
                                     <div class="card-body">
+
                                         <group>
+
                                             <group string="Catálogo maestro">
+
                                                 <field name="toner_black_id"
+
                                                        placeholder="Seleccione el modelo de tóner negro"/>
+
                                             </group>
+
                                             <group string="Datos aplicados">
+
                                                 <field name="toner_modelo_black"
+
                                                        placeholder="Ejemplo: TN-324K"
+
                                                        readonly="toner_black_id"/>
+
                                                 <field name="toner_codigo_parte_black"
+
                                                        placeholder="Ejemplo: A8DA130"
+
                                                        readonly="toner_black_id"/>
+
                                                 <field name="durabilidad_toner_black"
+
                                                        string="Duración aplicada"
+
                                                        readonly="toner_black_id"/>
+
                                                 <field name="stock_minimo_black"/>
+
                                             </group>
+
                                         </group>
+
                                         <div class="alert alert-light border mt-2"
+
                                              invisible="not toner_black_id">
+
                                             La referencia, el código de parte y la duración
+
                                             provienen del modelo de tóner seleccionado.
+
                                         </div>
+
                                     </div>
+
                                 </div>
 
                                 <!-- CIAN -->
+
                                 <div class="card border-info mb-3"
+
                                      invisible="tipo_id != 'color'">
+
                                     <div class="card-header">
+
                                         <strong>Tóner cian</strong>
+
                                     </div>
+
                                     <div class="card-body">
+
                                         <group>
+
                                             <group string="Catálogo maestro">
+
                                                 <field name="toner_cyan_id"
+
                                                        placeholder="Seleccione el modelo de tóner cian"/>
+
                                             </group>
+
                                             <group string="Datos aplicados">
+
                                                 <field name="toner_modelo_cyan"
+
                                                        placeholder="Ejemplo: TN-324C"
+
                                                        readonly="toner_cyan_id"/>
+
                                                 <field name="toner_codigo_parte_cyan"
+
                                                        placeholder="Código OEM"
+
                                                        readonly="toner_cyan_id"/>
+
                                                 <field name="durabilidad_toner_cyan"
+
                                                        string="Duración aplicada"
+
                                                        readonly="toner_cyan_id"/>
+
                                                 <field name="stock_minimo_cyan"/>
+
                                             </group>
+
                                         </group>
+
                                         <div class="alert alert-light border mt-2"
+
                                              invisible="not toner_cyan_id">
+
                                             La referencia, el código de parte y la duración
+
                                             provienen del modelo de tóner seleccionado.
+
                                         </div>
+
                                     </div>
+
                                 </div>
 
                                 <!-- MAGENTA -->
+
                                 <div class="card border-danger mb-3"
+
                                      invisible="tipo_id != 'color'">
+
                                     <div class="card-header">
+
                                         <strong>Tóner magenta</strong>
+
                                     </div>
+
                                     <div class="card-body">
+
                                         <group>
+
                                             <group string="Catálogo maestro">
+
                                                 <field name="toner_magenta_id"
+
                                                        placeholder="Seleccione el modelo de tóner magenta"/>
+
                                             </group>
+
                                             <group string="Datos aplicados">
+
                                                 <field name="toner_modelo_magenta"
+
                                                        placeholder="Ejemplo: TN-324M"
+
                                                        readonly="toner_magenta_id"/>
+
                                                 <field name="toner_codigo_parte_magenta"
+
                                                        placeholder="Código OEM"
+
                                                        readonly="toner_magenta_id"/>
+
                                                 <field name="durabilidad_toner_magenta"
+
                                                        string="Duración aplicada"
+
                                                        readonly="toner_magenta_id"/>
+
                                                 <field name="stock_minimo_magenta"/>
+
                                             </group>
+
                                         </group>
+
                                         <div class="alert alert-light border mt-2"
+
                                              invisible="not toner_magenta_id">
+
                                             La referencia, el código de parte y la duración
+
                                             provienen del modelo de tóner seleccionado.
+
                                         </div>
+
                                     </div>
+
                                 </div>
 
                                 <!-- AMARILLO -->
+
                                 <div class="card border-warning mb-3"
+
                                      invisible="tipo_id != 'color'">
+
                                     <div class="card-header">
+
                                         <strong>Tóner amarillo</strong>
+
                                     </div>
+
                                     <div class="card-body">
+
                                         <group>
+
                                             <group string="Catálogo maestro">
+
                                                 <field name="toner_yellow_id"
+
                                                        placeholder="Seleccione el modelo de tóner amarillo"/>
+
                                             </group>
+
                                             <group string="Datos aplicados">
+
                                                 <field name="toner_modelo_yellow"
+
                                                        placeholder="Ejemplo: TN-324Y"
+
                                                        readonly="toner_yellow_id"/>
+
                                                 <field name="toner_codigo_parte_yellow"
+
                                                        placeholder="Código OEM"
+
                                                        readonly="toner_yellow_id"/>
+
                                                 <field name="durabilidad_toner_yellow"
+
                                                        string="Duración aplicada"
+
                                                        readonly="toner_yellow_id"/>
+
                                                 <field name="stock_minimo_yellow"/>
+
                                             </group>
+
                                         </group>
+
                                         <div class="alert alert-light border mt-2"
+
                                              invisible="not toner_yellow_id">
+
                                             La referencia, el código de parte y la duración
+
                                             provienen del modelo de tóner seleccionado.
+
                                         </div>
+
                                     </div>
+
                                 </div>
 
                                 <!-- FUENTE -->
+
                                 <group string="Información técnica">
+
                                     <group>
+
                                         <field name="toner_fuente_informacion"/>
+
                                         <field name="toner_fecha_verificacion"/>
+
                                     </group>
+
                                     <group>
+
                                         <field name="toner_observaciones"
+
                                                placeholder="Referencias alternativas, región o información pendiente"/>
+
                                     </group>
+
                                 </group>
 
                                 <!-- TIEMPOS Y ALERTAS -->
+
                                 <group>
+
                                     <group string="Tiempos">
+
                                         <field name="tiempo_entrega_dias"/>
+
                                         <field name="margen_seguridad_dias"/>
+
                                         <field name="tiempo_total_prevencion" readonly="1"/>
+
                                     </group>
+
                                     <group string="Alertas">
+
                                         <field name="alerta_stock_critico" widget="boolean_toggle"/>
+
                                         <field name="alerta_consumo_alto" widget="boolean_toggle"/>
+
                                         <field name="gestionar_toner_automatico" widget="boolean_toggle"/>
+
                                     </group>
+
                                 </group>
 
                                 <group string="Resumen">
+
                                     <field name="resumen_configuracion_toner"
+
                                            readonly="1"
+
                                            nolabel="1"/>
+
                                 </group>
 
                             </page>
-
-
 
                             <!-- ================================= -->
 
                             <!-- EQUIPOS ASOCIADOS                 -->
 
                             <!-- ================================= -->
-
-
 
                             <page
 
@@ -818,15 +844,9 @@
 
                             >
 
-
-
                                 <group>
 
-
-
                                     <group>
-
-
 
                                         <field
 
@@ -836,15 +856,9 @@
 
                                         />
 
-
-
                                     </group>
 
-
-
                                     <group>
-
-
 
                                         <button
 
@@ -859,8 +873,6 @@
                                             icon="fa-print"
 
                                         />
-
-
 
                                         <button
 
@@ -878,15 +890,9 @@
 
                                         />
 
-
-
                                     </group>
 
-
-
                                 </group>
-
-
 
                                 <div
 
@@ -901,8 +907,6 @@
                                     este modelo.
 
                                 </div>
-
-
 
                                 <div
 
@@ -920,37 +924,23 @@
 
                                 </div>
 
-
-
                             </page>
-
-
 
                         </notebook>
 
-
-
                     </sheet>
 
-
-
                 </form>
-
-
 
             </field>
 
         </record>
-
-
 
         <!-- ===================================================== -->
 
         <!-- LISTA                                                 -->
 
         <!-- ===================================================== -->
-
-
 
         <record id="modelos_maquina_tree_view" model="ir.ui.view">
 
@@ -960,15 +950,9 @@
 
             <field name="arch" type="xml">
 
-
-
                 <list string="Modelos de máquinas">
 
-
-
                     <field name="marca_id"/>
-
-
 
                     <field
 
@@ -978,11 +962,7 @@
 
                     />
 
-
-
                     <field name="name"/>
-
-
 
                     <field
 
@@ -992,11 +972,7 @@
 
                     />
 
-
-
                     <field name="tipo_id"/>
-
-
 
                     <field
 
@@ -1005,8 +981,6 @@
                         optional="show"
 
                     />
-
-
 
                     <field
 
@@ -1018,8 +992,6 @@
 
                     />
 
-
-
                     <field
 
                         name="toner_codigo_parte_black"
@@ -1029,8 +1001,6 @@
                         optional="hide"
 
                     />
-
-
 
                     <field
 
@@ -1042,8 +1012,6 @@
 
                     />
 
-
-
                     <field
 
                         name="toner_modelo_cyan"
@@ -1053,8 +1021,6 @@
                         optional="hide"
 
                     />
-
-
 
                     <field
 
@@ -1066,8 +1032,6 @@
 
                     />
 
-
-
                     <field
 
                         name="toner_modelo_yellow"
@@ -1078,8 +1042,6 @@
 
                     />
 
-
-
                     <field
 
                         name="external_id_display"
@@ -1089,8 +1051,6 @@
                         optional="show"
 
                     />
-
-
 
                     <field
 
@@ -1110,8 +1070,6 @@
 
                     />
 
-
-
                     <field
 
                         name="equipos_activos_count"
@@ -1121,8 +1079,6 @@
                         optional="show"
 
                     />
-
-
 
                     <button
 
@@ -1138,8 +1094,6 @@
 
                     />
 
-
-
                     <button
 
                         name="action_export_models_xml"
@@ -1154,25 +1108,17 @@
 
                     />
 
-
-
                 </list>
-
-
 
             </field>
 
         </record>
-
-
 
         <!-- ===================================================== -->
 
         <!-- BÚSQUEDA                                              -->
 
         <!-- ===================================================== -->
-
-
 
         <record id="modelos_maquina_search_view" model="ir.ui.view">
 
@@ -1182,79 +1128,45 @@
 
             <field name="arch" type="xml">
 
-
-
                 <search string="Buscar modelos de máquinas">
-
-
 
                     <field name="name"/>
 
-
-
                     <field name="codigo_tecnico"/>
-
-
 
                     <field name="marca_id"/>
 
-
-
                     <field name="familia_id"/>
-
-
 
                     <field name="tipo_id"/>
 
-
-
                     <field name="tipo_maquina_id"/>
-
-
 
                     <field name="toner_black_id"/>
 
                     <field name="toner_modelo_black"/>
 
-
-
                     <field name="toner_codigo_parte_black"/>
-
-
 
                     <field name="toner_cyan_id"/>
 
                     <field name="toner_modelo_cyan"/>
 
-
-
                     <field name="toner_codigo_parte_cyan"/>
-
-
 
                     <field name="toner_magenta_id"/>
 
                     <field name="toner_modelo_magenta"/>
 
-
-
                     <field name="toner_codigo_parte_magenta"/>
-
-
 
                     <field name="toner_yellow_id"/>
 
                     <field name="toner_modelo_yellow"/>
 
-
-
                     <field name="toner_codigo_parte_yellow"/>
 
-
-
                     <separator/>
-
-
 
                     <filter
 
@@ -1272,8 +1184,6 @@
 
                     />
 
-
-
                     <filter
 
                         string="Información pendiente"
@@ -1288,8 +1198,6 @@
 
                     />
 
-
-
                     <filter
 
                         string="Máquinas color"
@@ -1299,8 +1207,6 @@
                         domain="[('tipo_id', '=', 'color')]"
 
                     />
-
-
 
                     <filter
 
@@ -1312,8 +1218,6 @@
 
                     />
 
-
-
                     <filter
 
                         string="Con equipos activos"
@@ -1324,11 +1228,7 @@
 
                     />
 
-
-
-                    <group expand="1" string="Agrupar por">
-
-
+                    <group>
 
                         <filter
 
@@ -1340,8 +1240,6 @@
 
                         />
 
-
-
                         <filter
 
                             string="Familia"
@@ -1352,8 +1250,6 @@
 
                         />
 
-
-
                         <filter
 
                             string="Tecnología"
@@ -1363,8 +1259,6 @@
                             context="{'group_by': 'tipo_id'}"
 
                         />
-
-
 
                         <filter
 
@@ -1380,29 +1274,19 @@
 
                         />
 
-
-
                     </group>
 
-
-
                 </search>
-
-
 
             </field>
 
         </record>
-
-
 
         <!-- ===================================================== -->
 
         <!-- KANBAN                                                -->
 
         <!-- ===================================================== -->
-
-
 
         <record id="modelos_maquina_kanban_view" model="ir.ui.view">
 
@@ -1412,8 +1296,6 @@
 
             <field name="arch" type="xml">
 
-
-
                 <kanban
 
                     class="o_kanban_small_column"
@@ -1421,8 +1303,6 @@
                     sample="1"
 
                 >
-
-
 
                     <field name="name"/>
 
@@ -1442,23 +1322,13 @@
 
                     <field name="external_id_state"/>
 
-
-
                     <templates>
-
-
 
                         <t t-name="card">
 
-
-
                             <div class="d-flex flex-column gap-2">
 
-
-
                                 <div>
-
-
 
                                     <strong class="fs-5">
 
@@ -1466,15 +1336,11 @@
 
                                     </strong>
 
-
-
                                     <div class="text-muted">
 
                                         <field name="marca_id"/>
 
                                     </div>
-
-
 
                                     <div
 
@@ -1488,19 +1354,11 @@
 
                                     </div>
 
-
-
                                 </div>
-
-
 
                                 <div>
 
-
-
                                     <strong>Tóner negro:</strong>
-
-
 
                                     <span
 
@@ -1511,8 +1369,6 @@
                                         <field name="toner_modelo_black"/>
 
                                     </span>
-
-
 
                                     <span
 
@@ -1526,11 +1382,7 @@
 
                                     </span>
 
-
-
                                 </div>
-
-
 
                                 <div
 
@@ -1544,8 +1396,6 @@
 
                                 </div>
 
-
-
                                 <div>
 
                                     <strong>Fabricante:</strong>
@@ -1556,19 +1406,13 @@
 
                                 </div>
 
-
-
                                 <div class="d-flex justify-content-between">
-
-
 
                                     <span>
 
                                         <field name="tipo_id"/>
 
                                     </span>
-
-
 
                                     <span>
 
@@ -1578,41 +1422,25 @@
 
                                     </span>
 
-
-
                                 </div>
-
-
 
                             </div>
 
-
-
                         </t>
-
-
 
                     </templates>
 
-
-
                 </kanban>
-
-
 
             </field>
 
         </record>
-
-
 
         <!-- ===================================================== -->
 
         <!-- ACCIONES MASIVAS                                      -->
 
         <!-- ===================================================== -->
-
-
 
         <record
 
@@ -1636,8 +1464,6 @@
 
         </record>
 
-
-
         <record
 
             id="server_action_export_models_xml"
@@ -1659,8 +1485,6 @@
             <field name="code">action = records.action_export_models_xml()</field>
 
         </record>
-
-
 
     </data>
 

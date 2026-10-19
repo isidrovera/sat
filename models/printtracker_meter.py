@@ -63,12 +63,17 @@ class PrintTrackerMeter(models.Model):
                                help='Indica si es la lectura más reciente del dispositivo')
     
     # Constrains para evitar duplicados
-    _sql_constraints = [
-        ('unique_pt_meter', 'UNIQUE(pt_meter_id)', 
-         'ID de medidor PrintTracker debe ser único'),
-        ('unique_device_date', 'UNIQUE(device_id, reading_date)', 
-         'Solo puede haber una lectura por dispositivo por fecha/hora exacta')
-    ]
+    
+    _unique_pt_meter = models.Constraint(
+        'UNIQUE(pt_meter_id)',
+        'ID de medidor PrintTracker debe ser único',
+    )
+
+    _unique_device_date = models.Constraint(
+        'UNIQUE(device_id, reading_date)',
+        'Solo puede haber una lectura por dispositivo por fecha/hora exacta',
+    )
+
 
     @api.depends('device_id', 'reading_date', 'total_pages_life')
     def _compute_display_name(self):

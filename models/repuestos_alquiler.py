@@ -10,8 +10,11 @@ from io import BytesIO
 import base64
 import re
 
+
 class repuestos_alquiler(models.Model):
     _name = 'repuestos.alquiler'
+    _description = 'Repuestos de Equipos en Alquiler'
+
     name = fields.Char("Descripción")
 
     cliente_id = fields.Char("Cliente")

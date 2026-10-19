@@ -571,48 +571,47 @@ class SatMonitoringAgent(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_monitoring_agent_code_unique',
-            'unique(code)',
-            'El código técnico del agente ya está siendo utilizado.',
-        ),
-        (
-            'sat_monitoring_agent_heartbeat_positive',
-            'CHECK(heartbeat_interval > 0)',
-            'El intervalo heartbeat debe ser mayor que cero.',
-        ),
-        (
-            'sat_monitoring_agent_offline_positive',
-            'CHECK(offline_after_seconds > 0)',
-            'El tiempo para considerar offline debe ser mayor que cero.',
-        ),
-        (
-            'sat_monitoring_agent_discovery_positive',
-            'CHECK(discovery_interval >= 0)',
-            'El intervalo discovery no puede ser negativo.',
-        ),
-        (
-            'sat_monitoring_agent_poll_positive',
-            'CHECK(default_poll_interval > 0)',
-            'El intervalo de polling debe ser mayor que cero.',
-        ),
-        (
-            'sat_monitoring_agent_parallel_hosts_positive',
-            'CHECK(max_parallel_hosts > 0)',
-            'La cantidad de hosts simultáneos debe ser mayor que cero.',
-        ),
-        (
-            'sat_monitoring_agent_parallel_snmp_positive',
-            'CHECK(max_parallel_snmp > 0)',
-            'La cantidad de consultas SNMP simultáneas debe ser mayor que cero.',
-        ),
-        (
-            'sat_monitoring_agent_config_revision_positive',
-            'CHECK(config_revision > 0)',
-            'La revisión de configuración debe ser mayor que cero.',
-        ),
-    ]
+    
+    _sat_monitoring_agent_code_unique = models.Constraint(
+        'UNIQUE(code)',
+        'El código técnico del agente ya está siendo utilizado.',
+    )
+
+    _sat_monitoring_agent_heartbeat_positive = models.Constraint(
+        'CHECK(heartbeat_interval > 0)',
+        'El intervalo heartbeat debe ser mayor que cero.',
+    )
+
+    _sat_monitoring_agent_offline_positive = models.Constraint(
+        'CHECK(offline_after_seconds > 0)',
+        'El tiempo para considerar offline debe ser mayor que cero.',
+    )
+
+    _sat_monitoring_agent_discovery_positive = models.Constraint(
+        'CHECK(discovery_interval >= 0)',
+        'El intervalo discovery no puede ser negativo.',
+    )
+
+    _sat_monitoring_agent_poll_positive = models.Constraint(
+        'CHECK(default_poll_interval > 0)',
+        'El intervalo de polling debe ser mayor que cero.',
+    )
+
+    _sat_monitoring_agent_parallel_hosts_positive = models.Constraint(
+        'CHECK(max_parallel_hosts > 0)',
+        'La cantidad de hosts simultáneos debe ser mayor que cero.',
+    )
+
+    _sat_monitoring_agent_parallel_snmp_positive = models.Constraint(
+        'CHECK(max_parallel_snmp > 0)',
+        'La cantidad de consultas SNMP simultáneas debe ser mayor que cero.',
+    )
+
+    _sat_monitoring_agent_config_revision_positive = models.Constraint(
+        'CHECK(config_revision > 0)',
+        'La revisión de configuración debe ser mayor que cero.',
+    )
+
 
     # ========================================================
     # COMPUTES

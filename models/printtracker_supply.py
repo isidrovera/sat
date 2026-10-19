@@ -220,20 +220,22 @@ class PrintTrackerSupply(models.Model):
 
     # Constrains
 
-    _sql_constraints = [
+    
+    _unique_supply_key = models.Constraint(
+        'UNIQUE(device_id, supply_key)',
+        'Clave de suministro PrintTracker debe ser única por equipo',
+    )
 
-        ('unique_supply_key', 'UNIQUE(device_id, supply_key)',
-         'Clave de suministro PrintTracker debe ser única por equipo'),
+    _positive_percent = models.Constraint(
+        'CHECK(percent_remaining >= 0 AND percent_remaining <= 100)',
+        'Porcentaje restante debe estar entre 0 y 100',
+    )
 
-        ('positive_percent', 'CHECK(percent_remaining >= 0 AND percent_remaining <= 100)',
+    _positive_levels = models.Constraint(
+        'CHECK(current_level >= 0 AND max_level >= 0)',
+        'Niveles deben ser positivos',
+    )
 
-         'Porcentaje restante debe estar entre 0 y 100'),
-
-        ('positive_levels', 'CHECK(current_level >= 0 AND max_level >= 0)',
-
-         'Niveles deben ser positivos')
-
-    ]
 
 
 

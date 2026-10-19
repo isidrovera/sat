@@ -634,9 +634,12 @@ class Reparaciones(models.Model):
     
     maquina_id = fields.Many2one('sat.sat', string='Maquina',  tracking=True )
      # Restricción SQL para evitar duplicados de serie_id
-    _sql_constraints = [
-        ('unique_serie_id', 'unique(serie_id)', 'El número de serie ya existe.')
-    ]
+    
+    _unique_serie_id = models.Constraint(
+        'UNIQUE(serie_id)',
+        'El número de serie ya existe.',
+    )
+
     
 
     marca = fields.Char(string='Marca', related='maquina_id.marca', readonly=True, store=True)
@@ -656,12 +659,14 @@ class Reparaciones(models.Model):
     ubicacion_id = fields.Selection(related='maquina_id.ubicacion_id', readonly=True, store=True)
     prioridad = fields.Selection(related='maquina_id.prioridad',readonly=True,store=True)
 
-    estado_id = fields.Selection([('sin_revisar', 'Sin revisar'),('para_revision', 'Para revision'),('en_revision', 'En revisión'), ('finalizado', 'Finalizado'), ('con_problemas', 'Con problemas'), ('de_partes', 'De partes'), ('entregada', 'Entregada')],
-                                 string='Estado de revisión',
-                                 related='maquina_id.estado_ventas_id',
-                                 readonly=False,
-                                         store=True,                                         
-                                 )
+    
+    estado_id = fields.Selection(
+        string='Estado de revisión',
+        related='maquina_id.estado_ventas_id',
+        readonly=False,
+        store=True,
+    )
+
     serie_id = fields.Char(string='Serie', related='maquina_id.serie_id', readonly=False, store=True )
     # Campos de estado físico exterior
     tapas_id = fields.Selection([
@@ -694,10 +699,13 @@ class Reparaciones(models.Model):
         ('no', 'Sin Disco Duro Interno Instalado')
     ], string='Estado del Disco Duro', tracking=True)
 
-    tipo_id = fields.Selection([
-        ('color', 'Equipo Multifuncional a Color (CMYK)'),
-        ('monocromatica', 'Equipo Multifuncional Monocromático')
-    ], string='Tipo de Sistema Multifuncional', related='maquina_id.tipo_id', readonly=True)
+    
+    tipo_id = fields.Selection(
+        string='Tipo de Sistema Multifuncional',
+        related='maquina_id.tipo_id',
+        readonly=True
+    )
+
 
     tray_id = fields.Char("Número Total de Bandejas de Papel Instaladas", tracking=True)
 
@@ -1008,17 +1016,32 @@ class Reparaciones(models.Model):
     )
 
    
-    @api.depends('maquina_id.cliente_id.asesora_id.mobile')
+    
+    @api.depends('maquina_id.cliente_id.asesora_id.phone')
     def _compute_asesora_mobile_clean(self):
         for record in self:
-            if record.maquina_id.cliente_id.asesora_id.mobile:
-                phone = record.maquina_id.cliente_id.asesora_id.mobile.replace('+', '')
-                phone = ''.join(phone.split())
-                if not phone.startswith('51'):
+            asesora = record.maquina_id.cliente_id.asesora_id
+            phone = asesora.phone or ''
+
+            if phone:
+                # Conservar solo números
+                phone = ''.join(
+                    char for char in phone
+                    if char.isdigit()
+                )
+
+                # Eliminar prefijo internacional 00
+                if phone.startswith('00'):
+                    phone = phone[2:]
+
+                # Agregar código de Perú
+                if phone and not phone.startswith('51'):
                     phone = '51' + phone
+
                 record.asesora_mobile_clean = phone
             else:
                 record.asesora_mobile_clean = ''
+
 
     solicitudes_parte_tecnico_ids = fields.One2many(
     'solicitud.parte.tecnico', 'reparacion_id', string='Solicitudes de Partes Técnico')
@@ -1925,6 +1948,8 @@ class Reparaciones(models.Model):
 
 class ReportReparacionView(models.AbstractModel):
     _name = 'report.sat.report_reparaciones_ventas'
+    _description = 'Reporte de Reparaciones y Ventas'
+
 
     @api.model
     def _get_report_values(self, docids, data=None):

@@ -1993,13 +1993,13 @@ class TicketRepuestoPedido(models.Model):
 
 
 
+
 class TicketRepuestoPedidoLinea(models.Model):
-
     _name = 'ticket.repuesto.pedido.linea'
-
     _description = 'Línea de Pedido de Repuestos de Ticket'
-
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'pedido_id, id'
+
 
 
 

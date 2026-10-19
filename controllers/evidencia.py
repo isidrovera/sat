@@ -530,7 +530,7 @@ class EvidenciaController(http.Controller):
 
     @http.route(
         '/evidencia/<string:token>/geocode',
-        type='json',
+        type='jsonrpc',
         auth='public',
         csrf=False,
         methods=['POST']
@@ -632,7 +632,7 @@ class EvidenciaController(http.Controller):
 
     @http.route(
         '/evidencia/<string:token>/upload',
-        type='json',
+        type='jsonrpc',
         auth='public',
         csrf=False,
         methods=['POST']

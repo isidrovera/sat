@@ -4,12 +4,13 @@ class opciones_cliente(models.Model):
 
     _inherit = 'res.partner'
 
+    
     asesora_id = fields.Many2one(
         'res.partner',
         string='Asesora',
-        required=True
-
+        required=False,
     )
+
     tipo_cliente = fields.Selection([('alquiler', 'Alquiler'), ('distribuidor', 'Distribuidor'),
                                      ('proveedor', 'Proveedor')], default="distribuidor",
                                     string='Tipo de cliente',

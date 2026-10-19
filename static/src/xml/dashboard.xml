@@ -1,264 +1,254 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <templates>
-    <t t-name="sat.DashboardTemplate">
-        <div class="raw main-section dashboard-container">
-            <div class="content-scroll">
-
-                <!-- Header -->
-               
-
-                <!-- Máquinas -->
-                <div class="dashboard-section">
-                    <h3 class="section-title">
-                        <i class="ri-printer-line"></i>
+  <t t-name="sat.DashboardTemplate">
+    <div class="raw main-section dashboard-container sat-dashboard-v2">
+      <div class="content-scroll"><header class="dashboard-header"><div class="dashboard-brand"><div class="dashboard-brand-icon"><i class="ri-dashboard-3-line"/></div><div class="dashboard-brand-copy"><h1 class="dashboard-title">Panel Principal SAT</h1><p class="dashboard-subtitle">Máquinas, reparaciones, soporte, alquileres y control de equipos</p></div></div></header><nav class="dashboard-quick-nav" aria-label="Secciones del dashboard"><a class="dashboard-nav-link" href="#sat-maquinas"><i class="ri-printer-line"/><span>Máquinas</span></a><a class="dashboard-nav-link" href="#sat-reparaciones"><i class="ri-tools-line"/><span>Reparaciones</span></a><a class="dashboard-nav-link" href="#sat-soporte"><i class="ri-customer-service-2-line"/><span>Soporte</span></a><a class="dashboard-nav-link" href="#sat-alquileres"><i class="ri-archive-line"/><span>Alquileres</span></a><a class="dashboard-nav-link" href="#sat-control"><i class="ri-shield-check-line"/><span>Control de equipos</span></a><a class="dashboard-nav-link" href="#sat-estadisticas"><i class="ri-bar-chart-box-line"/><span>Estadísticas</span></a></nav><div class="dashboard-section dashboard-section-v2" id="sat-maquinas">
+                    <div class="dashboard-section-heading"><h2 class="section-title">
+                        <i class="ri-printer-line"/>
                         Gestión de Máquinas
-                    </h3>
-                    <div class="dashboard-tiles maquinas-tiles">
+                    </h2>
+                    </div><div class="dashboard-tiles maquinas-tiles">
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_total_maquinas">
+                            <div class="oh-card sat-kpi-card" id="tile_total_maquinas">
                                 <div class="oh-card-body">
-                                    <i class="ri-printer-fill"></i><div class="kpi-info"><span class="metric-value" id="total_maquinas">0</span><h3>Total Máquinas</h3></div></div>
+                                    <i class="ri-printer-fill"/><div class="kpi-info"><span class="metric-value" id="total_maquinas">0</span><h3>Total Máquinas</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_maquinas_disponibles">
+                            <div class="oh-card sat-kpi-card" id="tile_maquinas_disponibles">
                                 <div class="oh-card-body">
-                                    <i class="ri-checkbox-circle-fill"></i><div class="kpi-info"><span class="metric-value" id="maquinas_disponibles">0</span><h3>Disponibles</h3></div></div>
+                                    <i class="ri-checkbox-circle-fill"/><div class="kpi-info"><span class="metric-value" id="maquinas_disponibles">0</span><h3>Disponibles</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_maquinas_separadas">
+                            <div class="oh-card sat-kpi-card" id="tile_maquinas_separadas">
                                 <div class="oh-card-body">
-                                    <i class="ri-pause-circle-fill"></i><div class="kpi-info"><span class="metric-value" id="maquinas_separadas">0</span><h3>Separadas</h3></div></div>
+                                    <i class="ri-pause-circle-fill"/><div class="kpi-info"><span class="metric-value" id="maquinas_separadas">0</span><h3>Separadas</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_maquinas_con_problemas">
+                            <div class="oh-card sat-kpi-card" id="tile_maquinas_con_problemas">
                                 <div class="oh-card-body">
-                                    <i class="ri-error-warning-fill"></i><div class="kpi-info"><span class="metric-value" id="maquinas_con_problemas">0</span><h3>Con Problemas</h3></div></div>
+                                    <i class="ri-error-warning-fill"/><div class="kpi-info"><span class="metric-value" id="maquinas_con_problemas">0</span><h3>Con Problemas</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_maquinas_de_partes">
+                            <div class="oh-card sat-kpi-card" id="tile_maquinas_de_partes">
                                 <div class="oh-card-body">
-                                    <i class="ri-tools-fill"></i><div class="kpi-info"><span class="metric-value" id="maquinas_de_partes">0</span><h3>Para Partes</h3></div></div>
+                                    <i class="ri-tools-fill"/><div class="kpi-info"><span class="metric-value" id="maquinas_de_partes">0</span><h3>Para Partes</h3></div></div>
                             </div>
                         </div>
 
                     </div>
                 </div>
 
-                <!-- Reparaciones -->
-                <div class="dashboard-section">
-                    <h3 class="section-title">
-                        <i class="ri-tools-line"></i>
+                <div class="dashboard-section dashboard-section-v2" id="sat-reparaciones">
+                    <div class="dashboard-section-heading"><h2 class="section-title">
+                        <i class="ri-tools-line"/>
                         Centro de Reparaciones
-                    </h3>
-                    <div class="dashboard-tiles reparaciones-tiles">
+                    </h2>
+                    </div><div class="dashboard-tiles reparaciones-tiles">
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_total_reparaciones">
+                            <div class="oh-card sat-kpi-card" id="tile_total_reparaciones">
                                 <div class="oh-card-body">
-                                    <i class="ri-hammer-fill"></i><div class="kpi-info"><span class="metric-value" id="total_reparaciones">0</span><h3>Total Reparaciones</h3></div></div>
+                                    <i class="ri-hammer-fill"/><div class="kpi-info"><span class="metric-value" id="total_reparaciones">0</span><h3>Total Reparaciones</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_maquinas_sin_revisar">
+                            <div class="oh-card sat-kpi-card" id="tile_maquinas_sin_revisar">
                                 <div class="oh-card-body">
-                                    <i class="ri-alert-fill"></i><div class="kpi-info"><span class="metric-value" id="maquinas_sin_revisar">0</span><h3>Sin Revisar</h3></div></div>
+                                    <i class="ri-alert-fill"/><div class="kpi-info"><span class="metric-value" id="maquinas_sin_revisar">0</span><h3>Sin Revisar</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_maquinas_para_revision">
+                            <div class="oh-card sat-kpi-card" id="tile_maquinas_para_revision">
                                 <div class="oh-card-body">
-                                    <i class="ri-search-eye-fill"></i><div class="kpi-info"><span class="metric-value" id="maquinas_para_revision">0</span><h3>Para Revisión</h3></div></div>
+                                    <i class="ri-search-eye-fill"/><div class="kpi-info"><span class="metric-value" id="maquinas_para_revision">0</span><h3>Para Revisión</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_reparaciones_en_revision">
+                            <div class="oh-card sat-kpi-card" id="tile_reparaciones_en_revision">
                                 <div class="oh-card-body">
-                                    <i class="ri-loader-4-fill"></i><div class="kpi-info"><span class="metric-value" id="reparaciones_en_revision">0</span><h3>En Revisión</h3></div></div>
+                                    <i class="ri-loader-4-fill"/><div class="kpi-info"><span class="metric-value" id="reparaciones_en_revision">0</span><h3>En Revisión</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_reparaciones_finalizado">
+                            <div class="oh-card sat-kpi-card" id="tile_reparaciones_finalizado">
                                 <div class="oh-card-body">
-                                    <i class="ri-check-double-fill"></i><div class="kpi-info"><span class="metric-value" id="reparaciones_finalizado">0</span><h3>Finalizadas</h3></div></div>
+                                    <i class="ri-check-double-fill"/><div class="kpi-info"><span class="metric-value" id="reparaciones_finalizado">0</span><h3>Finalizadas</h3></div></div>
                             </div>
                         </div>
 
                     </div>
                 </div>
 
-                <!-- Soporte -->
-                <div class="dashboard-section">
-                    <h3 class="section-title">
-                        <i class="ri-customer-service-2-line"></i>
+                <div class="dashboard-section dashboard-section-v2" id="sat-soporte">
+                    <div class="dashboard-section-heading"><h2 class="section-title">
+                        <i class="ri-customer-service-2-line"/>
                         Centro de Soporte
-                    </h3>
-                    <div class="dashboard-tiles tickets-tiles">
+                    </h2>
+                    </div><div class="dashboard-tiles tickets-tiles">
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_total_tickets">
+                            <div class="oh-card sat-kpi-card" id="tile_total_tickets">
                                 <div class="oh-card-body">
-                                    <i class="ri-ticket-2-fill"></i><div class="kpi-info"><span class="metric-value" id="total_tickets">0</span><h3>Total Tickets</h3></div></div>
+                                    <i class="ri-ticket-2-fill"/><div class="kpi-info"><span class="metric-value" id="total_tickets">0</span><h3>Total Tickets</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_tickets_nuevos">
+                            <div class="oh-card sat-kpi-card" id="tile_tickets_nuevos">
                                 <div class="oh-card-body">
-                                    <i class="ri-add-circle-fill"></i><div class="kpi-info"><span class="metric-value" id="tickets_nuevos">0</span><h3>Nuevos</h3></div></div>
+                                    <i class="ri-add-circle-fill"/><div class="kpi-info"><span class="metric-value" id="tickets_nuevos">0</span><h3>Nuevos</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_tickets_proceso">
+                            <div class="oh-card sat-kpi-card" id="tile_tickets_proceso">
                                 <div class="oh-card-body">
-                                    <i class="ri-settings-5-fill"></i><div class="kpi-info"><span class="metric-value" id="tickets_proceso">0</span><h3>En Proceso</h3></div></div>
+                                    <i class="ri-settings-5-fill"/><div class="kpi-info"><span class="metric-value" id="tickets_proceso">0</span><h3>En Proceso</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_tickets_en_ruta">
+                            <div class="oh-card sat-kpi-card" id="tile_tickets_en_ruta">
                                 <div class="oh-card-body">
-                                    <i class="ri-car-fill"></i><div class="kpi-info"><span class="metric-value" id="tickets_en_ruta">0</span><h3>En Ruta</h3></div></div>
+                                    <i class="ri-car-fill"/><div class="kpi-info"><span class="metric-value" id="tickets_en_ruta">0</span><h3>En Ruta</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_tickets_en_sitio">
+                            <div class="oh-card sat-kpi-card" id="tile_tickets_en_sitio">
                                 <div class="oh-card-body">
-                                    <i class="ri-map-pin-fill"></i><div class="kpi-info"><span class="metric-value" id="tickets_en_sitio">0</span><h3>En Sitio</h3></div></div>
+                                    <i class="ri-map-pin-fill"/><div class="kpi-info"><span class="metric-value" id="tickets_en_sitio">0</span><h3>En Sitio</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_tickets_en_revision">
+                            <div class="oh-card sat-kpi-card" id="tile_tickets_en_revision">
                                 <div class="oh-card-body">
-                                    <i class="ri-tools-fill"></i><div class="kpi-info"><span class="metric-value" id="tickets_en_revision">0</span><h3>En Revisión</h3></div></div>
+                                    <i class="ri-tools-fill"/><div class="kpi-info"><span class="metric-value" id="tickets_en_revision">0</span><h3>En Revisión</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_tickets_finalizado">
+                            <div class="oh-card sat-kpi-card" id="tile_tickets_finalizado">
                                 <div class="oh-card-body">
-                                    <i class="ri-check-line"></i><div class="kpi-info"><span class="metric-value" id="tickets_finalizado">0</span><h3>Finalizados</h3></div></div>
+                                    <i class="ri-check-line"/><div class="kpi-info"><span class="metric-value" id="tickets_finalizado">0</span><h3>Finalizados</h3></div></div>
                             </div>
                         </div>
 
                     </div>
                 </div>
 
-                <!-- Alquileres -->
-                <div class="dashboard-section">
-                    <h3 class="section-title">
-                        <i class="ri-archive-line"></i>
+                <div class="dashboard-section dashboard-section-v2" id="sat-alquileres">
+                    <div class="dashboard-section-heading"><h2 class="section-title">
+                        <i class="ri-archive-line"/>
                         Gestión de Alquileres
-                    </h3>
-                    <div class="dashboard-tiles alquiler-tiles">
+                    </h2>
+                    </div><div class="dashboard-tiles alquiler-tiles">
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_total_maquinas_alquiler">
+                            <div class="oh-card sat-kpi-card" id="tile_total_maquinas_alquiler">
                                 <div class="oh-card-body">
-                                    <i class="ri-archive-fill"></i><div class="kpi-info"><span class="metric-value" id="total_maquinas_alquiler">0</span><h3>Total Alquileres</h3></div></div>
+                                    <i class="ri-archive-fill"/><div class="kpi-info"><span class="metric-value" id="total_maquinas_alquiler">0</span><h3>Total Alquileres</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_alquiler_alquilada">
+                            <div class="oh-card sat-kpi-card" id="tile_alquiler_alquilada">
                                 <div class="oh-card-body">
-                                    <i class="ri-archive-fill"></i><div class="kpi-info"><span class="metric-value" id="alquiler_alquilada">0</span><h3>Alquiladas</h3></div></div>
+                                    <i class="ri-archive-fill"/><div class="kpi-info"><span class="metric-value" id="alquiler_alquilada">0</span><h3>Alquiladas</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_alquiler_sin_revisar">
+                            <div class="oh-card sat-kpi-card" id="tile_alquiler_sin_revisar">
                                 <div class="oh-card-body">
-                                    <i class="ri-error-warning-line"></i><div class="kpi-info"><span class="metric-value" id="alquiler_sin_revisar">0</span><h3>Sin Revisar</h3></div></div>
+                                    <i class="ri-error-warning-line"/><div class="kpi-info"><span class="metric-value" id="alquiler_sin_revisar">0</span><h3>Sin Revisar</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_alquiler_revisada">
+                            <div class="oh-card sat-kpi-card" id="tile_alquiler_revisada">
                                 <div class="oh-card-body">
-                                    <i class="ri-check-circle-line"></i><div class="kpi-info"><span class="metric-value" id="alquiler_revisada">0</span><h3>Revisada</h3></div></div>
+                                    <i class="ri-check-circle-line"/><div class="kpi-info"><span class="metric-value" id="alquiler_revisada">0</span><h3>Revisada</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_alquiler_lista">
+                            <div class="oh-card sat-kpi-card" id="tile_alquiler_lista">
                                 <div class="oh-card-body">
-                                    <i class="ri-checkbox-line"></i><div class="kpi-info"><span class="metric-value" id="alquiler_lista">0</span><h3>Lista</h3></div></div>
+                                    <i class="ri-checkbox-line"/><div class="kpi-info"><span class="metric-value" id="alquiler_lista">0</span><h3>Lista</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_alquiler_con_problemas">
+                            <div class="oh-card sat-kpi-card" id="tile_alquiler_con_problemas">
                                 <div class="oh-card-body">
-                                    <i class="ri-alert-line"></i><div class="kpi-info"><span class="metric-value" id="alquiler_con_problemas">0</span><h3>Con Problemas</h3></div></div>
+                                    <i class="ri-alert-line"/><div class="kpi-info"><span class="metric-value" id="alquiler_con_problemas">0</span><h3>Con Problemas</h3></div></div>
                             </div>
                         </div>
 
                     </div>
                 </div>
 
-                <!-- Sistema de Bloqueo -->
-                <div class="dashboard-section">
-                    <h3 class="section-title">
-                        <i class="ri-shield-check-line"></i>
+                <div class="dashboard-section dashboard-section-v2" id="sat-control">
+                    <div class="dashboard-section-heading"><h2 class="section-title">
+                        <i class="ri-shield-check-line"/>
                         Sistema de Control de Equipos
-                    </h3>
-                    <div class="dashboard-tiles bloqueo-tiles">
+                    </h2>
+                    </div><div class="dashboard-tiles bloqueo-tiles">
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_equipos_activos">
+                            <div class="oh-card sat-kpi-card" id="tile_equipos_activos">
                                 <div class="oh-card-body">
-                                    <i class="ri-check-double-line"></i><div class="kpi-info"><span class="metric-value" id="equipos_activos">0</span><h3>Equipos Activos</h3></div></div>
+                                    <i class="ri-check-double-line"/><div class="kpi-info"><span class="metric-value" id="equipos_activos">0</span><h3>Equipos Activos</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_equipos_suspendidos">
+                            <div class="oh-card sat-kpi-card" id="tile_equipos_suspendidos">
                                 <div class="oh-card-body">
-                                    <i class="ri-pause-line"></i><div class="kpi-info"><span class="metric-value" id="equipos_suspendidos">0</span><h3>Suspendidos</h3></div></div>
+                                    <i class="ri-pause-line"/><div class="kpi-info"><span class="metric-value" id="equipos_suspendidos">0</span><h3>Suspendidos</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_equipos_bloqueados">
+                            <div class="oh-card sat-kpi-card" id="tile_equipos_bloqueados">
                                 <div class="oh-card-body">
-                                    <i class="ri-lock-line"></i><div class="kpi-info"><span class="metric-value" id="equipos_bloqueados">0</span><h3>Bloqueados</h3></div></div>
+                                    <i class="ri-lock-line"/><div class="kpi-info"><span class="metric-value" id="equipos_bloqueados">0</span><h3>Bloqueados</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_equipos_no_accesibles">
+                            <div class="oh-card sat-kpi-card" id="tile_equipos_no_accesibles">
                                 <div class="oh-card-body">
-                                    <i class="ri-wifi-off-line"></i><div class="kpi-info"><span class="metric-value" id="equipos_no_accesibles">0</span><h3>No Accesibles</h3></div></div>
+                                    <i class="ri-wifi-off-line"/><div class="kpi-info"><span class="metric-value" id="equipos_no_accesibles">0</span><h3>No Accesibles</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_equipos_pendiente_bloqueo">
+                            <div class="oh-card sat-kpi-card" id="tile_equipos_pendiente_bloqueo">
                                 <div class="oh-card-body">
-                                    <i class="ri-time-line"></i><div class="kpi-info"><span class="metric-value" id="equipos_pendiente_bloqueo">0</span><h3>Pend. Bloqueo</h3></div></div>
+                                    <i class="ri-time-line"/><div class="kpi-info"><span class="metric-value" id="equipos_pendiente_bloqueo">0</span><h3>Pend. Bloqueo</h3></div></div>
                             </div>
                         </div>
 
                         <div class="tot_tasks">
-                            <div class="oh-card" id="tile_equipos_pendiente_desbloqueo">
+                            <div class="oh-card sat-kpi-card" id="tile_equipos_pendiente_desbloqueo">
                                 <div class="oh-card-body">
-                                    <i class="ri-unlock-line"></i><div class="kpi-info"><span class="metric-value" id="equipos_pendiente_desbloqueo">0</span><h3>Pend. Desbloqueo</h3></div></div>
+                                    <i class="ri-unlock-line"/><div class="kpi-info"><span class="metric-value" id="equipos_pendiente_desbloqueo">0</span><h3>Pend. Desbloqueo</h3></div></div>
                             </div>
                         </div>
 
@@ -270,7 +260,7 @@
                             <div class="alert-panel">
                                 <div class="alert-header">
                                     <h4>
-                                        <i class="ri-alarm-warning-line"></i>
+                                        <i class="ri-alarm-warning-line"/>
                                         Equipos que Requieren Atención
                                     </h4>
                                 </div>
@@ -282,28 +272,27 @@
                     </div>
                 </div>
 
-                <!-- Gráficos -->
-                <div class="dashboard-section">
-                    <h3 class="section-title">
-                        <i class="ri-bar-chart-box-line"></i>
+                <div class="dashboard-section dashboard-section-v2" id="sat-estadisticas">
+                    <div class="dashboard-section-heading"><h2 class="section-title">
+                        <i class="ri-bar-chart-box-line"/>
                         Análisis y Estadísticas
-                    </h3>
-                    <div class="row dashboard-charts">
+                    </h2>
+                    </div><div class="row dashboard-charts">
 
                         <!-- Disponibilidad -->
                         <div class="col-lg-6 col-md-12">
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-pie-chart-line"></i>
+                                        <i class="ri-pie-chart-line"/>
                                         Máquinas por Disponibilidad
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="chart-container">
-                                    <div id="disponibilidadChart" style="width:100%;height:100%;"></div>
+                                    <div id="disponibilidadChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -313,15 +302,15 @@
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-donut-chart-line"></i>
+                                        <i class="ri-donut-chart-line"/>
                                         Estado de Máquinas
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="chart-container">
-                                    <div id="estadoChart" style="width:100%;height:100%;"></div>
+                                    <div id="estadoChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -331,15 +320,15 @@
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-shield-check-line"></i>
+                                        <i class="ri-shield-check-line"/>
                                         Estados de Equipos Alquilados
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="chart-container">
-                                    <div id="estadosBloqueoChart" style="width:100%;height:100%;"></div>
+                                    <div id="estadosBloqueoChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -349,28 +338,28 @@
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-user-settings-line"></i>
+                                        <i class="ri-user-settings-line"/>
                                         Reparaciones por Técnico
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="filter-section mb-3 d-flex align-items-center">
                                     <label for="startDateTecnicos">
-                                        <i class="ri-calendar-line"></i> Inicio:
+                                        <i class="ri-calendar-line"/> Inicio:
                                     </label>
-                                    <input type="date" id="startDateTecnicos" class="form-control" style="width:auto;" />
+                                    <input type="date" id="startDateTecnicos" class="form-control" style="width:auto;"/>
                                     <label for="endDateTecnicos">
-                                        <i class="ri-calendar-check-line"></i> Fin:
+                                        <i class="ri-calendar-check-line"/> Fin:
                                     </label>
-                                    <input type="date" id="endDateTecnicos" class="form-control" style="width:auto;" />
+                                    <input type="date" id="endDateTecnicos" class="form-control" style="width:auto;"/>
                                     <button id="applyFilterTecnicos" class="btn btn-primary">
-                                        <i class="ri-filter-line"></i> Aplicar
+                                        <i class="ri-filter-line"/> Aplicar
                                     </button>
                                 </div>
                                 <div class="chart-container">
-                                    <div id="tecnicosChart" style="width:100%;height:100%;"></div>
+                                    <div id="tecnicosChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -380,28 +369,28 @@
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-customer-service-line"></i>
+                                        <i class="ri-customer-service-line"/>
                                         Tickets por Técnico
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="filter-section mb-3 d-flex align-items-center">
                                     <label for="startDate">
-                                        <i class="ri-calendar-line"></i> Inicio:
+                                        <i class="ri-calendar-line"/> Inicio:
                                     </label>
-                                    <input type="date" id="startDate" class="form-control" style="width:auto;" />
+                                    <input type="date" id="startDate" class="form-control" style="width:auto;"/>
                                     <label for="endDate">
-                                        <i class="ri-calendar-check-line"></i> Fin:
+                                        <i class="ri-calendar-check-line"/> Fin:
                                     </label>
-                                    <input type="date" id="endDate" class="form-control" style="width:auto;" />
+                                    <input type="date" id="endDate" class="form-control" style="width:auto;"/>
                                     <button id="applyFilter" class="btn btn-primary">
-                                        <i class="ri-filter-line"></i> Aplicar
+                                        <i class="ri-filter-line"/> Aplicar
                                     </button>
                                 </div>
                                 <div class="chart-container">
-                                    <div id="ticketsTecnicoChart" style="width:100%;height:100%;"></div>
+                                    <div id="ticketsTecnicoChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -411,15 +400,15 @@
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-calendar-2-line"></i>
+                                        <i class="ri-calendar-2-line"/>
                                         Tickets por Mes
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="chart-container">
-                                    <div id="ticketsMesChart" style="width:100%;height:100%;"></div>
+                                    <div id="ticketsMesChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -429,15 +418,15 @@
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-calendar-todo-line"></i>
+                                        <i class="ri-calendar-todo-line"/>
                                         Tickets por Año
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="chart-container">
-                                    <div id="ticketsAnoChart" style="width:100%;height:100%;"></div>
+                                    <div id="ticketsAnoChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -447,15 +436,15 @@
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-user-star-line"></i>
+                                        <i class="ri-user-star-line"/>
                                         Máquinas por Asesora
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="chart-container">
-                                    <div id="asesoraChart" style="width:100%;height:100%;"></div>
+                                    <div id="asesoraChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -465,15 +454,15 @@
                             <div class="chart-wrapper modern-chart">
                                 <div class="chart-header">
                                     <h4>
-                                        <i class="ri-building-line"></i>
+                                        <i class="ri-building-line"/>
                                         Alquileres por Cliente
                                     </h4>
                                     <button class="expand-button">
-                                        <i class="ri-fullscreen-line"></i>
+                                        <i class="ri-fullscreen-line"/>
                                     </button>
                                 </div>
                                 <div class="chart-container" style="height:400px;max-width:100%;overflow:hidden;">
-                                    <div id="alquileresClienteChart" style="width:100%;height:100%;"></div>
+                                    <div id="alquileresClienteChart" style="width:100%;height:100%;"/>
                                 </div>
                             </div>
                         </div>
@@ -481,12 +470,11 @@
                     </div>
                 </div>
 
-                <!-- Footer -->
                 <div class="row mt-4">
                     <div class="col-12 text-center">
                         <div class="footer-section">
                             <p class="text-muted">
-                                <i class="ri-copyright-line"></i>
+                                <i class="ri-copyright-line"/>
                                 2024 Sistema SAT — Desarrollado por Isidro Vera
                             </p>
                         </div>
@@ -494,6 +482,6 @@
                 </div>
 
             </div>
-        </div>
-    </t>
+    </div>
+  </t>
 </templates>

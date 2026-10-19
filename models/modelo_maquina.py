@@ -93,13 +93,12 @@ class ModelosMaquina(models.Model):
         compute='_compute_totales_config',
     )
 
-    _sql_constraints = [
-        (
-            'unique_marca_codigo_tecnico_modelo',
-            'unique(marca_id, codigo_tecnico)',
-            'Ya existe un modelo con este código técnico para la marca.',
-        ),
-    ]
+    
+    _unique_marca_codigo_tecnico_modelo = models.Constraint(
+        'UNIQUE(marca_id, codigo_tecnico)',
+        'Ya existe un modelo con este código técnico para la marca.',
+    )
+
 
     # =========================================================
     # NORMALIZACIÓN

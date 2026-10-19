@@ -230,7 +230,7 @@
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">lincoln@corapsac.com</field>
-    <field name="email_cc">logistica@corapsac.com</field>
+    <field name="email_cc">logistica@corapsac.com, asistentelogistico@corapsac.com.pe</field>
     <field name="subject">⚠️ ALERTA: Cambio de modelo detectado - {{ object.serie_id }}</field>
     <field name="auto_delete" eval="True"/>
 
@@ -642,7 +642,7 @@
     <field name="model_id" ref="model_sat_sat"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
     <field name="email_to">lincoln@corapsac.com</field>
-    <field name="email_cc">logistica@corapsac.com</field>
+    <field name="email_cc">logistica@corapsac.com, asistentelogistico@corapsac.com.pe</field>
     <field name="subject">⚠️ Anomalía en contómetro para reclamo: {{ object.serie_id }}</field>
     
     <field name="auto_delete" eval="True"/>

@@ -22,8 +22,8 @@
           <filter name="fil_op_ok"     string="Operativo"          domain="[('estado_operativo','=','operativo')]"/>
           <filter name="fil_op_par"    string="Operativo parcial"  domain="[('estado_operativo','=','parcial')]"/>
           <filter name="fil_op_no"     string="No operativo"       domain="[('estado_operativo','=','no_op')]"/>
-          <!-- Agrupar por -->
-          <group expand="0" string="Agrupar por">
+          <!-- Agrupar por: Odoo 19 -->
+          <group>
             <filter name="grp_tipo"   string="Tipo de componente" context="{'group_by':'tipo_id'}"/>
             <filter name="grp_color"  string="Color"              context="{'group_by':'color'}"/>
             <filter name="grp_check"  string="Estado check"       context="{'group_by':'estado_check'}"/>

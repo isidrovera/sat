@@ -2,9 +2,7 @@
 <odoo>
   <data>
 
-    <!-- =========================== -->
-    <!-- SEARCH (sin detalle_ids)    -->
-    <!-- =========================== -->
+    <!-- SEARCH: Configuración por modelo -->
     <record id="view_modelo_maquina_componente_search" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.search</field>
       <field name="model">modelo.maquina.componente</field>
@@ -12,7 +10,6 @@
         <search string="Buscar Configuración por Modelo">
           <field name="modelo_id"/>
           <field name="tipo_id"/>
-          <!-- detalle_ids en search no aporta: lo quitamos -->
           <field name="color"/>
           <field name="prioridad"/>
 
@@ -21,29 +18,28 @@
           <filter name="fil_color_m" string="Solo M" domain="[('color','=','m')]"/>
           <filter name="fil_color_y" string="Solo Y" domain="[('color','=','y')]"/>
 
+          <separator/>
           <filter name="fil_critico" string="Crítico" domain="[('prioridad','=','1')]"/>
-          <filter name="fil_medio"   string="Medio"   domain="[('prioridad','=','2')]"/>
-          <filter name="fil_bajo"    string="Bajo"    domain="[('prioridad','=','3')]"/>
+          <filter name="fil_medio" string="Medio" domain="[('prioridad','=','2')]"/>
+          <filter name="fil_bajo" string="Bajo" domain="[('prioridad','=','3')]"/>
 
-          <group expand="0" string="Agrupar por">
-            <filter name="grp_mod"    string="Modelo"    context="{'group_by':'modelo_id'}"/>
-            <filter name="grp_tipo"   string="Tipo"      context="{'group_by':'tipo_id'}"/>
-            <filter name="grp_color"  string="Color"     context="{'group_by':'color'}"/>
-            <filter name="grp_prio"   string="Prioridad" context="{'group_by':'prioridad'}"/>
+          <!-- Odoo 19: el grupo de filtros no lleva expand ni string -->
+          <group>
+            <filter name="grp_mod" string="Modelo" context="{'group_by':'modelo_id'}"/>
+            <filter name="grp_tipo" string="Tipo" context="{'group_by':'tipo_id'}"/>
+            <filter name="grp_color" string="Color" context="{'group_by':'color'}"/>
+            <filter name="grp_prio" string="Prioridad" context="{'group_by':'prioridad'}"/>
           </group>
         </search>
       </field>
     </record>
 
-    <!-- ============ -->
-    <!-- LIST (lista) -->
-    <!-- ============ -->
+    <!-- LIST: Componentes por modelo -->
     <record id="view_modelo_maquina_componente_list" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.list</field>
       <field name="model">modelo.maquina.componente</field>
       <field name="arch" type="xml">
-        <list string="Componentes por Modelo"
-              create="1" edit="1" delete="1"
+        <list string="Componentes por Modelo" create="1" edit="1" delete="1"
               default_order="modelo_id asc, tipo_id asc, prioridad asc">
           <field name="modelo_id"/>
           <field name="tipo_id"/>
@@ -55,60 +51,56 @@
       </field>
     </record>
 
-    <!-- ============================= -->
-    <!-- FORM (padre) con O2M embebido -->
-    <!-- ============================= -->
+    <!-- FORM: Componente por modelo con subpartes sugeridas -->
     <record id="view_modelo_maquina_componente_form" model="ir.ui.view">
-    <field name="name">modelo.maquina.componente.form</field>
-    <field name="model">modelo.maquina.componente</field>
-    <field name="arch" type="xml">
+      <field name="name">modelo.maquina.componente.form</field>
+      <field name="model">modelo.maquina.componente</field>
+      <field name="arch" type="xml">
         <form string="Config. Componente por Modelo">
-            <sheet>
-                <group>
-                    <group>
-                        <field name="modelo_id"/>
-                        <field name="tipo_id"/>
-                        <field name="color"/>
-                        <field name="prioridad"/>
-                    </group>
-                    <group>
-                        <field name="vida_util_paginas"/>
-                        <field name="vida_util_meses"/>
-                        <field name="estado_sugerido_id"/>
-                    </group>
-                </group>
+          <sheet>
+            <group>
+              <group>
+                <field name="modelo_id"/>
+                <field name="tipo_id"/>
+                <field name="color"/>
+                <field name="prioridad"/>
+              </group>
+              <group>
+                <field name="vida_util_paginas"/>
+                <field name="vida_util_meses"/>
+                <field name="estado_sugerido_id"/>
+              </group>
+            </group>
 
-                <group string="Detalles">
-                    <field name="frase_desgaste" placeholder="Ej.: 'Se observan líneas tenues en bordes'"/>
-                    <field name="frase_cambio" placeholder="Ej.: 'Aún no requiere cambio'"/>
-                </group>
+            <group string="Detalles">
+              <field name="frase_desgaste" placeholder="Ej.: 'Se observan líneas tenues en bordes'"/>
+              <field name="frase_cambio" placeholder="Ej.: 'Aún no requiere cambio'"/>
+            </group>
 
-                <separator string="Subpartes sugeridas"/>
-                <field name="detalle_ids">
-                    <list editable="bottom">
-                        <field name="subparte_id" options="{'no_open': True}"/>
-                        <field name="cantidad"/>
-                        <field name="nota"/>
-                    </list>
-                    <form string="Subparte sugerida">
-                        <sheet>
-                            <group>
-                                <field name="componente_id" invisible="1"/>
-                                <field name="subparte_id"/>
-                                <field name="cantidad"/>
-                                <field name="nota"/>
-                            </group>
-                        </sheet>
-                    </form>
-                </field>
-            </sheet>
+            <separator string="Subpartes sugeridas"/>
+            <field name="detalle_ids">
+              <list editable="bottom">
+                <field name="subparte_id" options="{'no_open': True}"/>
+                <field name="cantidad"/>
+                <field name="nota"/>
+              </list>
+              <form string="Subparte sugerida">
+                <sheet>
+                  <group>
+                    <field name="componente_id" invisible="1"/>
+                    <field name="subparte_id"/>
+                    <field name="cantidad"/>
+                    <field name="nota"/>
+                  </group>
+                </sheet>
+              </form>
+            </field>
+          </sheet>
         </form>
-    </field>
-</record>
+      </field>
+    </record>
 
-    <!-- =============================================== -->
-    <!-- Vistas del comodel: modelo.maquina.componente.subparte -->
-    <!-- =============================================== -->
+    <!-- LIST: Subpartes sugeridas -->
     <record id="view_modelo_maquina_componente_subparte_tree" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.subparte.tree</field>
       <field name="model">modelo.maquina.componente.subparte</field>
@@ -122,6 +114,7 @@
       </field>
     </record>
 
+    <!-- FORM: Subparte sugerida -->
     <record id="view_modelo_maquina_componente_subparte_form" model="ir.ui.view">
       <field name="name">modelo.maquina.componente.subparte.form</field>
       <field name="model">modelo.maquina.componente.subparte</field>

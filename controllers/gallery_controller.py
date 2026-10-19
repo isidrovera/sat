@@ -9,7 +9,6 @@ import os
 import time
 import uuid
 from urllib.parse import quote
-from werkzeug.exceptions import RequestEntityTooLarge
 from psycopg2.errors import SerializationFailure
 
 _logger = logging.getLogger(__name__)
@@ -21,12 +20,6 @@ def _login_redirect_response():
     current = request.httprequest.base_url
     target = f"{LOGIN_PATH}?redirect={quote(current, safe='')}"
     return request.redirect(target, 302)
-
-def _json_auth_required():
-    """Respuesta JSON para rutas type='json' cuando no hay sesión."""
-    login_url = f"{LOGIN_PATH}?redirect={quote(request.httprequest.base_url, safe='')}"
-    payload = {'success': False, 'code': 'AUTH_REQUIRED', 'error': 'Autenticación requerida', 'login_url': login_url}
-    return Response(json.dumps(payload), status=401, headers=[('Content-Type', 'application/json')])
 
 class GalleryController(http.Controller):
 
@@ -133,14 +126,10 @@ class GalleryController(http.Controller):
     # ------------------------------------------------
     # VALIDACIÓN DE SESIÓN / LÍMITES (JSON, REQUIERE LOGIN)
     # ------------------------------------------------
-    @http.route('/gallery/upload/validate/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    @http.route('/gallery/upload/validate/<int:reparacion_id>', type='jsonrpc', auth='user', methods=['POST'])
     def validate_upload(self, reparacion_id, file_count=0, total_size=0):
         """Valida antes de subir; devuelve una sesión 'legacy' si la necesitas."""
         try:
-            # auth='user' ya fuerza login, pero si llega público:
-            if request.env.user._is_public():
-                return _json_auth_required()
-
             _logger.info("[VALIDATE] Reparación %s | files=%s, size=%s", reparacion_id, file_count, total_size)
 
             reparacion = request.env['reparaciones.reparaciones'].sudo().browse(reparacion_id)
@@ -336,14 +325,12 @@ class GalleryController(http.Controller):
     # -------------------------------------------------------------
     # STUB: createuploadlink (SE DESHABILITA; FORZAMOS MODO DIRECTO)
     # -------------------------------------------------------------
-    @http.route('/gallery/pcloud/uploadlink/<int:reparacion_id>', type='json', auth='user', methods=['POST'])
+    @http.route('/gallery/pcloud/uploadlink/<int:reparacion_id>', type='jsonrpc', auth='user', methods=['POST'])
     def get_upload_link(self, reparacion_id, **kw):
         """
         Deshabilitado a propósito. Indicamos al frontend usar la subida directa
         vía /gallery/pcloud/upload-direct/<id>.
         """
-        if request.env.user._is_public():
-            return _json_auth_required()
         _logger.info("[UPLOAD_LINK] Deshabilitado: usar modo DIRECTO")
         return {'success': False, 'code': 'USE_DIRECT_UPLOAD', 'error': 'El modo upload-link está deshabilitado'}
 

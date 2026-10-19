@@ -17,7 +17,7 @@
           <filter name="fil_sensible_color" string="Difiere por color (K/C/M/Y)"
                   domain="[('is_color_sensitive','=',True)]"/>
           <!-- Agrupar por -->
-          <group expand="0" string="Agrupar por">
+          <group>
             <filter name="grp_critico" string="Crítico"
                     context="{'group_by':'is_critical'}"/>
             <filter name="grp_color" string="Sensibilidad por color"

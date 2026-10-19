@@ -305,7 +305,7 @@
             <field name="estado_id"/>
             <field name="observaciones"/>
             <templates>
-                <t t-name="kanban-box">
+                <t t-name="card">
                     <div class="o_componente_card" t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value and record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
 
                         <div class="o_card_header">
@@ -350,7 +350,7 @@
             <field name="observaciones"/>
 
             <templates>
-                <t t-name="kanban-box">
+                <t t-name="card">
                     <div class="o_componente_card" t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : 'o_card_success'}">
 
                         <div class="o_card_header">
@@ -579,7 +579,7 @@
             <field name="name">ticket.calendar</field>
             <field name="model">ticket.alquiler</field>
             <field name="arch" type="xml">
-                <calendar date_start="" color="partner_id" event_limit="5">
+                <calendar date_start="agenda" color="partner_id" event_limit="5">
                     <field name="partner_id" filters="1"/>
                     <field name="partner_id"/>
                 </calendar>
@@ -677,7 +677,7 @@
                     <field name="estado_id"/>
                     <filter string="Sin Estado" name="sin_estado" domain="[('estado_id', '=', False)]"/>
                     <filter string="Requiere Cambio" name="requiere_cambio" domain="[('estado_id.code', '=', 'requiere_cambio')]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Ticket" name="group_ticket" context="{'group_by': 'ticket_id'}"/>
                         <filter string="Componente" name="group_componente" context="{'group_by': 'componente_tipo_id'}"/>
                         <filter string="Estado" name="group_estado" context="{'group_by': 'estado_id'}"/>
@@ -730,7 +730,7 @@
                     <field name="estado_id"/>
                     <filter string="Sin Estado" name="sin_estado" domain="[('estado_id', '=', False)]"/>
                     <filter string="Requiere Cambio" name="requiere_cambio" domain="[('estado_id.code', '=', 'requiere_cambio')]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Ticket" name="group_ticket" context="{'group_by': 'ticket_id'}"/>
                         <filter string="Tipo" name="group_tipo" context="{'group_by': 'tipo_id'}"/>
                         <filter string="Estado" name="group_estado" context="{'group_by': 'estado_id'}"/>
@@ -1293,7 +1293,7 @@
                     <separator/>
                     <filter string="Hoy" name="hoy" domain="[('fecha', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0)))]"/>
                     <filter string="Esta semana" name="semana" domain="[('fecha', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
                         <filter string="Técnico" name="group_tecnico" context="{'group_by': 'tecnico_id'}"/>
                         <filter string="Cliente" name="group_cliente" context="{'group_by': 'cliente_id'}"/>
@@ -1388,7 +1388,7 @@
                     <separator/>
                     <filter string="Este mes" name="este_mes" domain="[('fecha_cambio', '&gt;=', (context_today()).strftime('%Y-%m-01'))]"/>
                     <filter string="Este año" name="este_anio" domain="[('fecha_cambio', '&gt;=', (context_today()).strftime('%Y-01-01'))]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Equipo" name="group_equipo" context="{'group_by': 'equipo_id'}"/>
                         <filter string="Subparte" name="group_subparte" context="{'group_by': 'subparte_id'}"/>
                         <filter string="Color" name="group_color" context="{'group_by': 'color_id'}"/>

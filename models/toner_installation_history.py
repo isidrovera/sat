@@ -543,9 +543,7 @@ class TonerInstallationHistory(models.Model):
     def _check_single_active_cycle(self):
         """
         Solo puede existir un ciclo activo por equipo y color.
-
-        Se valida a nivel ORM porque PostgreSQL no permite expresar
-        fácilmente este índice parcial mediante _sql_constraints.
+        Compatible con Odoo 19.
         """
         for record in self:
             if (
@@ -558,11 +556,7 @@ class TonerInstallationHistory(models.Model):
             duplicate = self.search(
                 [
                     ("id", "!=", record.id),
-                    (
-                        "equipment_id",
-                        "=",
-                        record.equipment_id.id,
-                    ),
+                    ("equipment_id", "=", record.equipment_id.id),
                     ("color", "=", record.color),
                     ("state", "=", "active"),
                 ],
@@ -578,10 +572,7 @@ class TonerInstallationHistory(models.Model):
                     % {
                         "color": dict(
                             self.COLOR_SELECTION
-                        ).get(
-                            record.color,
-                            record.color,
-                        ),
+                        ).get(record.color, record.color),
                         "serie": (
                             record.equipment_serial
                             or record.equipment_id.serie

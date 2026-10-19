@@ -16,9 +16,9 @@
           <filter name="fil_blocking" string="Puede dejar no operativo"
                   domain="[('is_blocking','=',True)]"/>
           <!-- Agrupar por -->
-          <group expand="0" string="Agrupar por">
-            <filter name="grp_tipo"  string="Tipo"   context="{'group_by':'tipo_id'}"/>
-            <filter name="grp_color" string="Color"  context="{'group_by':'color'}"/>
+          <group>
+            <filter name="grp_tipo" string="Tipo" context="{'group_by':'tipo_id'}"/>
+            <filter name="grp_color" string="Color" context="{'group_by':'color'}"/>
             <filter name="grp_block" string="Bloqueante"
                     context="{'group_by':'is_blocking'}"/>
           </group>

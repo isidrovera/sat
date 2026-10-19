@@ -83,11 +83,21 @@ class GeminiConfiguracion(models.Model):
     # ========================================
     # RESTRICCIONES
     # ========================================
-    _sql_constraints = [
-        ('activo_unico', 
-         'CHECK(activo = false OR (SELECT COUNT(*) FROM gemini_configuracion WHERE activo = true) = 1)', 
-         'Solo puede haber una configuración activa')
-    ]
+        # Odoo 19: esta validación requiere Python.
+    # PostgreSQL no permite usar una subconsulta
+    # dentro de una restricción CHECK.
+
+    @api.constrains('activo')
+    def _check_activo_unico(self):
+        for record in self:
+            if record.activo:
+                if self.search_count([
+                    ('activo', '=', True),
+                    ('id', '!=', record.id),
+                ]):
+                    raise ValidationError(
+                        'Solo puede haber una configuración activa'
+                    )
     
     # ========================================
     # MÉTODOS

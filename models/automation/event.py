@@ -204,10 +204,17 @@ class SatAutomationEvent(models.Model):
 
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        ("sat_automation_event_uuid_unique", "unique(event_uuid)", "UUID duplicado."),
-        ("sat_automation_fingerprint_unique", "unique(fingerprint)", "Evento duplicado."),
-    ]
+    
+    _sat_automation_event_uuid_unique = models.Constraint(
+        'UNIQUE(event_uuid)',
+        'UUID duplicado.',
+    )
+
+    _sat_automation_fingerprint_unique = models.Constraint(
+        'UNIQUE(fingerprint)',
+        'Evento duplicado.',
+    )
+
 
     @api.model_create_multi
     def create(self, vals_list):

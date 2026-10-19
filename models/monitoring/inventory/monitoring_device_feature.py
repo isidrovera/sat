@@ -703,23 +703,20 @@ class SatMonitoringDeviceFeature(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_monitoring_device_feature_unique',
-            'unique(device_id, code)',
-            'Ya existe esta característica para el equipo.',
-        ),
-        (
-            'sat_monitoring_device_feature_observation_positive',
-            'CHECK(observation_count >= 0)',
-            'Las observaciones no pueden ser negativas.',
-        ),
-        (
-            'sat_monitoring_device_feature_life_range',
-            'CHECK(life_percent >= 0 AND life_percent <= 100)',
-            'La vida útil debe estar entre 0 y 100.',
-        ),
-    ]
+    _sat_monitoring_device_feature_unique = models.Constraint(
+        'UNIQUE(device_id, code)',
+        'Ya existe esta característica para el equipo.',
+    )
+
+    _sat_monitoring_device_feature_observation_positive = models.Constraint(
+        'CHECK(observation_count >= 0)',
+        'Las observaciones no pueden ser negativas.',
+    )
+
+    _sat_monitoring_device_feature_life_range = models.Constraint(
+        'CHECK(life_percent >= 0 AND life_percent <= 100)',
+        'La vida útil debe estar entre 0 y 100.',
+    )
 
     # ========================================================
     # DISPLAY NAME

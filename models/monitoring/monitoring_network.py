@@ -524,38 +524,40 @@ class SatMonitoringNetwork(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_monitoring_network_code_unique',
-            'unique(code)',
-            'El código técnico de la red ya está siendo utilizado.',
-        ),
-        (
-            'sat_monitoring_network_agent_cidr_unique',
-            'unique(agent_id, cidr)',
-            'El agente ya tiene configurada esta red.',
-        ),
-        (
-            'sat_monitoring_network_discovery_interval_positive',
-            'CHECK(discovery_interval >= 0)',
-            'El intervalo de discovery no puede ser negativo.',
-        ),
-        (
-            'sat_monitoring_network_poll_interval_positive',
-            'CHECK(poll_interval > 0)',
-            'El intervalo de polling debe ser mayor que cero.',
-        ),
-        (
-            'sat_monitoring_network_max_hosts_positive',
-            'CHECK(max_hosts_per_cycle > 0)',
-            'El máximo de hosts debe ser mayor que cero.',
-        ),
-        (
-            'sat_monitoring_network_parallel_positive',
-            'CHECK(max_parallel_hosts > 0)',
-            'Los hosts simultáneos deben ser mayores que cero.',
-        ),
-    ]
+    
+    # ========================================================
+    # RESTRICCIONES SQL - ODOO 19
+    # ========================================================
+
+    _sat_monitoring_network_code_unique = models.Constraint(
+        'UNIQUE(code)',
+        'El código técnico de la red ya está siendo utilizado.',
+    )
+
+    _sat_monitoring_network_agent_cidr_unique = models.Constraint(
+        'UNIQUE(agent_id, cidr)',
+        'El agente ya tiene configurada esta red.',
+    )
+
+    _sat_monitoring_network_discovery_interval_positive = models.Constraint(
+        'CHECK(discovery_interval >= 0)',
+        'El intervalo de discovery no puede ser negativo.',
+    )
+
+    _sat_monitoring_network_poll_interval_positive = models.Constraint(
+        'CHECK(poll_interval > 0)',
+        'El intervalo de polling debe ser mayor que cero.',
+    )
+
+    _sat_monitoring_network_max_hosts_positive = models.Constraint(
+        'CHECK(max_hosts_per_cycle > 0)',
+        'El máximo de hosts debe ser mayor que cero.',
+    )
+
+    _sat_monitoring_network_parallel_positive = models.Constraint(
+        'CHECK(max_parallel_hosts > 0)',
+        'Los hosts simultáneos deben ser mayores que cero.',
+    )
 
     # ========================================================
     # COMPUTES

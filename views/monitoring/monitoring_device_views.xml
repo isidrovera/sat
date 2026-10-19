@@ -91,7 +91,7 @@
 
                     
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
 
                         <filter name="group_partner" string="Cliente" context="{'group_by': 'partner_id'}"/>
 
@@ -903,66 +903,6 @@
 
         
 
-        <record id="action_monitoring_device" model="ir.actions.act_window">
-            <field name="name">Equipos Monitoreados</field>
-            <field name="res_model">sat.monitoring.device</field>
-
-            <field name="view_mode">list,kanban,form</field>
-
-            <field name="search_view_id" ref="view_sat_monitoring_device_search"/>
-
-            <field name="context">
-                {
-                    'search_default_monitoring_enabled': 1
-                }
-            </field>
-
-            <field name="help" type="html">
-
-                <p class="o_view_nocontent_smiling_face">
-                    No hay equipos monitoreados
-                </p>
-
-                <p>
-                    Los equipos aparecerán automáticamente al ser
-                    descubiertos por los agentes SNMP.
-                </p>
-
-            </field>
-
-        </record>
-
-        
-
-        <record id="action_monitoring_device_list_view" model="ir.actions.act_window.view">
-            <field name="sequence" eval="1"/>
-
-            <field name="view_mode">list</field>
-
-            <field name="view_id" ref="view_sat_monitoring_device_list"/>
-
-            <field name="act_window_id" ref="action_monitoring_device"/>
-        </record>
-
-        <record id="action_monitoring_device_kanban_view" model="ir.actions.act_window.view">
-            <field name="sequence" eval="2"/>
-
-            <field name="view_mode">kanban</field>
-
-            <field name="view_id" ref="view_sat_monitoring_device_kanban"/>
-
-            <field name="act_window_id" ref="action_monitoring_device"/>
-        </record>
-
-        <record id="action_monitoring_device_form_view" model="ir.actions.act_window.view">
-            <field name="sequence" eval="3"/>
-
-            <field name="view_mode">form</field>
-
-            <field name="view_id" ref="view_sat_monitoring_device_form"/>
-
-            <field name="act_window_id" ref="action_monitoring_device"/>
-        </record>
-
+      
     </data>
 </odoo>

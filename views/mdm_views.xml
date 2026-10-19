@@ -86,17 +86,17 @@
                     <button name="action_send_push_traccar"
                   string="📍 Traccar"
                   type="object"
-                  title="Abrir Traccar"
+                  help="Abrir Traccar"
                   class="btn-sm btn-primary"/>
                     <button name="action_send_push_config_updated"
                   string="🔄 Config"
                   type="object"
-                  title="Actualizar configuración"
+                  help="Actualizar configuración"
                   class="btn-sm btn-secondary"/>
                     <button name="action_send_push_reboot"
                   string="🔁 Reiniciar"
                   type="object"
-                  title="Reiniciar dispositivo"
+                  help="Reiniciar dispositivo"
                   class="btn-sm btn-warning"/>
                 </list>
             </field>
@@ -221,7 +221,7 @@
                     <field name="phone"/>
                     <field name="last_update"/>
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="oe_kanban_card oe_kanban_global_click">
                                 <div class="o_kanban_record_top">
                                     <div class="o_kanban_record_headings">
@@ -282,7 +282,7 @@
                     <filter string="Sin técnico asignado" name="no_user"
                   domain="[('user_id','=',False)]"/>
                     <separator/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Estado" name="group_status"
                     context="{'group_by':'status_code'}"/>
                         <filter string="Técnico" name="group_user"
@@ -327,7 +327,7 @@
                     <filter string="Con error" name="error" domain="[('status','=','error')]"/>
                     <filter string="Hoy" name="today"
                   domain="[('create_date','&gt;=',datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Dispositivo" name="group_device"
                     context="{'group_by':'device_id'}"/>
                         <filter string="Tipo de comando" name="group_type"

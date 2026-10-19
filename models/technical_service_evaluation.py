@@ -360,13 +360,12 @@ class ClientServiceEvaluation(models.Model):
         store=True
     )
 
-    _sql_constraints = [
-        (
-            'client_service_evaluation_token_unique',
-            'unique(token)',
-            'El token de evaluación debe ser único.'
-        ),
-    ]
+    
+    _client_service_evaluation_token_unique = models.Constraint(
+        'UNIQUE(token)',
+        'El token de evaluación debe ser único.',
+    )
+
 
     # ==================== MÉTODOS CREATE Y WRITE ====================
     @api.model_create_multi

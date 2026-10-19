@@ -1,4 +1,4 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
     <data>
 
@@ -20,15 +20,7 @@
             <field name="name">evaluacion.personal.detalle.diario.tree</field>
             <field name="model">evaluacion.personal.detalle.diario</field>
             <field name="arch" type="xml">
-                <list string="Análisis Diario"
-                      default_order="fecha asc"
-                      decoration-success="cumple_objetivo and es_dia_laboral"
-                      decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
-                      decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
-                      decoration-muted="not es_dia_laboral or total_trabajos == 0"
-                      create="0"
-                      delete="0"
-                      edit="0">
+                <list string="Análisis Diario" default_order="fecha asc" decoration-success="cumple_objetivo and es_dia_laboral" decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral" decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0" decoration-muted="not es_dia_laboral or total_trabajos == 0" create="0" delete="0" edit="0">
 
                     <field name="fecha"/>
                     <field name="dia_semana"/>
@@ -36,37 +28,15 @@
                     <field name="es_dia_laboral" column_invisible="1"/>
                     <field name="es_sabado" column_invisible="1"/>
 
-                    <field name="cantidad_reparaciones"
-                           string="Reparaciones"
-                           sum="Total Reparaciones"/>
-                    <field name="cantidad_tickets"
-                           string="Tickets"
-                           sum="Total Tickets"/>
-                    <field name="total_trabajos"
-                           string="Total"
-                           sum="Total General"
-                           widget="badge"
-                           decoration-success="total_trabajos &gt;= objetivo_dia"
-                           decoration-warning="total_trabajos &gt;= objetivo_dia * 0.7 and total_trabajos &lt; objetivo_dia"
-                           decoration-danger="total_trabajos &lt; objetivo_dia * 0.7 and total_trabajos &gt; 0"/>
+                    <field name="cantidad_reparaciones" string="Reparaciones" sum="Total Reparaciones"/>
+                    <field name="cantidad_tickets" string="Tickets" sum="Total Tickets"/>
+                    <field name="total_trabajos" string="Total" sum="Total General" widget="badge" decoration-success="total_trabajos &gt;= objetivo_dia" decoration-warning="total_trabajos &gt;= objetivo_dia * 0.7 and total_trabajos &lt; objetivo_dia" decoration-danger="total_trabajos &lt; objetivo_dia * 0.7 and total_trabajos &gt; 0"/>
                     <field name="objetivo_dia" string="Objetivo"/>
                     <!-- CORREGIDO: el campo ya está en escala 0-100; el widget
                          percentage espera 0-1 y mostraba valores x100 -->
-                    <field name="porcentaje_cumplimiento"
-                           string="% Cumplimiento"
-                           optional="show"/>
-                    <field name="cumple_objetivo"
-                           string="Cumple"
-                           widget="boolean_toggle"
-                           optional="show"/>
-                    <field name="estado_dia"
-                           string="Estado"
-                           widget="badge"
-                           decoration-success="estado_dia == 'excelente'"
-                           decoration-info="estado_dia == 'bueno'"
-                           decoration-warning="estado_dia == 'aceptable'"
-                           decoration-danger="estado_dia == 'bajo'"
-                           decoration-muted="estado_dia == 'sin_actividad'"/>
+                    <field name="porcentaje_cumplimiento" string="% Cumplimiento" optional="show"/>
+                    <field name="cumple_objetivo" string="Cumple" widget="boolean_toggle" optional="show"/>
+                    <field name="estado_dia" string="Estado" widget="badge" decoration-success="estado_dia == 'excelente'" decoration-info="estado_dia == 'bueno'" decoration-warning="estado_dia == 'aceptable'" decoration-danger="estado_dia == 'bajo'" decoration-muted="estado_dia == 'sin_actividad'"/>
 
                     <!-- Campos nuevos para bono -->
                     <field name="dia_equivalente_bono" string="Día Eq." optional="hide"/>
@@ -83,18 +53,8 @@
                     <field name="clientes_atendidos" string="Clientes" optional="hide"/>
                     <field name="modelos_trabajados" string="Modelos/Equipos" optional="hide"/>
 
-                    <button name="action_ver_reparaciones_dia"
-                            type="object"
-                            string="Ver Reparaciones"
-                            icon="fa-wrench"
-                            invisible="cantidad_reparaciones == 0"
-                            class="btn-link"/>
-                    <button name="action_ver_tickets_dia"
-                            type="object"
-                            string="Ver Tickets"
-                            icon="fa-ticket"
-                            invisible="cantidad_tickets == 0"
-                            class="btn-link"/>
+                    <button name="action_ver_reparaciones_dia" type="object" string="Ver Reparaciones" icon="fa-wrench" invisible="cantidad_reparaciones == 0" class="btn-link"/>
+                    <button name="action_ver_tickets_dia" type="object" string="Ver Tickets" icon="fa-ticket" invisible="cantidad_tickets == 0" class="btn-link"/>
                 </list>
             </field>
         </record>
@@ -112,18 +72,10 @@
                     </header>
                     <sheet>
                         <div class="oe_button_box" name="button_box">
-                            <button name="action_ver_reparaciones_dia"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-wrench"
-                                    invisible="cantidad_reparaciones == 0">
+                            <button name="action_ver_reparaciones_dia" type="object" class="oe_stat_button" icon="fa-wrench" invisible="cantidad_reparaciones == 0">
                                 <field name="cantidad_reparaciones" widget="statinfo" string="Reparaciones"/>
                             </button>
-                            <button name="action_ver_tickets_dia"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-ticket"
-                                    invisible="cantidad_tickets == 0">
+                            <button name="action_ver_tickets_dia" type="object" class="oe_stat_button" icon="fa-ticket" invisible="cantidad_tickets == 0">
                                 <field name="cantidad_tickets" widget="statinfo" string="Tickets"/>
                             </button>
                         </div>
@@ -214,24 +166,15 @@
             <field name="name">evaluacion.personal.tree</field>
             <field name="model">evaluacion.personal</field>
             <field name="arch" type="xml">
-                <list default_order="fecha desc"
-                      decoration-success="puntaje_total_bono &gt;= 110"
-                      decoration-info="puntaje_total_bono &gt;= 100 and puntaje_total_bono &lt; 110"
-                      decoration-warning="puntaje_total_bono &gt;= 95 and puntaje_total_bono &lt; 100"
-                      decoration-danger="puntaje_total_bono &lt; 95">
+                <list default_order="fecha desc" decoration-success="puntaje_total_bono &gt;= 110" decoration-info="puntaje_total_bono &gt;= 100 and puntaje_total_bono &lt; 110" decoration-warning="puntaje_total_bono &gt;= 95 and puntaje_total_bono &lt; 100" decoration-danger="puntaje_total_bono &lt; 95">
                     <header>
-                        <button name="action_enviar_reportes_masivo"
-                                string="Enviar Reportes"
-                                type="object"
-                                class="btn-primary"/>
+                        <button name="action_enviar_reportes_masivo" string="Enviar Reportes" type="object" class="btn-primary"/>
                     </header>
                     <field name="name"/>
                     <field name="fecha"/>
                     <field name="usuario_id"/>
                     <field name="tipo_operativo" optional="show"/>
-                    <field name="cierre_confirmado_disponible"
-                           string="Cierre confirmado"
-                           optional="show"/>
+                    <field name="cierre_confirmado_disponible" string="Cierre confirmado" optional="show"/>
                     <field name="cantidad_reparaciones" optional="show"/>
                     <field name="cantidad_tickets" optional="show"/>
                     <field name="porcentaje_produccion_total" string="% Producción" optional="show"/>
@@ -243,11 +186,7 @@
                     <field name="bono_final" string="Bono Final" optional="show"/>
                     <field name="puntaje_total" widget="progressbar" optional="hide"/>
                     <field name="nivel_desempeno" optional="hide"/>
-                    <field name="state" widget="badge"
-                           decoration-danger="state == 'borrador'"
-                           decoration-warning="state == 'en_revision'"
-                           decoration-info="state == 'aprobado'"
-                           decoration-success="state == 'enviado' or state == 'finalizado'"/>
+                    <field name="state" widget="badge" decoration-danger="state == 'borrador'" decoration-warning="state == 'en_revision'" decoration-info="state == 'aprobado'" decoration-success="state == 'enviado' or state == 'finalizado'"/>
                 </list>
             </field>
         </record>
@@ -262,25 +201,13 @@
             <field name="arch" type="xml">
                 <form string="Evaluación Mensual de Personal">
                     <header>
-                        <button name="action_regenerar_detalle_diario"
-                                string="Regenerar análisis diario"
-                                type="object"
-                                class="btn-secondary"
-                                confirm="¿Desea regenerar el análisis diario? Esto recalculará todos los datos."/>
+                        <button name="action_regenerar_detalle_diario" string="Regenerar análisis diario" type="object" class="btn-secondary" confirm="¿Desea regenerar el análisis diario? Esto recalculará todos los datos."/>
 
-                        <button name="action_recalcular_bono"
-                                string="Recalcular evaluación y bono"
-                                type="object"
-                                class="btn-primary"/>
+                        <button name="action_recalcular_bono" string="Recalcular evaluación y bono" type="object" class="btn-primary"/>
 
-                        <button name="action_duplicar_mes_anterior"
-                                string="Duplicar mes anterior"
-                                type="object"
-                                class="btn-secondary"/>
+                        <button name="action_duplicar_mes_anterior" string="Duplicar mes anterior" type="object" class="btn-secondary"/>
 
-                        <field name="state"
-                               widget="statusbar"
-                               statusbar_visible="borrador,en_revision,aprobado,enviado,finalizado"/>
+                        <field name="state" widget="statusbar" statusbar_visible="borrador,en_revision,aprobado,enviado,finalizado"/>
                     </header>
 
                     <sheet>
@@ -290,47 +217,23 @@
                         <field name="aplica_acelerador" invisible="1"/>
 
                         <div class="oe_button_box" name="button_box">
-                            <button name="ver_reparaciones"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-wrench">
-                                <field name="cantidad_reparaciones"
-                                       widget="statinfo"
-                                       string="Reparaciones"/>
+                            <button name="ver_reparaciones" type="object" class="oe_stat_button" icon="fa-wrench">
+                                <field name="cantidad_reparaciones" widget="statinfo" string="Reparaciones"/>
                             </button>
 
-                            <button name="ver_tickets"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-ticket">
-                                <field name="cantidad_tickets"
-                                       widget="statinfo"
-                                       string="Tickets"/>
+                            <button name="ver_tickets" type="object" class="oe_stat_button" icon="fa-ticket">
+                                <field name="cantidad_tickets" widget="statinfo" string="Tickets"/>
                             </button>
 
-                            <button name="action_ver_reclamos_bono"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-exclamation-triangle">
-                                <field name="reclamos_procedentes_count"
-                                       widget="statinfo"
-                                       string="Reclamos"/>
+                            <button name="action_ver_reclamos_bono" type="object" class="oe_stat_button" icon="fa-exclamation-triangle">
+                                <field name="reclamos_procedentes_count" widget="statinfo" string="Reclamos"/>
                             </button>
 
-                            <button name="action_ver_evaluaciones_servicio_bono"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-star">
-                                <field name="evaluaciones_servicio_count"
-                                       widget="statinfo"
-                                       string="Encuestas"/>
+                            <button name="action_ver_evaluaciones_servicio_bono" type="object" class="oe_stat_button" icon="fa-star">
+                                <field name="evaluaciones_servicio_count" widget="statinfo" string="Encuestas"/>
                             </button>
 
-                            <button name="action_ver_dia_detalle"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-calendar-check"
-                                    invisible="not tiene_detalle_diario">
+                            <button name="action_ver_dia_detalle" type="object" class="oe_stat_button" icon="fa-calendar-check" invisible="not tiene_detalle_diario">
                                 <div class="o_field_widget o_stat_info">
                                     <span class="o_stat_value">
                                         <field name="total_dias_trabajados"/>
@@ -339,12 +242,7 @@
                                 </div>
                             </button>
 
-                            <button name="%(action_evaluacion_personal_detalle_diario)d"
-                                    type="action"
-                                    class="oe_stat_button"
-                                    icon="fa-chart-line"
-                                    context="{'search_default_evaluacion_id': id}"
-                                    invisible="not tiene_detalle_diario">
+                            <button name="action_ver_dia_detalle" type="object" class="oe_stat_button" icon="fa-chart-line" context="{'search_default_evaluacion_id': id}" invisible="not tiene_detalle_diario">
                                 <div class="o_field_widget o_stat_info">
                                     <span class="o_stat_value">Ver</span>
                                     <span class="o_stat_text">Análisis diario</span>
@@ -363,33 +261,23 @@
                         <!-- ALERTAS PRINCIPALES                                -->
                         <!-- ================================================= -->
 
-                        <div class="alert alert-danger"
-                             role="alert"
-                             invisible="tipo_operativo == 'servicios' or cierre_confirmado_disponible">
+                        <div class="alert alert-danger" role="alert" invisible="tipo_operativo == 'servicios' or cierre_confirmado_disponible">
                             <strong>Evaluación pendiente de cierre mensual.</strong>
                             <br/>
                             Para técnicos de taller o mixtos debe existir un cierre mensual
                             confirmado con una meta asignada. Mientras falte el cierre,
                             la evaluación no debe aprobarse ni generar bono.
                             <br/>
-                            <field name="mensaje_cierre_mensual"
-                                   readonly="1"
-                                   nolabel="1"/>
+                            <field name="mensaje_cierre_mensual" readonly="1" nolabel="1"/>
                         </div>
 
-                        <div class="alert alert-success"
-                             role="alert"
-                             invisible="tipo_operativo == 'servicios' or not cierre_confirmado_disponible">
+                        <div class="alert alert-success" role="alert" invisible="tipo_operativo == 'servicios' or not cierre_confirmado_disponible">
                             <strong>Meta de taller tomada de un cierre mensual confirmado.</strong>
                             <br/>
-                            <field name="mensaje_cierre_mensual"
-                                   readonly="1"
-                                   nolabel="1"/>
+                            <field name="mensaje_cierre_mensual" readonly="1" nolabel="1"/>
                         </div>
 
-                        <div class="alert alert-success"
-                             role="alert"
-                             invisible="bono_final == 0">
+                        <div class="alert alert-success" role="alert" invisible="bono_final == 0">
                             <strong>Bono calculado:</strong>
                             S/ <field name="bono_final" readonly="1"/>
                             <span invisible="not aplica_acelerador">
@@ -397,9 +285,7 @@
                             </span>
                         </div>
 
-                        <div class="alert alert-warning"
-                             role="alert"
-                             invisible="bono_final != 0">
+                        <div class="alert alert-warning" role="alert" invisible="bono_final != 0">
                             <strong>Sin bono.</strong>
                             Revise el resultado, el cierre mensual, reclamos, encuestas,
                             asistencia y demás motivos explicados en el resumen gerencial.
@@ -412,17 +298,11 @@
                                 <field name="fecha"/>
                                 <field name="mes" readonly="1"/>
                                 <field name="anio" readonly="1"/>
-                                <field name="tipo_operativo"
-                                       widget="badge"
-                                       decoration-info="tipo_operativo == 'taller'"
-                                       decoration-success="tipo_operativo == 'servicios'"
-                                       decoration-warning="tipo_operativo == 'mixto'"/>
+                                <field name="tipo_operativo" widget="badge" decoration-info="tipo_operativo == 'taller'" decoration-success="tipo_operativo == 'servicios'" decoration-warning="tipo_operativo == 'mixto'"/>
                             </group>
 
                             <group string="Resultado mensual">
-                                <field name="puntaje_total_bono"
-                                       string="Resultado total"
-                                       readonly="1"/>
+                                <field name="puntaje_total_bono" string="Resultado total" readonly="1"/>
                                 <field name="bono_base" readonly="1"/>
                                 <field name="monto_acelerador" readonly="1"/>
                                 <field name="bono_final" readonly="1"/>
@@ -544,18 +424,14 @@
                                         <h5 class="mb-0"><i class="fa fa-bullseye me-2"/>Origen de la meta de producción</h5>
                                     </div>
                                     <div class="card-body">
-                                        <div class="alert alert-danger mb-3"
-                                             role="alert"
-                                             invisible="tipo_operativo == 'servicios' or cierre_confirmado_disponible">
+                                        <div class="alert alert-danger mb-3" role="alert" invisible="tipo_operativo == 'servicios' or cierre_confirmado_disponible">
                                             <strong>No existe un cierre mensual confirmado.</strong>
                                             La evaluación de taller o mixto no debe aprobarse hasta que exista una meta válida.
                                             <br/>
                                             <field name="mensaje_cierre_mensual" readonly="1" nolabel="1"/>
                                         </div>
 
-                                        <div class="alert alert-success mb-3"
-                                             role="alert"
-                                             invisible="tipo_operativo == 'servicios' or not cierre_confirmado_disponible">
+                                        <div class="alert alert-success mb-3" role="alert" invisible="tipo_operativo == 'servicios' or not cierre_confirmado_disponible">
                                             <strong>Meta validada.</strong>
                                             La meta fue tomada de un cierre mensual confirmado y congelado para gerencia.
                                             <br/>
@@ -564,51 +440,23 @@
 
                                         <group>
                                             <group string="Datos del cierre">
-                                                <field name="cierre_mensual_id"
-                                                       string="Cierre aplicado"
-                                                       readonly="1"
-                                                       invisible="tipo_operativo == 'servicios'"/>
-                                                <field name="cierre_tecnico_line_id"
-                                                       string="Detalle del técnico"
-                                                       readonly="1"
-                                                       invisible="tipo_operativo == 'servicios'"/>
-                                                <field name="pool_total_exigible_cierre"
-                                                       string="Máquinas exigibles del mes"
-                                                       readonly="1"
-                                                       invisible="tipo_operativo == 'servicios'"/>
-                                                <field name="cierre_confirmado_disponible"
-                                                       string="Cierre confirmado"
-                                                       readonly="1"
-                                                       invisible="tipo_operativo == 'servicios'"/>
+                                                <field name="cierre_mensual_id" string="Cierre aplicado" readonly="1" invisible="tipo_operativo == 'servicios'"/>
+                                                <field name="cierre_tecnico_line_id" string="Detalle del técnico" readonly="1" invisible="tipo_operativo == 'servicios'"/>
+                                                <field name="pool_total_exigible_cierre" string="Máquinas exigibles del mes" readonly="1" invisible="tipo_operativo == 'servicios'"/>
+                                                <field name="cierre_confirmado_disponible" string="Cierre confirmado" readonly="1" invisible="tipo_operativo == 'servicios'"/>
                                             </group>
 
                                             <group string="Meta individual">
-                                                <field name="meta_taller_ajustada"
-                                                       string="Meta asignada al técnico"
-                                                       readonly="1"
-                                                       invisible="tipo_operativo == 'servicios'"/>
-                                                <field name="horas_taller_disponibles_cierre"
-                                                       string="Horas disponibles de taller"
-                                                       readonly="1"
-                                                       invisible="tipo_operativo == 'servicios'"/>
-                                                <field name="porcentaje_participacion_pool"
-                                                       string="Participación en el pool (%)"
-                                                       readonly="1"
-                                                       invisible="tipo_operativo == 'servicios'"/>
-                                                <field name="reparaciones_validas_bono"
-                                                       string="Producción finalizada"
-                                                       readonly="1"
-                                                       invisible="tipo_operativo == 'servicios'"/>
+                                                <field name="meta_taller_ajustada" string="Meta asignada al técnico" readonly="1" invisible="tipo_operativo == 'servicios'"/>
+                                                <field name="horas_taller_disponibles_cierre" string="Horas disponibles de taller" readonly="1" invisible="tipo_operativo == 'servicios'"/>
+                                                <field name="porcentaje_participacion_pool" string="Participación en el pool (%)" readonly="1" invisible="tipo_operativo == 'servicios'"/>
+                                                <field name="reparaciones_validas_bono" string="Producción finalizada" readonly="1" invisible="tipo_operativo == 'servicios'"/>
                                             </group>
                                         </group>
 
-                                        <div class="alert alert-light border mb-0"
-                                             invisible="tipo_operativo == 'servicios'">
+                                        <div class="alert alert-light border mb-0" invisible="tipo_operativo == 'servicios'">
                                             <h6 class="mb-2"><i class="fa fa-circle-info me-2"/>¿Por qué recibió esta meta?</h6>
-                                            <field name="explicacion_meta_gerencia"
-                                                   readonly="1"
-                                                   nolabel="1"
-                                                   placeholder="El cierre mensual todavía no tiene explicación para este técnico."/>
+                                            <field name="explicacion_meta_gerencia" readonly="1" nolabel="1" placeholder="El cierre mensual todavía no tiene explicación para este técnico."/>
                                         </div>
                                     </div>
                                 </div>
@@ -856,15 +704,9 @@
                             <page string="Bono Mensual" name="bono_mensual">
                                 <group>
                                     <group string="Perfil aplicado">
-                                        <field name="tipo_operativo"
-                                               widget="badge"
-                                               decoration-info="tipo_operativo == 'taller'"
-                                               decoration-success="tipo_operativo == 'servicios'"
-                                               decoration-warning="tipo_operativo == 'mixto'"/>
-                                        <field name="meta_base_taller"
-                                               />
-                                        <field name="meta_base_servicios"
-                                               />
+                                        <field name="tipo_operativo" widget="badge" decoration-info="tipo_operativo == 'taller'" decoration-success="tipo_operativo == 'servicios'" decoration-warning="tipo_operativo == 'mixto'"/>
+                                        <field name="meta_base_taller"/>
+                                        <field name="meta_base_servicios"/>
                                     </group>
 
                                     <group string="Escala y monto">
@@ -889,10 +731,7 @@
                                 </group>
 
                                 <group string="Motivo completo del resultado">
-                                    <field name="motivo_bono"
-                                           readonly="1"
-                                           nolabel="1"
-                                           widget="text"/>
+                                    <field name="motivo_bono" readonly="1" nolabel="1" widget="text"/>
                                 </group>
                             </page>
 
@@ -901,43 +740,29 @@
                             <!-- ================================================= -->
                             <page string="Producción y Cierre" name="produccion_ajustada">
 
-                                <div class="alert alert-danger"
-                                     role="alert"
-                                     invisible="tipo_operativo == 'servicios' or cierre_confirmado_disponible">
+                                <div class="alert alert-danger" role="alert" invisible="tipo_operativo == 'servicios' or cierre_confirmado_disponible">
                                     <strong>No existe cierre mensual confirmado para este técnico y periodo.</strong>
                                     La meta de taller no debe aprobarse hasta completar el cierre.
                                 </div>
 
-                                <group string="Cierre mensual aplicado"
-                                       invisible="tipo_operativo == 'servicios'">
+                                <group string="Cierre mensual aplicado" invisible="tipo_operativo == 'servicios'">
                                     <group>
                                         <field name="cierre_mensual_id" readonly="1"/>
                                         <field name="cierre_tecnico_line_id" readonly="1"/>
                                         <field name="pool_total_exigible_cierre" readonly="1"/>
-                                        <field name="porcentaje_participacion_pool"
-                                               string="Participación del técnico (%)"
-                                               readonly="1"/>
+                                        <field name="porcentaje_participacion_pool" string="Participación del técnico (%)" readonly="1"/>
                                     </group>
 
                                     <group>
-                                        <field name="horas_taller_disponibles_cierre"
-                                               readonly="1"/>
-                                        <field name="meta_taller_ajustada"
-                                               string="Meta asignada por cierre"
-                                               readonly="1"/>
-                                        <field name="reparaciones_validas_bono"
-                                               string="Máquinas finalizadas"
-                                               readonly="1"/>
-                                        <field name="porcentaje_produccion_taller"
-                                               readonly="1"/>
+                                        <field name="horas_taller_disponibles_cierre" readonly="1"/>
+                                        <field name="meta_taller_ajustada" string="Meta asignada por cierre" readonly="1"/>
+                                        <field name="reparaciones_validas_bono" string="Máquinas finalizadas" readonly="1"/>
+                                        <field name="porcentaje_produccion_taller" readonly="1"/>
                                     </group>
                                 </group>
 
-                                <group string="Motivo del reparto"
-                                       invisible="tipo_operativo == 'servicios'">
-                                    <field name="explicacion_meta_gerencia"
-                                           readonly="1"
-                                           nolabel="1"/>
+                                <group string="Motivo del reparto" invisible="tipo_operativo == 'servicios'">
+                                    <field name="explicacion_meta_gerencia" readonly="1" nolabel="1"/>
                                 </group>
 
                                 <group>
@@ -975,43 +800,23 @@
                                     </group>
 
                                     <group string="Cobertura de encuestas">
-                                        <field name="tickets_validos_bono"
-                                               string="Tickets finalizados"
-                                               readonly="1"/>
-                                        <field name="evaluaciones_servicio_minimas"
-                                               string="Tickets que deben estar cubiertos"
-                                               readonly="1"/>
-                                        <field name="evaluaciones_servicio_count"
-                                               string="Evaluaciones respondidas consideradas"
-                                               readonly="1"/>
-                                        <field name="evaluaciones_servicio_faltantes"
-                                               string="Tickets requeridos sin cobertura"
-                                               readonly="1"/>
-                                        <field name="cumple_minimo_evaluaciones"
-                                               string="Cobertura completa"
-                                               readonly="1"/>
-                                        <field name="penalidad_evaluaciones_servicio"
-                                               readonly="1"/>
+                                        <field name="tickets_validos_bono" string="Tickets finalizados" readonly="1"/>
+                                        <field name="evaluaciones_servicio_minimas" string="Tickets que deben estar cubiertos" readonly="1"/>
+                                        <field name="evaluaciones_servicio_count" string="Evaluaciones respondidas consideradas" readonly="1"/>
+                                        <field name="evaluaciones_servicio_faltantes" string="Tickets requeridos sin cobertura" readonly="1"/>
+                                        <field name="cumple_minimo_evaluaciones" string="Cobertura completa" readonly="1"/>
+                                        <field name="penalidad_evaluaciones_servicio" readonly="1"/>
                                     </group>
                                 </group>
 
                                 <group string="Resultado del cliente">
-                                    <field name="promedio_evaluacion_servicio"
-                                           string="Promedio de evaluaciones"
-                                           readonly="1"/>
-                                    <field name="evaluaciones_criticas_count"
-                                           string="Evaluaciones rojas"
-                                           readonly="1"/>
+                                    <field name="promedio_evaluacion_servicio" string="Promedio de evaluaciones" readonly="1"/>
+                                    <field name="evaluaciones_criticas_count" string="Evaluaciones rojas" readonly="1"/>
                                 </group>
 
                                 <group string="Reclamos que afectan al técnico">
-                                    <field name="incidencia_ids"
-                                           readonly="1"
-                                           nolabel="1">
-                                        <list create="0"
-                                              delete="0"
-                                              edit="0"
-                                              decoration-danger="afecta_tecnico and procede">
+                                    <field name="incidencia_ids" readonly="1" nolabel="1">
+                                        <list create="0" delete="0" edit="0" decoration-danger="afecta_tecnico and procede">
                                             <field name="name"/>
                                             <field name="fecha_hora"/>
                                             <field name="cliente_id"/>
@@ -1026,13 +831,8 @@
                                 </group>
 
                                 <group string="Evaluaciones de servicio consideradas">
-                                    <field name="evaluacion_servicio_ids"
-                                           readonly="1"
-                                           nolabel="1">
-                                        <list create="0"
-                                              delete="0"
-                                              edit="0"
-                                              decoration-danger="puntaje_servicio &lt; 70">
+                                    <field name="evaluacion_servicio_ids" readonly="1" nolabel="1">
+                                        <list create="0" delete="0" edit="0" decoration-danger="puntaje_servicio &lt; 70">
                                             <field name="name"/>
                                             <field name="partner_id"/>
                                             <field name="technician_id"/>
@@ -1059,16 +859,13 @@
 
                                 <group>
                                     <group string="Asistencia">
-                                        <field name="faltas_injustificadas_equivalentes"
-                                               readonly="1"/>
-                                        <field name="puntaje_asistencia_real"
-                                               readonly="1"/>
+                                        <field name="faltas_injustificadas_equivalentes" readonly="1"/>
+                                        <field name="puntaje_asistencia_real" readonly="1"/>
                                     </group>
 
                                     <group string="Apoyo y trabajo en equipo">
                                         <field name="apoyo_calificacion"/>
-                                        <field name="puntaje_apoyo_real"
-                                               readonly="1"/>
+                                        <field name="puntaje_apoyo_real" readonly="1"/>
                                     </group>
                                 </group>
                             </page>
@@ -1076,39 +873,21 @@
                             <!-- ================================================= -->
                             <!-- ANÁLISIS DIARIO                                    -->
                             <!-- ================================================= -->
-                            <page string="Análisis Diario"
-                                  name="analisis_diario"
-                                  invisible="not id">
-                                <div class="alert alert-warning"
-                                     role="alert"
-                                     invisible="tiene_detalle_diario">
+                            <page string="Análisis Diario" name="analisis_diario" invisible="not id">
+                                <div class="alert alert-warning" role="alert" invisible="tiene_detalle_diario">
                                     <strong>Análisis diario no generado.</strong>
                                     <br/>
                                     Use “Regenerar análisis diario” para crear el desglose.
                                 </div>
 
-                                <field name="detalle_diario_ids"
-                                       mode="list"
-                                       context="{'default_evaluacion_id': id}">
-                                    <list string="Desglose diario"
-                                          decoration-success="cumple_objetivo and es_dia_laboral"
-                                          decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral"
-                                          decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0"
-                                          decoration-muted="not es_dia_laboral or total_trabajos == 0"
-                                          create="0"
-                                          delete="0"
-                                          edit="0">
+                                <field name="detalle_diario_ids" mode="list" context="{'default_evaluacion_id': id}">
+                                    <list string="Desglose diario" decoration-success="cumple_objetivo and es_dia_laboral" decoration-warning="porcentaje_cumplimiento &gt;= 70 and porcentaje_cumplimiento &lt; 100 and es_dia_laboral" decoration-danger="porcentaje_cumplimiento &lt; 70 and es_dia_laboral and total_trabajos &gt; 0" decoration-muted="not es_dia_laboral or total_trabajos == 0" create="0" delete="0" edit="0">
                                         <field name="fecha"/>
                                         <field name="dia_semana"/>
-                                        <field name="es_dia_laboral"
-                                               column_invisible="1"/>
-                                        <field name="cantidad_reparaciones"
-                                               sum="Total"/>
-                                        <field name="cantidad_tickets"
-                                               sum="Total"/>
-                                        <field name="total_trabajos"
-                                               sum="Total"
-                                               widget="badge"/>
+                                        <field name="es_dia_laboral" column_invisible="1"/>
+                                        <field name="cantidad_reparaciones" sum="Total"/>
+                                        <field name="cantidad_tickets" sum="Total"/>
+                                        <field name="total_trabajos" sum="Total" widget="badge"/>
                                         <field name="objetivo_dia"/>
                                         <field name="porcentaje_cumplimiento"/>
                                         <field name="estado_dia" widget="badge"/>
@@ -1122,19 +901,9 @@
                                         <field name="clientes_atendidos" optional="hide"/>
                                         <field name="modelos_trabajados" optional="hide"/>
 
-                                        <button name="action_ver_reparaciones_dia"
-                                                type="object"
-                                                string=""
-                                                icon="fa-wrench"
-                                                invisible="cantidad_reparaciones == 0"
-                                                title="Ver reparaciones"/>
+                                        <button name="action_ver_reparaciones_dia" type="object" string="" icon="fa-wrench" invisible="cantidad_reparaciones == 0" title="Ver reparaciones"/>
 
-                                        <button name="action_ver_tickets_dia"
-                                                type="object"
-                                                string=""
-                                                icon="fa-ticket"
-                                                invisible="cantidad_tickets == 0"
-                                                title="Ver tickets"/>
+                                        <button name="action_ver_tickets_dia" type="object" string="" icon="fa-ticket" invisible="cantidad_tickets == 0" title="Ver tickets"/>
                                     </list>
                                 </field>
                             </page>
@@ -1142,8 +911,7 @@
                             <!-- ================================================= -->
                             <!-- MÉTRICAS ANTERIORES                                -->
                             <!-- ================================================= -->
-                            <page string="Métricas Objetivas"
-                                  name="metricas_objetivas">
+                            <page string="Métricas Objetivas" name="metricas_objetivas">
                                 <div class="alert alert-secondary" role="alert">
                                     <strong>Referencial:</strong>
                                     estos indicadores pertenecen al sistema anterior y
@@ -1154,46 +922,29 @@
                                     <group string="Reparaciones anteriores">
                                         <field name="cantidad_reparaciones" readonly="1"/>
                                         <field name="objetivo_reparaciones" readonly="1"/>
-                                        <field name="porcentaje_reparaciones"
-                                               widget="percentpie"
-                                               readonly="1"/>
-                                        <field name="promedio_diario_reparaciones"
-                                               widget="float"
-                                               digits="[16,2]"
-                                               readonly="1"/>
+                                        <field name="porcentaje_reparaciones" widget="percentpie" readonly="1"/>
+                                        <field name="promedio_diario_reparaciones" widget="float" digits="[16,2]" readonly="1"/>
                                     </group>
 
                                     <group string="Tickets anteriores">
                                         <field name="cantidad_tickets" readonly="1"/>
                                         <field name="objetivo_tickets" readonly="1"/>
-                                        <field name="porcentaje_tickets"
-                                               widget="percentpie"
-                                               readonly="1"/>
-                                        <field name="promedio_diario_tickets"
-                                               widget="float"
-                                               digits="[16,2]"
-                                               readonly="1"/>
+                                        <field name="porcentaje_tickets" widget="percentpie" readonly="1"/>
+                                        <field name="promedio_diario_tickets" widget="float" digits="[16,2]" readonly="1"/>
                                     </group>
                                 </group>
 
                                 <group string="Puntajes anteriores">
-                                    <field name="puntaje_objetivos"
-                                           widget="progressbar"
-                                           readonly="1"/>
-                                    <field name="puntaje_desempeno"
-                                           widget="progressbar"
-                                           readonly="1"/>
-                                    <field name="puntaje_total"
-                                           widget="progressbar"
-                                           readonly="1"/>
+                                    <field name="puntaje_objetivos" widget="progressbar" readonly="1"/>
+                                    <field name="puntaje_desempeno" widget="progressbar" readonly="1"/>
+                                    <field name="puntaje_total" widget="progressbar" readonly="1"/>
                                 </group>
                             </page>
 
                             <!-- ================================================= -->
                             <!-- EVALUACIÓN TÉCNICA                                 -->
                             <!-- ================================================= -->
-                            <page string="Evaluación Técnica"
-                                  name="evaluacion_tecnica">
+                            <page string="Evaluación Técnica" name="evaluacion_tecnica">
                                 <group>
                                     <group string="Calidad del trabajo">
                                         <field name="calidad_trabajo"/>
@@ -1219,20 +970,12 @@
                             <!-- ================================================= -->
                             <!-- RETROALIMENTACIÓN                                   -->
                             <!-- ================================================= -->
-                            <page string="Retroalimentación"
-                                  name="retroalimentacion">
+                            <page string="Retroalimentación" name="retroalimentacion">
                                 <group>
-                                    <field name="fortalezas"
-                                           widget="text"
-                                           readonly="1"/>
-                                    <field name="areas_mejora"
-                                           widget="text"
-                                           readonly="1"/>
-                                    <field name="plan_accion"
-                                           widget="text"
-                                           readonly="1"/>
-                                    <field name="comentarios"
-                                           widget="text"/>
+                                    <field name="fortalezas" widget="text" readonly="1"/>
+                                    <field name="areas_mejora" widget="text" readonly="1"/>
+                                    <field name="plan_accion" widget="text" readonly="1"/>
+                                    <field name="comentarios" widget="text"/>
                                 </group>
                             </page>
 
@@ -1242,15 +985,9 @@
                             <page string="Seguimiento" name="seguimiento">
                                 <group>
                                     <field name="proxima_evaluacion" readonly="1"/>
-                                    <field name="objetivos_proximos"
-                                           widget="text"
-                                           readonly="1"/>
-                                    <field name="necesita_capacitacion"
-                                           readonly="1"/>
-                                    <field name="temas_capacitacion"
-                                           widget="text"
-                                           invisible="not necesita_capacitacion"
-                                           readonly="1"/>
+                                    <field name="objetivos_proximos" widget="text" readonly="1"/>
+                                    <field name="necesita_capacitacion" readonly="1"/>
+                                    <field name="temas_capacitacion" widget="text" invisible="not necesita_capacitacion" readonly="1"/>
                                 </group>
                             </page>
                         </notebook>
@@ -1284,7 +1021,7 @@
                     <templates>
                         <t t-name="card">
                             <div class="oe_kanban_card oe_kanban_global_click">
-                                <div t-attf-class="p-2 text-white #{record.puntaje_total_bono.raw_value >= 110 ? 'bg-success' : (record.puntaje_total_bono.raw_value >= 95 ? 'bg-warning' : 'bg-danger')}">
+                                <div t-attf-class="p-2 text-white #{record.puntaje_total_bono.raw_value &gt;= 110 ? 'bg-success' : (record.puntaje_total_bono.raw_value &gt;= 95 ? 'bg-warning' : 'bg-danger')}">
                                     <div class="d-flex align-items-center">
                                         <i class="fa fa-user-circle me-2 fa-2x"/>
                                         <div class="flex-grow-1">
@@ -1306,9 +1043,7 @@
                                     <div class="text-center py-2">
                                         <div class="mb-2">Resultado Bono</div>
                                         <div class="progress" style="height: 30px;">
-                                            <div t-attf-class="progress-bar progress-bar-striped #{record.puntaje_total_bono.raw_value >= 110 ? 'bg-success' : (record.puntaje_total_bono.raw_value >= 95 ? 'bg-warning' : 'bg-danger')}"
-                                                 t-attf-style="width: #{Math.min(100, record.puntaje_total_bono.raw_value)}%"
-                                                 role="progressbar">
+                                            <div t-attf-class="progress-bar progress-bar-striped #{record.puntaje_total_bono.raw_value &gt;= 110 ? 'bg-success' : (record.puntaje_total_bono.raw_value &gt;= 95 ? 'bg-warning' : 'bg-danger')}" t-attf-style="width: #{Math.min(100, record.puntaje_total_bono.raw_value)}%" role="progressbar">
                                                 <span class="fw-bold">
                                                     <t t-esc="Math.round(record.puntaje_total_bono.raw_value)"/>%
                                                 </span>
@@ -1429,12 +1164,10 @@
                     <filter string="Sin Análisis Diario" name="sin_detalle" domain="[('tiene_detalle_diario', '=', False)]"/>
                     <separator/>
 
-                    <filter string="Este Mes" name="este_mes"
-                            domain="[('fecha', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%Y-%m-%d')), ('fecha', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
-                    <filter string="Mes Anterior" name="mes_anterior"
-                            domain="[('fecha', '&gt;=', (context_today() - relativedelta(months=1, day=1)).strftime('%Y-%m-%d')), ('fecha', '&lt;=', (context_today() - relativedelta(months=1, day=31)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="Este Mes" name="este_mes" domain="[('fecha', '&gt;=', (context_today() - relativedelta(day=1)).strftime('%Y-%m-%d')), ('fecha', '&lt;=', (context_today() + relativedelta(day=31)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="Mes Anterior" name="mes_anterior" domain="[('fecha', '&gt;=', (context_today() - relativedelta(months=1, day=1)).strftime('%Y-%m-%d')), ('fecha', '&lt;=', (context_today() - relativedelta(months=1, day=31)).strftime('%Y-%m-%d'))]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Técnico" name="group_usuario" context="{'group_by': 'usuario_id'}"/>
                         <filter string="Evaluador" name="group_evaluador" context="{'group_by': 'evaluador_id'}"/>
                         <filter string="Perfil operativo" name="group_tipo_operativo" context="{'group_by': 'tipo_operativo'}"/>
@@ -1471,7 +1204,7 @@
                     <filter string="Bueno" name="bueno" domain="[('estado_dia', '=', 'bueno')]"/>
                     <filter string="Aceptable" name="aceptable" domain="[('estado_dia', '=', 'aceptable')]"/>
                     <filter string="Bajo" name="bajo" domain="[('estado_dia', '=', 'bajo')]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Evaluación" name="group_eval" context="{'group_by': 'evaluacion_id'}"/>
                         <filter string="Técnico" name="group_usuario" context="{'group_by': 'usuario_id'}"/>
                         <filter string="Día Semana" name="group_dia" context="{'group_by': 'dia_semana'}"/>

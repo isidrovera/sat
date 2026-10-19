@@ -787,33 +787,36 @@ class SatSnmpProfileMetric(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_snmp_profile_metric_code_unique',
-            'unique(profile_id, code)',
-            'Ya existe una métrica con ese código dentro del perfil.',
-        ),
-        (
-            'sat_snmp_profile_metric_polling_positive',
-            'CHECK(polling_interval >= 0)',
-            'El intervalo de polling no puede ser negativo.',
-        ),
-        (
-            'sat_snmp_profile_metric_timeout_positive',
-            'CHECK(timeout_seconds >= 0)',
-            'El timeout no puede ser negativo.',
-        ),
-        (
-            'sat_snmp_profile_metric_retries_positive',
-            'CHECK(retries >= 0)',
-            'Los reintentos no pueden ser negativos.',
-        ),
-        (
-            'sat_snmp_profile_metric_divisor_nonzero',
-            'CHECK(divisor <> 0)',
-            'El divisor no puede ser cero.',
-        ),
-    ]
+    
+    # ========================================================
+    # RESTRICCIONES SQL - ODOO 19
+    # ========================================================
+
+    _sat_snmp_profile_metric_code_unique = models.Constraint(
+        'UNIQUE(profile_id, code)',
+        'Ya existe una métrica con ese código dentro del perfil.',
+    )
+
+    _sat_snmp_profile_metric_polling_positive = models.Constraint(
+        'CHECK(polling_interval >= 0)',
+        'El intervalo de polling no puede ser negativo.',
+    )
+
+    _sat_snmp_profile_metric_timeout_positive = models.Constraint(
+        'CHECK(timeout_seconds >= 0)',
+        'El timeout no puede ser negativo.',
+    )
+
+    _sat_snmp_profile_metric_retries_positive = models.Constraint(
+        'CHECK(retries >= 0)',
+        'Los reintentos no pueden ser negativos.',
+    )
+
+    _sat_snmp_profile_metric_divisor_nonzero = models.Constraint(
+        'CHECK(divisor <> 0)',
+        'El divisor no puede ser cero.',
+    )
+
 
     # ========================================================
     # VALIDACIONES

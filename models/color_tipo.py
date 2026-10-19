@@ -10,6 +10,8 @@ class ColorTipo(models.Model):
     sequence = fields.Integer(default=10)
     active = fields.Boolean(default=True)
 
-    _sql_constraints = [
-        ('color_code_uniq', 'unique(code)', 'El código de color ya existe.'),
-    ]
+    
+    _color_code_uniq = models.Constraint(
+        'UNIQUE(code)',
+        'El código de color ya existe.',
+    )

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
     <data>
 
@@ -31,26 +31,10 @@
             <field name="arch" type="xml">
                 <form string="Sesión WhatsApp">
                     <header>
-                        <button name="action_reopen"
-                                type="object"
-                                string="Reabrir"
-                                class="btn-primary"
-                                invisible="state in ('open', 'human')"/>
-                        <button name="action_set_human"
-                                type="object"
-                                string="Modo humano"
-                                class="btn-secondary"
-                                invisible="state == 'human'"/>
-                        <button name="action_close"
-                                type="object"
-                                string="Cerrar"
-                                class="btn-secondary"
-                                invisible="state in ('closed', 'expired')"/>
-                        <button name="action_expire"
-                                type="object"
-                                string="Expirar"
-                                class="btn-secondary"
-                                invisible="state in ('closed', 'expired')"/>
+                        <button name="action_reopen" type="object" string="Reabrir" class="btn-primary" invisible="state in ('open', 'human')"/>
+                        <button name="action_set_human" type="object" string="Modo humano" class="btn-secondary" invisible="state == 'human'"/>
+                        <button name="action_close" type="object" string="Cerrar" class="btn-secondary" invisible="state in ('closed', 'expired')"/>
+                        <button name="action_expire" type="object" string="Expirar" class="btn-secondary" invisible="state in ('closed', 'expired')"/>
                         <field name="state" widget="statusbar" statusbar_visible="open,human,closed,expired"/>
                     </header>
 
@@ -133,14 +117,6 @@
                     <filter name="group_company" string="Empresa" context="{'group_by':'active_company_id'}"/>
                 </search>
             </field>
-        </record>
-
-        <record id="action_whatsapp_session" model="ir.actions.act_window">
-            <field name="name">Sesiones WhatsApp</field>
-            <field name="res_model">whatsapp.session</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_session_search"/>
-            <field name="context">{'search_default_open': 1}</field>
         </record>
 
         <!-- ========================================================= -->
@@ -242,13 +218,6 @@
             </field>
         </record>
 
-        <record id="action_whatsapp_message" model="ir.actions.act_window">
-            <field name="name">Mensajes WhatsApp</field>
-            <field name="res_model">whatsapp.message</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_message_search"/>
-        </record>
-
         <!-- ========================================================= -->
         <!-- WHATSAPP OUTBOX                                          -->
         <!-- ========================================================= -->
@@ -277,21 +246,9 @@
             <field name="arch" type="xml">
                 <form string="Mensaje en cola WhatsApp">
                     <header>
-                        <button name="action_mark_sent"
-                                type="object"
-                                string="Marcar enviado"
-                                class="btn-primary"
-                                invisible="state == 'sent'"/>
-                        <button name="action_mark_failed"
-                                type="object"
-                                string="Marcar fallido"
-                                class="btn-secondary"
-                                invisible="state in ('sent', 'cancelled')"/>
-                        <button name="action_cancel"
-                                type="object"
-                                string="Cancelar"
-                                class="btn-secondary"
-                                invisible="state in ('sent', 'cancelled')"/>
+                        <button name="action_mark_sent" type="object" string="Marcar enviado" class="btn-primary" invisible="state == 'sent'"/>
+                        <button name="action_mark_failed" type="object" string="Marcar fallido" class="btn-secondary" invisible="state in ('sent', 'cancelled')"/>
+                        <button name="action_cancel" type="object" string="Cancelar" class="btn-secondary" invisible="state in ('sent', 'cancelled')"/>
                         <field name="state" widget="statusbar" statusbar_visible="pending,sent,failed,cancelled"/>
                     </header>
                     <sheet>
@@ -358,14 +315,6 @@
                     <filter name="group_partner" string="Contacto" context="{'group_by':'partner_id'}"/>
                 </search>
             </field>
-        </record>
-
-        <record id="action_whatsapp_outbox" model="ir.actions.act_window">
-            <field name="name">Cola de salida WhatsApp</field>
-            <field name="res_model">whatsapp.outbox</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_outbox_search"/>
-            <field name="context">{'search_default_pending': 1}</field>
         </record>
 
         <!-- ========================================================= -->
@@ -452,13 +401,6 @@
             </field>
         </record>
 
-        <record id="action_whatsapp_media" model="ir.actions.act_window">
-            <field name="name">Media WhatsApp</field>
-            <field name="res_model">whatsapp.media</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_media_search"/>
-        </record>
-
         <!-- ========================================================= -->
         <!-- WHATSAPP HANDOFF                                         -->
         <!-- ========================================================= -->
@@ -487,16 +429,8 @@
             <field name="arch" type="xml">
                 <form string="Derivación humana WhatsApp">
                     <header>
-                        <button name="action_release"
-                                type="object"
-                                string="Liberar"
-                                class="btn-primary"
-                                invisible="state != 'open'"/>
-                        <button name="action_cancel"
-                                type="object"
-                                string="Cancelar"
-                                class="btn-secondary"
-                                invisible="state != 'open'"/>
+                        <button name="action_release" type="object" string="Liberar" class="btn-primary" invisible="state != 'open'"/>
+                        <button name="action_cancel" type="object" string="Cancelar" class="btn-secondary" invisible="state != 'open'"/>
                         <field name="state" widget="statusbar" statusbar_visible="open,released,cancelled"/>
                     </header>
                     <sheet>
@@ -550,14 +484,6 @@
                     <filter name="group_partner" string="Contacto" context="{'group_by':'partner_id'}"/>
                 </search>
             </field>
-        </record>
-
-        <record id="action_whatsapp_handoff" model="ir.actions.act_window">
-            <field name="name">Handoff humano WhatsApp</field>
-            <field name="res_model">whatsapp.handoff</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_handoff_search"/>
-            <field name="context">{'search_default_open': 1}</field>
         </record>
 
         <!-- ========================================================= -->
@@ -648,14 +574,6 @@
             </field>
         </record>
 
-        <record id="action_whatsapp_auto_response" model="ir.actions.act_window">
-            <field name="name">Auto respuestas WhatsApp</field>
-            <field name="res_model">whatsapp.auto.response</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_auto_response_search"/>
-            <field name="context">{'search_default_active': 1}</field>
-        </record>
-
         <!-- ========================================================= -->
         <!-- WHATSAPP INTENT RULE                                     -->
         <!-- ========================================================= -->
@@ -739,14 +657,6 @@
             </field>
         </record>
 
-        <record id="action_whatsapp_intent_rule" model="ir.actions.act_window">
-            <field name="name">Reglas de intención WhatsApp</field>
-            <field name="res_model">whatsapp.intent.rule</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_intent_rule_search"/>
-            <field name="context">{'search_default_active': 1}</field>
-        </record>
-
         <!-- ========================================================= -->
         <!-- WHATSAPP TEMPLATE                                        -->
         <!-- ========================================================= -->
@@ -820,14 +730,6 @@
             </field>
         </record>
 
-        <record id="action_whatsapp_template" model="ir.actions.act_window">
-            <field name="name">Plantillas WhatsApp</field>
-            <field name="res_model">whatsapp.template</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_template_search"/>
-            <field name="context">{'search_default_active': 1}</field>
-        </record>
-
         <!-- ========================================================= -->
         <!-- WHATSAPP BUSINESS HOURS                                  -->
         <!-- ========================================================= -->
@@ -897,13 +799,6 @@
             </field>
         </record>
 
-        <record id="action_whatsapp_business_hours" model="ir.actions.act_window">
-            <field name="name">Horarios WhatsApp</field>
-            <field name="res_model">whatsapp.business.hours</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_business_hours_search"/>
-        </record>
-
         <!-- ========================================================= -->
         <!-- WHATSAPP CALENDAR EVENT                                  -->
         <!-- ========================================================= -->
@@ -931,14 +826,8 @@
             <field name="arch" type="xml">
                 <form string="Evento calendario WhatsApp">
                     <header>
-                        <button name="action_load_current_year_peru_holidays"
-                                type="object"
-                                string="Cargar feriados año actual"
-                                class="btn-secondary"/>
-                        <button name="action_load_next_year_peru_holidays"
-                                type="object"
-                                string="Cargar feriados próximo año"
-                                class="btn-secondary"/>
+                        <button name="action_load_current_year_peru_holidays" type="object" string="Cargar feriados año actual" class="btn-secondary"/>
+                        <button name="action_load_next_year_peru_holidays" type="object" string="Cargar feriados próximo año" class="btn-secondary"/>
                     </header>
                     <sheet>
                         <group>
@@ -987,14 +876,6 @@
                     <filter name="group_source" string="Origen" context="{'group_by':'source'}"/>
                 </search>
             </field>
-        </record>
-
-        <record id="action_whatsapp_calendar_event" model="ir.actions.act_window">
-            <field name="name">Calendario WhatsApp</field>
-            <field name="res_model">whatsapp.calendar.event</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_calendar_event_search"/>
-            <field name="context">{'search_default_active': 1}</field>
         </record>
 
         <!-- ========================================================= -->
@@ -1090,106 +971,5 @@
             </field>
         </record>
 
-        <record id="action_whatsapp_api_log" model="ir.actions.act_window">
-            <field name="name">Logs API WhatsApp</field>
-            <field name="res_model">whatsapp.api.log</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_whatsapp_api_log_search"/>
-        </record>
-
-        <!-- ========================================================= -->
-        <!-- MENÚS WHATSAPP                                           -->
-        <!-- Respeta estructura existente: cuelga de sat.ajustes       -->
-        <!-- ========================================================= -->
-
-        <menuitem id="menu_whatsapp_root"
-                  name="WhatsApp"
-                  parent="sat.ajustes"
-                  sequence="300"/>
-
-        <menuitem id="menu_whatsapp_operations"
-                  name="Operación"
-                  parent="menu_whatsapp_root"
-                  sequence="10"/>
-
-        <menuitem id="menu_whatsapp_config"
-                  name="Configuración"
-                  parent="menu_whatsapp_root"
-                  sequence="20"/>
-
-        <menuitem id="menu_whatsapp_debug"
-                  name="Auditoría / Debug"
-                  parent="menu_whatsapp_root"
-                  sequence="30"/>
-
-        <!-- Operación -->
-        <menuitem id="menu_whatsapp_session"
-                  name="Sesiones"
-                  parent="menu_whatsapp_operations"
-                  action="action_whatsapp_session"
-                  sequence="10"/>
-
-        <menuitem id="menu_whatsapp_message"
-                  name="Mensajes"
-                  parent="menu_whatsapp_operations"
-                  action="action_whatsapp_message"
-                  sequence="20"/>
-
-        <menuitem id="menu_whatsapp_outbox"
-                  name="Cola de salida"
-                  parent="menu_whatsapp_operations"
-                  action="action_whatsapp_outbox"
-                  sequence="30"/>
-
-        <menuitem id="menu_whatsapp_media"
-                  name="Media"
-                  parent="menu_whatsapp_operations"
-                  action="action_whatsapp_media"
-                  sequence="40"/>
-
-        <menuitem id="menu_whatsapp_handoff"
-                  name="Handoff humano"
-                  parent="menu_whatsapp_operations"
-                  action="action_whatsapp_handoff"
-                  sequence="50"/>
-
-        <!-- Configuración -->
-        <menuitem id="menu_whatsapp_auto_response"
-                  name="Auto respuestas"
-                  parent="menu_whatsapp_config"
-                  action="action_whatsapp_auto_response"
-                  sequence="10"/>
-
-        <menuitem id="menu_whatsapp_intent_rule"
-                  name="Reglas de intención"
-                  parent="menu_whatsapp_config"
-                  action="action_whatsapp_intent_rule"
-                  sequence="20"/>
-
-        <menuitem id="menu_whatsapp_template"
-                  name="Plantillas"
-                  parent="menu_whatsapp_config"
-                  action="action_whatsapp_template"
-                  sequence="30"/>
-
-        <menuitem id="menu_whatsapp_business_hours"
-                  name="Horarios"
-                  parent="menu_whatsapp_config"
-                  action="action_whatsapp_business_hours"
-                  sequence="40"/>
-
-        <menuitem id="menu_whatsapp_calendar_event"
-                  name="Calendario / Feriados"
-                  parent="menu_whatsapp_config"
-                  action="action_whatsapp_calendar_event"
-                  sequence="50"/>
-
-        <!-- Auditoría -->
-        <menuitem id="menu_whatsapp_api_log"
-                  name="Logs API"
-                  parent="menu_whatsapp_debug"
-                  action="action_whatsapp_api_log"
-                  sequence="10"/>
-
-    </data>
+        </data>
 </odoo>

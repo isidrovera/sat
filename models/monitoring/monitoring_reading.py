@@ -595,13 +595,10 @@ class SatMonitoringReading(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_monitoring_reading_snapshot_metric_unique',
-            'unique(snapshot_id, metric_code)',
-            'Ya existe una lectura con este código dentro del snapshot.',
-        ),
-    ]
+    _sat_monitoring_reading_snapshot_metric_unique = models.Constraint(
+        'UNIQUE(snapshot_id, metric_code)',
+        'Ya existe una lectura con este código dentro del snapshot.',
+    )
 
     # ========================================================
     # DISPLAY NAME

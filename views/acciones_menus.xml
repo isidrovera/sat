@@ -826,7 +826,139 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
       <field name="res_model">sat.ai.usage</field>
       <field name="view_mode">list,form</field>
     </record>
-    <menuitem id="sat_menu_root" name="Sistema de taller" sequence="1" web_icon="sat,static/description/icon.png"/>
+    <!-- WHATSAPP: ACCIONES trasladadas desde whatsapp_views.xml --><record id="action_whatsapp_session" model="ir.actions.act_window">
+            <field name="name">Sesiones WhatsApp</field>
+            <field name="res_model">whatsapp.session</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_session_search"/>
+            <field name="context">{'search_default_open': 1}</field>
+        </record>
+
+        <record id="action_whatsapp_message" model="ir.actions.act_window">
+            <field name="name">Mensajes WhatsApp</field>
+            <field name="res_model">whatsapp.message</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_message_search"/>
+        </record>
+
+        <record id="action_whatsapp_outbox" model="ir.actions.act_window">
+            <field name="name">Cola de salida WhatsApp</field>
+            <field name="res_model">whatsapp.outbox</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_outbox_search"/>
+            <field name="context">{'search_default_pending': 1}</field>
+        </record>
+
+        <record id="action_whatsapp_media" model="ir.actions.act_window">
+            <field name="name">Media WhatsApp</field>
+            <field name="res_model">whatsapp.media</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_media_search"/>
+        </record>
+
+        <record id="action_whatsapp_handoff" model="ir.actions.act_window">
+            <field name="name">Handoff humano WhatsApp</field>
+            <field name="res_model">whatsapp.handoff</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_handoff_search"/>
+            <field name="context">{'search_default_open': 1}</field>
+        </record>
+
+        <record id="action_whatsapp_auto_response" model="ir.actions.act_window">
+            <field name="name">Auto respuestas WhatsApp</field>
+            <field name="res_model">whatsapp.auto.response</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_auto_response_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+        </record>
+
+        <record id="action_whatsapp_intent_rule" model="ir.actions.act_window">
+            <field name="name">Reglas de intención WhatsApp</field>
+            <field name="res_model">whatsapp.intent.rule</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_intent_rule_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+        </record>
+
+        <record id="action_whatsapp_template" model="ir.actions.act_window">
+            <field name="name">Plantillas WhatsApp</field>
+            <field name="res_model">whatsapp.template</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_template_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+        </record>
+
+        <record id="action_whatsapp_business_hours" model="ir.actions.act_window">
+            <field name="name">Horarios WhatsApp</field>
+            <field name="res_model">whatsapp.business.hours</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_business_hours_search"/>
+        </record>
+
+        <record id="action_whatsapp_calendar_event" model="ir.actions.act_window">
+            <field name="name">Calendario WhatsApp</field>
+            <field name="res_model">whatsapp.calendar.event</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_calendar_event_search"/>
+            <field name="context">{'search_default_active': 1}</field>
+        </record>
+
+        <record id="action_whatsapp_api_log" model="ir.actions.act_window">
+            <field name="name">Logs API WhatsApp</field>
+            <field name="res_model">whatsapp.api.log</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_whatsapp_api_log_search"/>
+        </record>
+
+        <record id="action_sat_notificacion_log" model="ir.actions.act_window">
+            <field name="name">Notificaciones WhatsApp</field>
+            <field name="res_model">sat.notificacion.log</field>
+            <field name="view_mode">list,form,pivot,graph</field>
+            <field name="search_view_id" ref="view_sat_notificacion_log_search"/>
+            <field name="context">{'search_default_filter_pendientes': 1}</field>
+            <field name="help" type="html">
+                <p class="o_view_nocontent_smiling_face">
+                    No hay notificaciones registradas
+                </p>
+                <p>
+                    Aquí se mostrará el historial de WhatsApp enviados, pendientes,
+                    errores y mensajes programados por fuera de horario.
+                </p>
+            </field>
+        </record>
+
+        <record id="action_sat_reserva_regla" model="ir.actions.act_window">
+            <field name="name">Reglas y plazos</field>
+            <field name="res_model">sat.reserva.regla</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_sat_reserva_regla_search"/>
+            <field name="context">{'search_default_filter_reglas_activas': 1}</field>
+        </record>
+
+        <record id="action_sat_reserva_solicitudes" model="ir.actions.act_window">
+            <field name="name">Solicitudes de reservas</field>
+            <field name="res_model">sat.reserva.solicitud</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_sat_reserva_solicitud_search"/>
+        </record>
+
+        <record id="action_sat_reserva_por_autorizar" model="ir.actions.act_window">
+            <field name="name">Reservas por autorizar</field>
+            <field name="res_model">sat.reserva.solicitud</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_sat_reserva_solicitud_search"/>
+            <field name="domain">[('state', 'in', ('pending', 'partial'))]</field>
+            <field name="context">{'search_default_filter_solicitudes_pendientes': 1}</field>
+        </record>
+
+        <record id="action_sat_reserva_historial" model="ir.actions.act_window">
+            <field name="name">Historial de reservas</field>
+            <field name="res_model">sat.reserva.historial</field>
+            <field name="view_mode">list,form</field>
+            <field name="search_view_id" ref="view_sat_reserva_historial_search"/>
+        </record>
+
+        <record id="action_app_push_config" model="ir.actions.act_window"><field name="name">Configuración Push Firebase</field><field name="res_model">app.push.config</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_app_push_config_search"/><field name="context">{'search_default_active': 1}</field><field name="help" type="html"><p class="o_view_nocontent_smiling_face">Configuración Push Firebase</p><p>Configura Firebase Cloud Messaging. Crea una configuración y carga las credenciales de la cuenta de servicio de Firebase.</p></field></record><record id="action_app_push_device" model="ir.actions.act_window"><field name="name">Dispositivos Copier Support</field><field name="res_model">app.push.device</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_app_push_device_search"/><field name="context">{'search_default_active': 1}</field><field name="help" type="html"><p class="o_view_nocontent_smiling_face">Dispositivos Copier Support</p><p>Los dispositivos aparecerán automáticamente cuando un usuario inicie sesión en Copier Support y registre su token de notificaciones.</p></field></record><record id="action_snmp_profile" model="ir.actions.act_window"><field name="name">Perfiles SNMP</field><field name="res_model">sat.snmp.profile</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_snmp_profile_search"/></record><record id="action_snmp_profile_metric" model="ir.actions.act_window"><field name="name">Métricas / OIDs</field><field name="res_model">sat.snmp.profile.metric</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_snmp_profile_metric_search"/></record><record id="action_snmp_credential" model="ir.actions.act_window"><field name="name">Credenciales SNMP</field><field name="res_model">sat.snmp.credential</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_snmp_credential_search"/></record><record id="action_monitoring_snapshot" model="ir.actions.act_window"><field name="name">Historial de Monitoreo</field><field name="res_model">sat.monitoring.snapshot</field><field name="view_mode">list,form,graph,pivot</field><field name="search_view_id" ref="view_monitoring_snapshot_search"/></record><record id="action_monitoring_reading" model="ir.actions.act_window"><field name="name">Lecturas SNMP</field><field name="res_model">sat.monitoring.reading</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_monitoring_reading_search"/></record><record id="action_monitoring_network" model="ir.actions.act_window"><field name="name">Redes de Monitoreo</field><field name="res_model">sat.monitoring.network</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_monitoring_network_search"/></record><record id="action_monitoring_device" model="ir.actions.act_window"><field name="name">Equipos Monitoreados</field><field name="res_model">sat.monitoring.device</field><field name="view_mode">list,kanban,form</field><field name="search_view_id" ref="view_sat_monitoring_device_search"/><field name="context">{'search_default_monitoring_enabled': 1}</field></record><record id="action_monitoring_device_feature" model="ir.actions.act_window"><field name="name"> Inventario Detectado  </field><field name="res_model">sat.monitoring.device.feature</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_monitoring_device_feature_search"/><field name="domain">[('active','=',True)]</field></record><record id="action_monitoring_alert" model="ir.actions.act_window"><field name="name">Alertas</field><field name="res_model">sat.monitoring.alert</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_monitoring_alert_search"/><field name="context">{'search_default_active_alerts': 1}</field></record><record id="action_monitoring_agent" model="ir.actions.act_window"><field name="name">Agentes de Monitoreo</field><field name="res_model">sat.monitoring.agent</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_monitoring_agent_search"/></record><record id="action_monitoring_device_list_view" model="ir.actions.act_window.view"><field name="sequence">1</field><field name="view_mode">list</field><field name="view_id" ref="view_sat_monitoring_device_list"/><field name="act_window_id" ref="action_monitoring_device"/></record><record id="action_monitoring_device_kanban_view" model="ir.actions.act_window.view"><field name="sequence">2</field><field name="view_mode">kanban</field><field name="view_id" ref="view_sat_monitoring_device_kanban"/><field name="act_window_id" ref="action_monitoring_device"/></record><record id="action_monitoring_device_form_view" model="ir.actions.act_window.view"><field name="sequence">3</field><field name="view_mode">form</field><field name="view_id" ref="view_sat_monitoring_device_form"/><field name="act_window_id" ref="action_monitoring_device"/></record><record id="action_toner_monitoring_event" model="ir.actions.act_window"><field name="name">Eventos de Tóner</field><field name="res_model">toner.monitoring.event</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_toner_monitoring_event_search"/><field name="context">{'search_default_filter_pending': 1}</field></record><record id="action_toner_installation_history" model="ir.actions.act_window"><field name="name">Historial de Instalaciones</field><field name="res_model">toner.installation.history</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_toner_installation_history_search"/><field name="context">{'search_default_filter_active': 1}</field></record><record id="action_toner_stock_movement" model="ir.actions.act_window"><field name="name">Kardex de Stock</field><field name="res_model">toner.stock.movement</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_toner_stock_movement_search"/><field name="context">{}</field></record><record id="action_prueba_maquina" model="ir.actions.act_window"><field name="name">Pruebas de Máquina</field><field name="res_model">sat.prueba.maquina</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_prueba_maquina_search"/><field name="view_id" ref="view_prueba_maquina_list"/></record><record id="action_sat_reserva_liberacion_forzada" model="ir.actions.server"><field name="name">Liberar reserva ahora</field><field name="model_id" ref="model_sat_sat"/><field name="binding_model_id" ref="model_sat_sat"/><field name="binding_view_types">form,list</field><field name="state">code</field><field name="code">action = records.action_abrir_liberacion_forzada()</field></record><record id="action_mantenimiento_zona" model="ir.actions.act_window"><field name="name">Zonas de mantenimiento</field><field name="res_model">mantenimiento.zona</field><field name="view_mode">kanban,list,form</field><field name="search_view_id" ref="view_mantenimiento_zona_search"/><field name="context">{'search_default_filter_active': 1}</field></record><record id="action_mantenimiento_zona_distrito" model="ir.actions.act_window"><field name="name">Distritos por zona</field><field name="res_model">mantenimiento.zona.distrito</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_mantenimiento_zona_distrito_search"/><field name="context">{'search_default_filter_active': 1, 'search_default_group_zona': 1}</field></record><record id="action_mantenimiento_planificador" model="ir.actions.act_window"><field name="name">Planificador inteligente</field><field name="res_model">mantenimiento.planificador</field><field name="view_mode">kanban,list,form</field><field name="search_view_id" ref="view_mantenimiento_planificador_search"/><field name="context">{'search_default_filter_activos': 1}</field></record><record id="action_mantenimiento_planificador_linea" model="ir.actions.act_window"><field name="name">Líneas de planificación</field><field name="res_model">mantenimiento.planificador.linea</field><field name="view_mode">kanban,calendar,list,form</field><field name="search_view_id" ref="view_mantenimiento_planificador_linea_search"/><field name="context">{'search_default_filter_pendiente': 1}</field></record><record id="action_mantenimiento_tecnico_perfil" model="ir.actions.act_window"><field name="name">Perfiles técnicos</field><field name="res_model">mantenimiento.tecnico.perfil</field><field name="view_mode">kanban,list,form</field><field name="search_view_id" ref="view_mantenimiento_tecnico_perfil_search"/><field name="context">{'search_default_filter_active': 1}</field></record><record id="action_mantenimiento_tecnico_disponibilidad" model="ir.actions.act_window"><field name="name">Disponibilidad técnica</field><field name="res_model">mantenimiento.tecnico.disponibilidad</field><field name="view_mode">calendar,kanban,list,form</field><field name="search_view_id" ref="view_mantenimiento_tecnico_disponibilidad_search"/><field name="context">{'search_default_filter_future': 1}</field></record><record id="action_mantenimiento_tecnico_ausencia" model="ir.actions.act_window"><field name="name">Ausencias y permisos</field><field name="res_model">mantenimiento.tecnico.ausencia</field><field name="view_mode">kanban,calendar,list,form</field><field name="search_view_id" ref="view_mantenimiento_tecnico_ausencia_search"/><field name="context">{'search_default_filter_hoy': 1}</field></record><record id="action_evaluacion_personal_detalle_diario" model="ir.actions.act_window"><field name="name">Análisis Diario</field><field name="res_model">evaluacion.personal.detalle.diario</field><field name="view_mode">list,form</field><field name="context">{'create': False, 'delete': False}</field></record><record id="action_evaluacion_cierre_mensual" model="ir.actions.act_window"><field name="name">Cierres mensuales</field><field name="res_model">evaluacion.cierre.mensual</field><field name="view_mode">list,form</field><field name="search_view_id" ref="view_evaluacion_cierre_mensual_search"/><field name="context">{}</field></record><record id="action_evaluacion_personal_dashboard_client" model="ir.actions.client"><field name="name">Dashboard Evaluaciones</field><field name="tag">evaluacion_personal_dashboard_tag</field></record><record id="action_whatsapp_inbox_app" model="ir.actions.client"><field name="name">Bandeja de atención WhatsApp</field><field name="tag">sat_whatsapp_inbox_app</field></record><menuitem id="sat_menu_root" name="Sistema de taller" sequence="1" web_icon="sat,static/description/icon.png"/>
     <menuitem id="sat_dashboard_menu" name="Dashboard" sequence="1" parent="sat_menu_root" action="sat_dashboard_action"/>
     <menuitem id="menu_corapsac_root" name="Corapsac" sequence="10" parent="sat_menu_root"/>
     <menuitem id="menu_andes_root" name="Andes" sequence="20" parent="sat_menu_root"/>
@@ -835,9 +967,39 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
     <menuitem id="menu_automation_root" name="Automatización" sequence="50" parent="sat_menu_root" groups="base.group_user"/>
     <menuitem id="menu_printtracker_root" name="PrintTracker Pro" sequence="60" parent="sat_menu_root"/>
     <menuitem id="menu_evaluaciones_root" name="Evaluaciones" sequence="70" parent="sat_menu_root"/>
-    <menuitem id="menu_reporte_estado_maquinas_main" name="Reportes" sequence="80" parent="sat_menu_root"/>
+    <menuitem id="menu_evaluacion_personal_dashboard" name="Dashboard Evaluaciones" parent="menu_evaluaciones_root" sequence="5" action="action_evaluacion_personal_dashboard_client"/><menuitem id="menu_evaluacion_cierre_mensual" name="Cierres mensuales" parent="menu_evaluaciones_root" sequence="40" action="action_evaluacion_cierre_mensual"/><menuitem id="menu_reporte_estado_maquinas_main" name="Reportes" sequence="80" parent="sat_menu_root"/>
     <menuitem id="menu_mdm_root" name="Control MDM" sequence="90" parent="sat_menu_root"/>
     <menuitem id="sat.ajustes" name="Configuración" sequence="200" parent="sat_menu_root"/>
+    <!-- WHATSAPP: MENÚS; sat.ajustes definido arriba --><menuitem id="menu_whatsapp_root" name="WhatsApp" parent="sat.ajustes" sequence="300"/>
+
+        <menuitem id="menu_whatsapp_inbox_app" name="Bandeja de atención" parent="menu_whatsapp_root" action="action_whatsapp_inbox_app" sequence="1"/><menuitem id="menu_whatsapp_operations" name="Operación" parent="menu_whatsapp_root" sequence="10"/>
+
+        <menuitem id="menu_whatsapp_config" name="Configuración" parent="menu_whatsapp_root" sequence="20"/>
+
+        <menuitem id="menu_whatsapp_debug" name="Auditoría / Debug" parent="menu_whatsapp_root" sequence="30"/>
+
+        <menuitem id="menu_whatsapp_session" name="Sesiones" parent="menu_whatsapp_operations" action="action_whatsapp_session" sequence="10"/>
+
+        <menuitem id="menu_whatsapp_message" name="Mensajes" parent="menu_whatsapp_operations" action="action_whatsapp_message" sequence="20"/>
+
+        <menuitem id="menu_whatsapp_outbox" name="Cola de salida" parent="menu_whatsapp_operations" action="action_whatsapp_outbox" sequence="30"/>
+
+        <menuitem id="menu_whatsapp_media" name="Media" parent="menu_whatsapp_operations" action="action_whatsapp_media" sequence="40"/>
+
+        <menuitem id="menu_whatsapp_handoff" name="Handoff humano" parent="menu_whatsapp_operations" action="action_whatsapp_handoff" sequence="50"/>
+
+        <menuitem id="menu_whatsapp_auto_response" name="Auto respuestas" parent="menu_whatsapp_config" action="action_whatsapp_auto_response" sequence="10"/>
+
+        <menuitem id="menu_whatsapp_intent_rule" name="Reglas de intención" parent="menu_whatsapp_config" action="action_whatsapp_intent_rule" sequence="20"/>
+
+        <menuitem id="menu_whatsapp_template" name="Plantillas" parent="menu_whatsapp_config" action="action_whatsapp_template" sequence="30"/>
+
+        <menuitem id="menu_whatsapp_business_hours" name="Horarios" parent="menu_whatsapp_config" action="action_whatsapp_business_hours" sequence="40"/>
+
+        <menuitem id="menu_whatsapp_calendar_event" name="Calendario / Feriados" parent="menu_whatsapp_config" action="action_whatsapp_calendar_event" sequence="50"/>
+
+        <menuitem id="menu_whatsapp_api_log" name="Logs API" parent="menu_whatsapp_debug" action="action_whatsapp_api_log" sequence="10"/>
+
     <menuitem id="sat.stock_maquinas" name="Máquinas" sequence="10" parent="menu_corapsac_root" action="sat.action_window"/>
     <menuitem id="sat.reparaciones" name="Reparaciones" sequence="20" parent="menu_corapsac_root" action="sat.action_reparaciones_window"/>
     <menuitem id="menu_corapsac_partes_root" name="Solicitudes de Partes" sequence="30" parent="menu_corapsac_root"/>
@@ -958,5 +1120,29 @@ action = env["sat.import.line"].browse(env.context.get("active_ids", [])).action
     <menuitem id="menu_excel_import_action" name="Importar desde Excel" sequence="10" parent="menu_config_tools_root" action="action_excel_import_model"/>
     <menuitem id="menu_universal_excel_import" name="Importador Universal" sequence="20" parent="menu_config_tools_root" action="action_universal_excel_import"/>
     <menuitem id="menu_sat_import_line" name="Carga rápida" sequence="30" parent="menu_config_tools_root" action="action_sat_import_line"/>
-  </data>
+  <menuitem id="menu_sat_notificacion_log" name="Notificaciones WhatsApp" parent="menu_corapsac_root" action="action_sat_notificacion_log" sequence="25"/>
+
+        <menuitem id="menu_reservas_comerciales_root" name="Reservas Comerciales" parent="menu_corapsac_root" sequence="60"/>
+        <menuitem id="menu_sat_reserva_solicitudes" name="Solicitudes" parent="menu_reservas_comerciales_root" action="action_sat_reserva_solicitudes" sequence="10"/>
+        <menuitem id="menu_sat_reserva_por_autorizar" name="Por autorizar" parent="menu_reservas_comerciales_root" action="action_sat_reserva_por_autorizar" groups="sat.group_reserva_comercial_autorizado" sequence="20"/>
+        <menuitem id="menu_sat_reserva_reglas" name="Reglas y plazos" parent="menu_reservas_comerciales_root" action="action_sat_reserva_regla" groups="sat.group_reserva_comercial_autorizado" sequence="30"/>
+        <menuitem id="menu_sat_reserva_historial" name="Historial" parent="menu_reservas_comerciales_root" action="action_sat_reserva_historial" groups="sat.group_reserva_comercial_autorizado" sequence="40"/>
+
+    <menuitem id="menu_monitoring_root" name="Monitoreo SNMP" parent="sat_menu_root" sequence="90" groups="base.group_user"/>
+<menuitem id="menu_monitoring_devices" name="Equipos" parent="menu_monitoring_root" action="action_monitoring_device" sequence="10" groups="base.group_user"/>
+<menuitem id="menu_monitoring_alerts" name="Alertas" parent="menu_monitoring_root" action="action_monitoring_alert" sequence="20" groups="base.group_user"/>
+<menuitem id="menu_monitoring_inventory" name="Inventario Detectado" parent="menu_monitoring_root" action="action_monitoring_device_feature" sequence="30" groups="base.group_user"/>
+<menuitem id="menu_monitoring_history_root" name="Historial" parent="menu_monitoring_root" sequence="40" groups="base.group_user"/>
+<menuitem id="menu_monitoring_snapshots" name="Ciclos de Monitoreo" parent="menu_monitoring_history_root" action="action_monitoring_snapshot" sequence="10" groups="base.group_user"/>
+<menuitem id="menu_monitoring_readings" name="Lecturas SNMP" parent="menu_monitoring_history_root" action="action_monitoring_reading" sequence="20" groups="base.group_user"/>
+<menuitem id="menu_monitoring_config_root" name="Monitoreo SNMP" parent="sat.ajustes" sequence="300" groups="base.group_system"/>
+<menuitem id="menu_monitoring_agents" name="Agentes" parent="menu_monitoring_config_root" action="action_monitoring_agent" sequence="10" groups="base.group_system"/>
+<menuitem id="menu_monitoring_networks" name="Redes" parent="menu_monitoring_config_root" action="action_monitoring_network" sequence="20" groups="base.group_system"/>
+<menuitem id="menu_monitoring_credentials" name="Credenciales SNMP" parent="menu_monitoring_config_root" action="action_snmp_credential" sequence="30" groups="base.group_system"/>
+<menuitem id="menu_monitoring_profiles" name="Perfiles SNMP" parent="menu_monitoring_config_root" action="action_snmp_profile" sequence="40" groups="base.group_system"/>
+<menuitem id="menu_monitoring_metrics" name="Métricas / OIDs" parent="menu_monitoring_config_root" action="action_snmp_profile_metric" sequence="50" groups="base.group_system"/>
+<menuitem id="menu_monitoring_config_devices" name="Equipos Monitoreados" parent="menu_monitoring_config_root" action="action_monitoring_device" sequence="60" groups="base.group_system"/>
+<menuitem id="menu_monitoring_config_snapshots" name="Snapshots" parent="menu_monitoring_config_root" action="action_monitoring_snapshot" sequence="70" groups="base.group_system"/>
+<menuitem id="menu_monitoring_config_readings" name="Lecturas" parent="menu_monitoring_config_root" action="action_monitoring_reading" sequence="80" groups="base.group_system"/>
+<menuitem id="menu_app_push_device" name="Dispositivos Copier Support" parent="sat.ajustes" sequence="250" action="action_app_push_device" groups="base.group_system"/><menuitem id="menu_app_push_config" name="Configuración Push Firebase" parent="sat.ajustes" sequence="251" action="action_app_push_config" groups="base.group_system"/></data>
 </odoo>

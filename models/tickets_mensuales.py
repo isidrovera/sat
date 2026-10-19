@@ -21,11 +21,14 @@ except ImportError:
     MATPLOTLIB_ENABLED = False
 _logger = logging.getLogger(__name__)
 
+
 class EquipmentVisitReport(models.Model):
     _name = 'equipment.visit.report'
     _description = 'Informe de Visitas Técnicas por Equipo'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _rec_name = 'name'
     _order = 'date_from desc, id desc'
+
     
     name = fields.Char(string='Nombre', required=True, copy=False, readonly=True, default=lambda self: _('Nuevo'))
     date_from = fields.Date(string='Fecha Desde', required=True, default=lambda self: self._default_date_from())

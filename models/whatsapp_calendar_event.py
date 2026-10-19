@@ -117,13 +117,12 @@ class WhatsappCalendarEvent(models.Model):
 
     note = fields.Text(string="Notas internas")
 
-    _sql_constraints = [
-        (
-            "unique_whatsapp_calendar_event_date_type_name",
-            "unique(event_date, event_type, name)",
-            "Ya existe un evento con el mismo nombre, fecha y tipo.",
-        )
-    ]
+    
+    _unique_whatsapp_calendar_event_date_type_name = models.Constraint(
+        'UNIQUE(event_date, event_type, name)',
+        'Ya existe un evento con el mismo nombre, fecha y tipo.',
+    )
+
 
     # ==========================================================
     # Constraints

@@ -241,13 +241,12 @@ class WhatsappMessage(models.Model):
     # ==========================================================
     # SQL constraints / índices
     # ==========================================================
-    _sql_constraints = [
-        (
-            "uniq_external_message_session",
-            "UNIQUE(session_id, external_message_id)",
-            "Ya existe un mensaje con este external_message_id en la sesión (idempotencia).",
-        ),
-    ]
+    
+    _uniq_external_message_session = models.Constraint(
+        'UNIQUE(session_id, external_message_id)',
+        'Ya existe un mensaje con este external_message_id en la sesión (idempotencia).',
+    )
+
 
     def init(self):
         """

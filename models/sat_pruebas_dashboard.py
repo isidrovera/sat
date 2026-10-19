@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 
 import json
@@ -6,9 +7,10 @@ import re
 from datetime import date, datetime
 
 from odoo import api, fields, models
-from odoo.models import NewId
+from odoo.orm.identifiers import NewId
 
 _logger = logging.getLogger(__name__)
+
 
 
 class SatSatPruebasDashboard(models.Model):

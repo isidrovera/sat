@@ -7,15 +7,12 @@
             <field name="arch" type="xml">
                 <form string="Informes">
                     <header>
-                        <!-- Botón para enviar email (solo visible en estado borrador) -->
-                        <button name="send_email" string="Enviar por correo" type="object" 
-                            class="oe_highlight" invisible="state == 'sent'" />
-                        <!-- Campo de estado visible como widget statusbar -->
-                        <field name="state" widget="statusbar" statusbar_visible="draft,sent" />
+                        <button name="send_email" string="Enviar por correo" type="object"
+                                class="oe_highlight" invisible="state == 'sent'"/>
+                        <field name="state" widget="statusbar" statusbar_visible="draft,sent"/>
                     </header>
                     <sheet>
-                        <!-- Información de envío -->
-                        <div class="alert alert-info" role="alert" style="margin-bottom:0px;" 
+                        <div class="alert alert-info" role="alert" style="margin-bottom:0px;"
                              invisible="not sent_date">
                             <div>
                                 <strong>Enviado el:</strong>
@@ -24,9 +21,7 @@
                         </div>
                         <div class="oe_title">
                             <label for="name"/>
-                            <h1>
-                                <field name="name" placeholder="Informe N°"/>
-                            </h1>
+                            <h1><field name="name" placeholder="Informe N°"/></h1>
                         </div>
                         <group>
                             <group>
@@ -51,36 +46,36 @@
                                         <field name="modelo_id"/>
                                         <field name="serie"/>
                                         <field name="descripcion_procesada"/>
-                                        <field name="foto" 
-                                        widget="image"
-                                        />
+                                        <field name="foto" widget="image"/>
                                     </list>
                                 </field>
                             </page>
                         </notebook>
                     </sheet>
-                    <!-- Sección de chatter para seguimiento de actividad -->
                     <chatter/>
                 </form>
             </field>
         </record>
+
         <record id="informes_list_view" model="ir.ui.view">
             <field name="name">Informes.list</field>
             <field name="model">informes</field>
             <field name="arch" type="xml">
-                <list default_order="id desc" string="Informes" decoration-success="state=='sent'" decoration-info="state=='draft'">
+                <list default_order="id desc" string="Informes"
+                      decoration-success="state == 'sent'" decoration-info="state == 'draft'">
                     <field name="name"/>
                     <field name="importacion"/>
                     <field name="invoice"/>
                     <field name="proveedor_id"/>
                     <field name="create_date"/>
                     <field name="sent_date"/>
-                    <field name="state" widget="badge" 
-                           decoration-info="state == 'draft'" 
+                    <field name="state" widget="badge"
+                           decoration-info="state == 'draft'"
                            decoration-success="state == 'sent'"/>
                 </list>
             </field>
         </record>
+
         <record id="informes_search_view" model="ir.ui.view">
             <field name="name">Informe.search</field>
             <field name="model">informes</field>
@@ -91,9 +86,9 @@
                     <field name="invoice"/>
                     <field name="proveedor_id"/>
                     <separator/>
-                    <filter string="Borrador" name="draft" domain="[('state','=','draft')]"/>
-                    <filter string="Enviado" name="sent" domain="[('state','=','sent')]"/>
-                    <group expand="1" string="Agrupar Por">
+                    <filter string="Borrador" name="draft" domain="[('state', '=', 'draft')]"/>
+                    <filter string="Enviado" name="sent" domain="[('state', '=', 'sent')]"/>
+                    <group>
                         <filter string="Estado" name="groupby_state" context="{'group_by': 'state'}"/>
                         <filter string="Proveedor" name="groupby_proveedor" context="{'group_by': 'proveedor_id'}"/>
                         <filter string="Importación" name="groupby_importacion" context="{'group_by': 'importacion'}"/>
@@ -102,7 +97,7 @@
                 </search>
             </field>
         </record>
-        <!-- Kanban View -->
+
         <record id="informes_kanban_view" model="ir.ui.view">
             <field name="name">informes.kanban</field>
             <field name="model">informes</field>
@@ -116,34 +111,26 @@
                     <field name="create_date"/>
                     <field name="sent_date"/>
                     <templates>
-                        <t t-name="kanban-box">
-                            <div t-attf-class="oe_kanban_global_click">
+                        <t t-name="card">
+                            <div class="oe_kanban_global_click">
                                 <div class="oe_kanban_details">
-                                    <strong class="o_kanban_record_title">
-                                        <field name="name"/>
-                                    </strong>
+                                    <strong class="o_kanban_record_title"><field name="name"/></strong>
                                     <div class="o_kanban_record_subtitle">
-                                        <span>
-                                            <field name="proveedor_id"/>
-                                        </span>
+                                        <span><field name="proveedor_id"/></span>
                                     </div>
                                     <div>
                                         <t t-if="record.state.raw_value == 'draft'">
-                                            <span class="text-muted">Creado:
-                                                <field name="create_date"/>
-                                            </span>
+                                            <span class="text-muted">Creado: <field name="create_date"/></span>
                                         </t>
                                         <t t-if="record.state.raw_value == 'sent'">
-                                            <span class="text-success">Enviado:
-                                                <field name="sent_date"/>
-                                            </span>
+                                            <span class="text-success">Enviado: <field name="sent_date"/></span>
                                         </t>
                                     </div>
                                     <div class="o_kanban_tags_section">
-                                        <span class="badge badge-pill" t-if="record.importacion.raw_value">
+                                        <span class="badge rounded-pill" t-if="record.importacion.raw_value">
                                             <field name="importacion"/>
                                         </span>
-                                        <span class="badge badge-pill" t-if="record.invoice.raw_value">
+                                        <span class="badge rounded-pill" t-if="record.invoice.raw_value">
                                             <field name="invoice"/>
                                         </span>
                                     </div>

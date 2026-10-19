@@ -63,18 +63,16 @@ class MarcaMaquina(models.Model):
         default=True,
     )
 
-    _sql_constraints = [
-        (
-            'unique_name',
-            'unique(name)',
-            'La marca que intenta agregar ya existe.',
-        ),
-        (
-            'unique_codigo_tecnico',
-            'unique(codigo_tecnico)',
-            'El código técnico de la marca ya está siendo utilizado.',
-        ),
-    ]
+    
+    _unique_name = models.Constraint(
+        'UNIQUE(name)',
+        'La marca que intenta agregar ya existe.',
+    )
+
+    _unique_codigo_tecnico = models.Constraint(
+        'UNIQUE(codigo_tecnico)',
+        'El código técnico de la marca ya está siendo utilizado.',
+    )
 
     # =========================================================
     # NORMALIZACIÓN

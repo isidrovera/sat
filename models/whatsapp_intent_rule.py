@@ -247,13 +247,12 @@ class WhatsappIntentRule(models.Model):
     # ==========================================================
     # SQL constraints
     # ==========================================================
-    _sql_constraints = [
-        (
-            "unique_intent_rule_name",
-            "unique(name)",
-            "Ya existe una regla de intención con ese nombre.",
-        ),
-    ]
+    
+    _unique_intent_rule_name = models.Constraint(
+        'UNIQUE(name)',
+        'Ya existe una regla de intención con ese nombre.',
+    )
+
 
     # ==========================================================
     # Constraints

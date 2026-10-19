@@ -1,238 +1,432 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
+
     <data>
+
     <!-- VISTA LISTA -->
+
  <!-- VISTA LISTA MODERNA PARA CONTADORES DE IMPRESORAS -->
+
 <record id="view_contador_automatico_list" model="ir.ui.view">
+
     <field name="name">contador.automatico.list</field>
+
     <field name="model">contador.automatico</field>
+
     <field name="arch" type="xml">
-        <list string="📊 Contadores Automáticos" 
-              multi_edit="1"
-              sample="1"
-              create="1"
-              delete="1"
-              edit="1"
-              decoration-bf="estado == 'procesado'">
-            
+
+        <list string="📊 Contadores Automáticos" multi_edit="1" sample="1" create="1" delete="1" edit="1" decoration-bf="estado == 'procesado'">
+
+
+
             <!-- Campos principales -->
+
             <field name="name" string="📧 Asunto del Correo" optional="hide"/>
+
             <field name="remitente" string="👤 Remitente" optional="hide"/>
-            <field name="estado" string="Estado"
-                   decoration-success="estado == 'procesado'"
-                   decoration-info="estado == 'pendiente'"
-                   decoration-warning="estado == 'manual'"
-                   decoration-danger="estado == 'error'"
-                   decoration-muted="estado == 'filtrado'" 
-                   optional="hide"/>
-            
+
+            <field name="estado" string="Estado" decoration-success="estado == 'procesado'" decoration-info="estado == 'pendiente'" decoration-warning="estado == 'manual'" decoration-danger="estado == 'error'" decoration-muted="estado == 'filtrado'" optional="hide"/>
+
+
+
             <!-- Datos detectados -->
+
             <field name="cliente_detectado" string="👤 Cliente"/>
+
             <field name="equipo_id" string="🖨️ Equipo" optional="show"/>
+
             <field name="serie_detectada" string="🔢 Serie" optional="show"/>
+
             <field name="contador_bn_detectado" string="⚫ Contador B/N" optional="show"/>
+
             <field name="contador_color_detectado" string="🌈 Contador Color" optional="show"/>
+
             <field name="contador_scan_detectado" string="📄 Contador Scan" optional="show"/>
+
             <field name="contador_total_detectado" string="📊 Total" optional="show"/>
-            
+
+
+
             <!-- Sistema inteligente -->
+
             <field name="idioma_detectado" string="🌐 Idioma" optional="hide"/>
+
             <field name="marca_detectada" string="🏷️ Marca" optional="hide"/>
+
             <field name="formato_detectado" string="📋 Formato" optional="hide"/>
+
             <field name="confianza_deteccion" string="🎯 Confianza %" optional="hide"/>
+
             <field name="requiere_aprendizaje" string="🧠 Requiere Aprendizaje" widget="boolean_toggle" optional="hide"/>
-            
+
+
+
             <!-- Fechas -->
+
             <field name="fecha_procesamiento" string="⏰ Fecha Procesamiento" optional="show"/>
+
             <field name="create_date" string="📅 Fecha Creación" optional="hide"/>
-            
+
+
+
             <!-- Control original -->
-            <control>
-                <create name="add_contador" string="➕ Nuevo Registro"/>
-            </control>
-        </list>
+
+            </list>
+
     </field>
+
 </record>
 
+
+
     <!-- VISTA FORMULARIO -->
+
     <record id="view_contador_automatico_form" model="ir.ui.view">
+
         <field name="name">contador.automatico.form</field>
+
         <field name="model">contador.automatico</field>
+
         <field name="arch" type="xml">
+
             <form string="Contador Automático">
-                
+
+
+
                 <!-- Header con botones principales -->
+
                 <header>
-                    <button name="procesar_correo_inteligente" 
-                            string="▶ Procesar" 
-                            type="object" 
-                            class="btn-primary"
-                            invisible="estado in ['procesado']"/>
-                    
-                                    
-                    
+
+                    <button name="procesar_correo_inteligente" string="▶ Procesar" type="object" class="btn-primary" invisible="estado in ['procesado']"/>
+
+
+
+
+
+
+
                     <!-- Estado visual -->
-                    <field name="estado" widget="statusbar" 
-                           statusbar_visible="pendiente,procesado,manual,error,filtrado"/>
+
+                    <field name="estado" widget="statusbar" statusbar_visible="pendiente,procesado,manual,error,filtrado"/>
+
                 </header>
 
+
+
                 <sheet>
+
                     <!-- Información básica -->
+
                     <div class="oe_title">
+
                         <h1>
+
                             <field name="name" placeholder="Asunto del correo..."/>
+
                         </h1>
+
                         <h3>
+
                             <field name="remitente" placeholder="Remitente del correo"/>
+
                         </h3>
+
                     </div>
+
+
 
                     <!-- Badges informativos -->
+
                     <div class="o_row">
+
                         <span class="badge text-bg-success" invisible="not procesado_automaticamente">
+
                             🤖 Procesado Automáticamente
+
                         </span>
+
                         <span class="badge text-bg-info" invisible="not requiere_aprendizaje">
+
                             🧪 En aprendizaje
+
                         </span>
+
                         <span class="badge text-bg-warning" invisible="not aprendizaje_completado">
+
                             ✅ Aprendizaje registrado
+
                         </span>
+
                     </div>
 
+
+
                     <notebook>
+
                         <!-- Pestaña: Datos Detectados -->
+
                         <page string="📊 Datos Detectados" name="datos">
+
                             <group>
+
                                 <group string="Serie y Equipo">
+
                                     <field name="serie_detectada"/>
+
                                     <field name="equipo_id"/>
+
                                     <field name="original_mail_id"/>
+
                                 </group>
-                                
+
+
+
                                 <group string="Contadores Detectados">
+
                                     <field name="contador_bn_detectado"/>
+
                                     <field name="contador_color_detectado"/>
+
                                     <field name="contador_scan_detectado"/>
+
                                 </group>
+
                             </group>
-                            
+
+
+
                             <!-- Contadores anteriores -->
+
                             <group string="Valores Anteriores del Equipo" invisible="not equipo_id">
+
                                 <group>
+
                                     <field name="contador_bn_anterior" readonly="1"/>
+
                                     <field name="contador_color_anterior" readonly="1"/>
+
                                     <field name="contador_scan_anterior" readonly="1"/>
+
                                 </group>
+
                             </group>
+
                         </page>
+
+
 
                         <!-- Pestaña: Análisis del procesamiento -->
+
                         <page string="🔎 Análisis" name="inteligente">
+
                             <group>
+
                                 <group string="Detección Automática">
+
                                     <field name="idioma_detectado" readonly="1"/>
+
                                     <field name="marca_detectada" readonly="1"/>
+
                                     <field name="formato_detectado" readonly="1"/>
+
                                     <field name="confianza_deteccion" readonly="1" widget="percentage"/>
+
                                 </group>
-                                
+
+
+
                                 <group string="Estado del Aprendizaje">
+
                                     <field name="requiere_aprendizaje" readonly="1"/>
+
                                     <field name="aprendizaje_completado" readonly="1"/>
+
                                     <field name="patrones_auto_generados" readonly="1"/>
+
                                 </group>
+
                             </group>
-                            
+
+
+
                             <!-- Información adicional -->
+
                             <group string="Análisis de Contenido">
+
                                 <field name="palabras_clave_encontradas" widget="text" readonly="1"/>
+
                                 <field name="estructura_detectada" widget="text" readonly="1"/>
-                                
+
+
+
                             </group>
+
                         </page>
+
+
 
                         <!-- Pestaña: Contenido del Correo -->
+
                         <page string="📧 Contenido" name="contenido">
+
                             <group>
+
                                 <field name="contenido_original" widget="html" readonly="1" nolabel="1"/>
+
                             </group>
-                            
+
+
+
                             <group string="Contenido Procesado (Texto Plano)">
+
                                 <field name="contenido_procesado" widget="text" readonly="1" nolabel="1"/>
+
                             </group>
+
                         </page>
+
+
 
                         <!-- Pestaña: Control -->
+
                         <page string="⚙️ Control" name="control">
+
                             <group>
+
                                 <group string="Estado del Procesamiento">
+
                                     <field name="fecha_procesamiento" readonly="1"/>
+
                                     <field name="procesado_automaticamente" readonly="1"/>
+
                                     <field name="mensaje_error" widget="text" readonly="1" invisible="not mensaje_error"/>
+
                                 </group>
+
                             </group>
+
                         </page>
+
                     </notebook>
+
                 </sheet>
 
+
+
                 <!-- Chatter para seguimiento -->
+
                 <chatter/>
+
             </form>
+
         </field>
+
     </record>
 
+
+
     <!-- VISTA SEARCH -->
+
     <record id="view_contador_automatico_search" model="ir.ui.view">
+
         <field name="name">contador.automatico.search</field>
+
         <field name="model">contador.automatico</field>
+
         <field name="arch" type="xml">
+
             <search string="Buscar Contadores Automáticos">
-                
+
+
+
                 <!-- Campos de búsqueda -->
-                <field name="name" string="Asunto" 
-                       filter_domain="['|', ('name', 'ilike', self), ('contenido_procesado', 'ilike', self)]"/>
+
+                <field name="name" string="Asunto" filter_domain="['|', ('name', 'ilike', self), ('contenido_procesado', 'ilike', self)]"/>
+
                 <field name="remitente"/>
+
                 <field name="serie_detectada"/>
+
                 <field name="equipo_id"/>
-                
+
+
+
                 <!-- Filtros por estado -->
+
                 <separator/>
+
                 <filter string="🟢 Procesados" name="procesados" domain="[('estado', '=', 'procesado')]"/>
+
                 <filter string="⏳ Pendientes" name="pendientes" domain="[('estado', '=', 'pendiente')]"/>
+
                 <filter string="✋ Manuales" name="manuales" domain="[('estado', '=', 'manual')]"/>
+
                 <filter string="❌ Error" name="errores" domain="[('estado', '=', 'error')]"/>
+
                 <filter string="🚫 Filtrados" name="filtrados" domain="[('estado', '=', 'filtrado')]"/>
-                
+
+
+
                 <!-- Filtros sistema inteligente -->
+
                 <separator/>
+
                 <filter string="🤖 Procesado Automáticamente" name="automaticos" domain="[('procesado_automaticamente', '=', True)]"/>
+
                 <filter string="🧪 En aprendizaje" name="requiere_aprendizaje" domain="[('requiere_aprendizaje', '=', True)]"/>
+
                 <filter string="✅ Aprendizaje registrado" name="aprendizaje_completado" domain="[('aprendizaje_completado', '=', True)]"/>
-                
+
+
+
                 <!-- Filtros por marca/idioma -->
+
                 <separator/>
+
                 <filter string="Bizhub" name="bizhub" domain="[('marca_detectada', '=', 'Bizhub')]"/>
+
                 <filter string="Ricoh" name="ricoh" domain="[('marca_detectada', '=', 'Ricoh')]"/>
+
                 <filter string="Español" name="espanol" domain="[('idioma_detectado', '=', 'español')]"/>
+
                 <filter string="English" name="english" domain="[('idioma_detectado', '=', 'english')]"/>
-                
+
+
+
                 <!-- Filtros por fecha -->
+
                 <separator/>
+
                 <filter string="Hoy" name="hoy" domain="[('create_date', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+
                 <filter string="Esta Semana" name="esta_semana" domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+
                 <filter string="Este Mes" name="este_mes" domain="[('create_date', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
-                
+
+
+
                 <!-- Agrupaciones -->
-                <group expand="1" string="Agrupar Por">
+
+                <group>
+
                     <filter string="Estado" name="group_estado" context="{'group_by': 'estado'}"/>
+
                     <filter string="Marca Detectada" name="group_marca" context="{'group_by': 'marca_detectada'}"/>
+
                     <filter string="Idioma Detectado" name="group_idioma" context="{'group_by': 'idioma_detectado'}"/>
+
                     <filter string="Fecha Creación" name="group_fecha" context="{'group_by': 'create_date:day'}"/>
+
                 </group>
+
             </search>
+
         </field>
+
     </record>
+
 </data>
-    
+
+
+
 </odoo>

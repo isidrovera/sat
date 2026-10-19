@@ -555,13 +555,11 @@ class SatMonitoringAlert(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_monitoring_alert_occurrence_positive',
-            'CHECK(occurrence_count >= 0)',
-            'La cantidad de detecciones no puede ser negativa.',
-        ),
-    ]
+    
+    _sat_monitoring_alert_occurrence_positive = models.Constraint(
+        'CHECK(occurrence_count >= 0)',
+        'La cantidad de detecciones no puede ser negativa.',
+    )
 
     # ========================================================
     # VALIDACIONES

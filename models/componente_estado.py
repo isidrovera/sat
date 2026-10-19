@@ -22,6 +22,8 @@ class ComponenteEstado(models.Model):
              'Si está vacío, aplica a todos los componentes.'
     )
 
-    _sql_constraints = [
-        ('code_unique', 'unique(code)', 'Código de estado duplicado.'),
-    ]
+    
+    _code_unique = models.Constraint(
+        'UNIQUE(code)',
+        'Código de estado duplicado.',
+    )

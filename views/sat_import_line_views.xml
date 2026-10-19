@@ -2,22 +2,19 @@
 <odoo>
   <data>
 
-    <!-- LIST (Odoo 18) -->
+    <!-- LISTA: líneas de carga rápida -->
     <record id="view_sat_import_line_list" model="ir.ui.view">
       <field name="name">sat.import.line.list</field>
       <field name="model">sat.import.line</field>
       <field name="arch" type="xml">
         <list string="Carga rápida (staging)" editable="top" create="1" delete="1">
-          
           <field name="modelo_id"/>
           <field name="serie_id"/>
           <field name="contometro"/>
           <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"/>
-        
           <field name="importacion"/>
           <field name="invoice"/>
           <field name="proveedor_id"/>
-
           <field name="sat_id" optional="hide"/>
           <field name="error_msg" optional="hide"/>
           <field name="active" invisible="1"/>
@@ -27,7 +24,7 @@
       </field>
     </record>
 
-    <!-- SEARCH -->
+    <!-- BÚSQUEDA: filtros y agrupaciones compatibles con Odoo 19 -->
     <record id="view_sat_import_line_search" model="ir.ui.view">
       <field name="name">sat.import.line.search</field>
       <field name="model">sat.import.line</field>
@@ -50,7 +47,7 @@
           <filter string="Archivados" name="flt_archived"
                   domain="[('active','=',False)]"/>
 
-          <group expand="0" string="Agrupar">
+          <group>
             <filter string="Proveedor" name="grp_proveedor" context="{'group_by':'proveedor_id'}"/>
             <filter string="Importación" name="grp_importacion" context="{'group_by':'importacion'}"/>
             <filter string="Invoice" name="grp_invoice" context="{'group_by':'invoice'}"/>
@@ -61,13 +58,14 @@
       </field>
     </record>
 
-    <!-- FORM (opcional, útil para ver error_msg largo) -->
+    <!-- FORMULARIO: detalle de línea de importación -->
     <record id="view_sat_import_line_form" model="ir.ui.view">
       <field name="name">sat.import.line.form</field>
       <field name="model">sat.import.line</field>
       <field name="arch" type="xml">
         <form string="Carga rápida">
           <sheet>
+            <field name="currency_id" invisible="1"/>
             <group>
               <field name="state" widget="statusbar" statusbar_visible="draft,ready,done,error,cancel"/>
               <field name="active"/>
@@ -77,7 +75,7 @@
               <field name="modelo_id"/>
               <field name="serie_id"/>
               <field name="contometro"/>
-              <field name="precio_compra"/>
+              <field name="precio_compra" widget="monetary" options="{'currency_field': 'currency_id'}"/>
             </group>
 
             <group string="Cabecera" col="4">
@@ -95,6 +93,5 @@
       </field>
     </record>
 
- 
   </data>
 </odoo>

@@ -3,10 +3,11 @@
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
-
 class ModelosMaquin(models.Model):
     _name = 'modelo.maquina'
     _description = 'Modelos de máquinas de impresión y multifuncionales'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+
 
     # =========================================================
     # INFORMACIÓN PRINCIPAL
@@ -60,13 +61,12 @@ class ModelosMaquin(models.Model):
         default=_default_currency_id,
     )
 
-    _sql_constraints = [
-        (
-            'unique_name',
-            'unique(name)',
-            'El modelo de máquina que intenta agregar ya existe.',
-        ),
-    ]
+    
+    _unique_name = models.Constraint(
+        'UNIQUE(name)',
+        'El modelo de máquina que intenta agregar ya existe.',
+    )
+
 
     # =========================================================
     # CATÁLOGO MAESTRO DE TÓNER

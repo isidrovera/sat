@@ -11,6 +11,9 @@ class AccesorioTipo(models.Model):
     active = fields.Boolean(default=True)
     descripcion = fields.Text()
 
-    _sql_constraints = [
-        ('code_unique', 'unique(code)', 'Código de accesorio duplicado.')
-    ]
+    
+    _code_unique = models.Constraint(
+        'UNIQUE(code)',
+        'Código de accesorio duplicado.',
+    )
+

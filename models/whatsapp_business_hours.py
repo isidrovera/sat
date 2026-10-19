@@ -189,13 +189,12 @@ class WhatsappBusinessHours(models.Model):
     # ==========================================================
     # Restricciones SQL
     # ==========================================================
-    _sql_constraints = [
-        (
-            "unique_whatsapp_business_day",
-            "unique(day_of_week)",
-            "Ya existe una configuración de horario para este día.",
-        )
-    ]
+    
+    _unique_whatsapp_business_day = models.Constraint(
+        'UNIQUE(day_of_week)',
+        'Ya existe una configuración de horario para este día.',
+    )
+
 
     # ==========================================================
     # Computes

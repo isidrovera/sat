@@ -66,12 +66,17 @@ class PrintTrackerEntity(models.Model):
                                     compute='_compute_supply_status', store=False)
     
     # Constrains
-    _sql_constraints = [
-        ('unique_pt_entity', 'UNIQUE(pt_entity_id)', 
-         'ID PrintTracker debe ser único'),
-        ('no_self_parent', 'CHECK(id != parent_id)', 
-         'Una entidad no puede ser su propio padre')
-    ]
+    
+    _unique_pt_entity = models.Constraint(
+        'UNIQUE(pt_entity_id)',
+        'ID PrintTracker debe ser único',
+    )
+
+    _no_self_parent = models.Constraint(
+        'CHECK(id != parent_id)',
+        'Una entidad no puede ser su propio padre',
+    )
+
 
     @api.depends('parent_id')
     def _compute_level(self):

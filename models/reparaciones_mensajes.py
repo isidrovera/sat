@@ -141,8 +141,7 @@ class ReparacionesWhatsapp(models.Model):
     # -------------------------------------------------------------------------
 
     @api.depends(
-        'responsable_id',
-        'responsable_id.partner_id.mobile',
+        'responsable_id',        
         'responsable_id.partner_id.phone',
     )
     def _compute_responsable_mobile_clean(self):
@@ -158,11 +157,12 @@ class ReparacionesWhatsapp(models.Model):
                 )
                 record.responsable_mobile_clean = ''
 
+    
     @api.depends(
         'maquina_id',
         'maquina_id.cliente_id',
         'maquina_id.cliente_id.asesora_id',
-        'maquina_id.cliente_id.asesora_id.mobile',
+        'maquina_id.cliente_id.asesora_id.phone',
     )
     def _compute_asesora_mobile_clean(self):
         for record in self:

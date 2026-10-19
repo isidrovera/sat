@@ -40,10 +40,12 @@ class ModeloMaquinaAccesorio(models.Model):
     )
     nota = fields.Char(string='Nota')
 
-    _sql_constraints = [
-        ('uniq_modelo_accesorio', 'unique(modelo_id, tipo_id)', 
-         'Accesorio repetido para el modelo.')
-    ]
+    
+    _uniq_modelo_accesorio = models.Constraint(
+        'UNIQUE(modelo_id, tipo_id)',
+        'Accesorio repetido para el modelo.',
+    )
+
 
 
 class ModelosMaquin(models.Model):
@@ -90,7 +92,8 @@ class AccesorioSubparte(models.Model):
         default=True
     )
 
-    _sql_constraints = [
-        ('name_tipo_unique', 'unique(name, tipo_id)',
-         'Ya existe una subparte con este nombre para este tipo de accesorio.')
-    ]
+    
+    _name_tipo_unique = models.Constraint(
+        'UNIQUE(name, tipo_id)',
+        'Ya existe una subparte con este nombre para este tipo de accesorio.',
+    )

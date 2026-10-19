@@ -229,7 +229,7 @@
                         name="mis"
                         domain="[('tecnico_id','=',uid)]"/>
 
-                <group expand="0" string="Agrupar por">
+                <group>
                     <filter string="Técnico"
                             name="by_tecnico"
                             context="{'group_by':'tecnico_id'}"/>

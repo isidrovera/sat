@@ -112,13 +112,12 @@ class ModeloMaquinaFamilia(models.Model):
         copy=False,
     )
 
-    _sql_constraints = [
-        (
-            'unique_marca_codigo_familia',
-            'unique(marca_id, codigo_tecnico)',
-            'Ya existe una familia con este código para la marca.',
-        ),
-    ]
+    
+    _unique_marca_codigo_familia = models.Constraint(
+        'UNIQUE(marca_id, codigo_tecnico)',
+        'Ya existe una familia con este código para la marca.',
+    )
+
 
     # =========================================================
     # CAMPOS CALCULADOS

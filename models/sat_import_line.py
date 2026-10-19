@@ -1,12 +1,19 @@
+
 # -*- coding: utf-8 -*-
+
+import logging
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
 
 
+_logger = logging.getLogger(__name__)
+
+
 class SatImportLine(models.Model):
     _name = "sat.import.line"
     _description = "Staging de ingreso (tipo Excel) para crear sat.sat"
+    _inherit = ["mail.thread", "mail.activity.mixin"]
     _order = "create_date desc, id desc"
 
     active = fields.Boolean(
@@ -125,7 +132,11 @@ class SatImportLine(models.Model):
     @api.constrains("serie_id", "active", "state")
     def _check_unique_serie_in_staging(self):
         for record in self:
-            if not record.serie_id:
+            if (
+                not record.serie_id
+                or not record.active
+                or record.state == "cancel"
+            ):
                 continue
 
             duplicate = self.search(
@@ -140,9 +151,7 @@ class SatImportLine(models.Model):
 
             if duplicate:
                 raise ValidationError(
-                    _(
-                        "La serie %s ya existe en Carga rápida."
-                    )
+                    _("La serie %s ya existe en Carga rápida.")
                     % record.serie_id
                 )
 
@@ -234,34 +243,48 @@ class SatImportLine(models.Model):
                 continue
 
             try:
-                sat = Sat.create(
-                    {
-                        # En sat.sat el campo name es Many2one
-                        # relacionado con modelo.maquina.
-                        "name": line.modelo_id.id,
-                        "serie_id": line.serie_id,
-                        "contometro": line.contometro,
-                        "precio_compra": (
-                            line.precio_compra or 0.0
-                        ),
-                        "importacion": line.importacion,
-                        "invoice": line.invoice,
-                        "proveedor_id": line.proveedor_id.id,
-                    }
-                )
+                with self.env.cr.savepoint():
+                    sat = Sat.create(
+                        {
+                            "name": line.modelo_id.id,
+                            "serie_id": line.serie_id,
+                            "contometro": line.contometro,
+                            "precio_compra": (
+                                line.precio_compra or 0.0
+                            ),
+                            "importacion": line.importacion,
+                            "invoice": line.invoice,
+                            "proveedor_id": line.proveedor_id.id,
+                        }
+                    )
 
-                line.write(
-                    {
-                        "sat_id": sat.id,
-                        "state": "done",
-                        "error_msg": False,
-                        "active": False,
-                    }
-                )
+                    line.write(
+                        {
+                            "sat_id": sat.id,
+                            "state": "done",
+                            "error_msg": False,
+                            "active": False,
+                        }
+                    )
 
                 created += 1
 
+                _logger.info(
+                    "[SAT IMPORT] Equipo creado | "
+                    "linea=%s serie=%s sat_id=%s",
+                    line.id,
+                    line.serie_id,
+                    sat.id,
+                )
+
             except Exception as error:
+                _logger.exception(
+                    "[SAT IMPORT] Error creando equipo | "
+                    "linea=%s serie=%s",
+                    line.id,
+                    line.serie_id,
+                )
+
                 line.write(
                     {
                         "state": "error",
@@ -269,6 +292,13 @@ class SatImportLine(models.Model):
                     }
                 )
                 errors += 1
+
+        _logger.info(
+            "[SAT IMPORT] Proceso finalizado | "
+            "creados=%s errores=%s",
+            created,
+            errors,
+        )
 
         return {
             "type": "ir.actions.client",

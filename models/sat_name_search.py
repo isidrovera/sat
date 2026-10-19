@@ -1,13 +1,13 @@
+
 # -*- coding: utf-8 -*-
 
-from odoo import api, models
-from odoo.osv import expression
+from odoo import api, fields, models, _
 
 
 class SatSat(models.Model):
     _inherit = 'sat.sat'
 
-    @api.depends('serie_id', 'name', 'cliente_id', 'marca')
+    @api.depends('serie_id', 'name', 'name.name', 'cliente_id', 'cliente_id.name', 'marca')
     def _compute_display_name(self):
         """
         Muestra la máquina en los Many2one como:
@@ -20,70 +20,78 @@ class SatSat(models.Model):
                 partes.append(record.serie_id)
 
             if record.name:
-                partes.append(record.name.name or record.name.display_name)
+                partes.append(
+                    record.name.name or record.name.display_name
+                )
 
             if record.cliente_id:
                 partes.append(record.cliente_id.name)
 
-            record.display_name = ' - '.join(partes) if partes else 'Sin serie'
+            record.display_name = (
+                ' - '.join(partes) if partes else 'Sin serie'
+            )
 
     @api.model
-    def _name_search(self, name='', domain=None, operator='ilike', limit=100, order=None):
+    def _name_search(
+        self,
+        name='',
+        domain=None,
+        operator='ilike',
+        limit=100,
+        order=None,
+    ):
         """
         Permite buscar sat.sat por:
-        - serie_id
-        - modelo de máquina
-        - cliente
-        - marca
+        - Serie
+        - Modelo de máquina
+        - Cliente
+        - Marca
+
+        Compatible con Odoo 19.
         """
-        domain = list(domain or [])
+        search_domain = fields.Domain(domain or [])
 
         if name:
-            search_domain = [
-                '|', '|', '|',
-                ('serie_id', operator, name),
-                ('name.name', operator, name),
-                ('cliente_id.name', operator, name),
-                ('marca', operator, name),
-            ]
-            domain = expression.AND([domain, search_domain])
+            filters = fields.Domain.OR([
+                fields.Domain('serie_id', operator, name),
+                fields.Domain('name.name', operator, name),
+                fields.Domain('cliente_id.name', operator, name),
+                fields.Domain('marca', operator, name),
+            ])
 
-        return self._search(domain, limit=limit, order=order)
+            search_domain = fields.Domain.AND([
+                search_domain,
+                filters,
+            ])
+
+        return self._search(
+            search_domain,
+            limit=limit,
+            order=order,
+        )
 
     @api.model
-    def name_search(self, name='', args=None, operator='ilike', limit=100):
+    def name_search(
+        self,
+        name='',
+        domain=None,
+        operator='ilike',
+        limit=100,
+    ):
         """
-        Compatibilidad para que el desplegable del Many2one muestre también la serie.
+        Devuelve los equipos encontrados mostrando:
+        SERIE - MODELO - CLIENTE.
         """
-        args = args or []
-        domain = list(args)
+        ids = self._name_search(
+            name=name,
+            domain=domain,
+            operator=operator,
+            limit=limit,
+        )
 
-        if name:
-            search_domain = [
-                '|', '|', '|',
-                ('serie_id', operator, name),
-                ('name.name', operator, name),
-                ('cliente_id.name', operator, name),
-                ('marca', operator, name),
-            ]
-            domain = expression.AND([domain, search_domain])
+        records = self.browse(ids)
 
-        records = self.search(domain, limit=limit)
-
-        result = []
-        for record in records:
-            partes = []
-
-            if record.serie_id:
-                partes.append(record.serie_id)
-
-            if record.name:
-                partes.append(record.name.name or record.name.display_name)
-
-            if record.cliente_id:
-                partes.append(record.cliente_id.name)
-
-            display = ' - '.join(partes) if partes else record.display_name
-            result.append((record.id, display))
-
-        return result
+        return [
+            (record.id, record.display_name)
+            for record in records
+        ]

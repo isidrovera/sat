@@ -163,13 +163,11 @@ class WhatsappAutoResponse(models.Model):
     use_count = fields.Integer(string="Cantidad de usos", default=0, readonly=True)
     last_matched_message = fields.Text(string="Último mensaje matcheado", readonly=True)
 
-    _sql_constraints = [
-        (
-            "unique_whatsapp_auto_response_name",
-            "unique(name)",
-            "Ya existe una respuesta automática con ese nombre.",
-        ),
-    ]
+    
+    _unique_whatsapp_auto_response_name = models.Constraint(
+        'UNIQUE(name)',
+        'Ya existe una respuesta automática con ese nombre.',
+    )
 
     # ==========================================================
     # Constraints

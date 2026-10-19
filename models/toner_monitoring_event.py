@@ -476,24 +476,23 @@ class TonerMonitoringEvent(models.Model):
     # SQL
     # ============================================================
 
-    _sql_constraints = [
-        (
-            "toner_monitoring_level_percent_check",
-            "CHECK(level_percent IS NULL OR "
-            "(level_percent >= 0 AND level_percent <= 100))",
-            "El nivel de tóner debe estar entre 0 y 100.",
-        ),
-        (
-            "toner_monitoring_counter_bn_check",
-            "CHECK(counter_bn >= 0)",
-            "El contador B/N no puede ser negativo.",
-        ),
-        (
-            "toner_monitoring_counter_color_check",
-            "CHECK(counter_color >= 0)",
-            "El contador color no puede ser negativo.",
-        ),
-    ]
+    
+    _toner_monitoring_level_percent_check = models.Constraint(
+        'CHECK(level_percent IS NULL OR '
+        '(level_percent >= 0 AND level_percent <= 100))',
+        'El nivel de tóner debe estar entre 0 y 100.',
+    )
+
+    _toner_monitoring_counter_bn_check = models.Constraint(
+        'CHECK(counter_bn >= 0)',
+        'El contador B/N no puede ser negativo.',
+    )
+
+    _toner_monitoring_counter_color_check = models.Constraint(
+        'CHECK(counter_color >= 0)',
+        'El contador color no puede ser negativo.',
+    )
+
 
     # ============================================================
     # COMPUTES

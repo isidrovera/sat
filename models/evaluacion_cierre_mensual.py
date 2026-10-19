@@ -248,13 +248,12 @@ class EvaluacionCierreMensual(models.Model):
     # VALIDACIONES
     # ============================================================
 
-    _sql_constraints = [
-        (
-            'evaluacion_cierre_mensual_periodo_unique',
-            'unique(fecha_inicio)',
-            'Ya existe un cierre mensual para este periodo.',
-        ),
-    ]
+    
+    _evaluacion_cierre_mensual_periodo_unique = models.Constraint(
+        'UNIQUE(fecha_inicio)',
+        'Ya existe un cierre mensual para este periodo.',
+    )
+
 
     @api.constrains('fecha_inicio')
     def _check_fecha_inicio(self):
@@ -1661,10 +1660,9 @@ class EvaluacionCierreMensualTecnico(models.Model):
         readonly=True,
     )
 
-    _sql_constraints = [
-        (
-            'evaluacion_cierre_tecnico_unique',
-            'unique(cierre_id, tecnico_id)',
-            'El técnico ya fue incluido en este cierre mensual.',
-        ),
-    ]
+    
+    _evaluacion_cierre_tecnico_unique = models.Constraint(
+        'UNIQUE(cierre_id, tecnico_id)',
+        'El técnico ya fue incluido en este cierre mensual.',
+    )
+

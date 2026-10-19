@@ -1243,14 +1243,22 @@ class PrintTrackerAlert(models.Model):
     # ==========================================
     # CONSTRAINTS
     # ==========================================
-    _sql_constraints = [
-        ('positive_percentage', 'CHECK(porcentaje_suministro >= 0 AND porcentaje_suministro <= 100)',
-         'Porcentaje debe estar entre 0 y 100'),
-        ('positive_days', 'CHECK(dias_sin_lecturas >= 0)',
-         'Días sin lecturas debe ser positivo'),
-        ('unique_api_event', 'UNIQUE(api_event_id)',
-         'Event de API ya procesado'),
-    ]
+    
+    _positive_percentage = models.Constraint(
+        'CHECK(porcentaje_suministro >= 0 AND porcentaje_suministro <= 100)',
+        'Porcentaje debe estar entre 0 y 100',
+    )
+
+    _positive_days = models.Constraint(
+        'CHECK(dias_sin_lecturas >= 0)',
+        'Días sin lecturas debe ser positivo',
+    )
+
+    _unique_api_event = models.Constraint(
+        'UNIQUE(api_event_id)',
+        'Event de API ya procesado',
+    )
+
 
     # ==========================================
     # COMPUTED FIELDS

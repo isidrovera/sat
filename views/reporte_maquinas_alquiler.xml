@@ -1,7 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='utf-8'?>
 <odoo>
     <data>
-
         <!-- ============================================ -->
         <!-- VISTA LIST: Reporte Estado Máquina -->
         <!-- ============================================ -->
@@ -16,11 +15,7 @@
                     <field name="modelo"/>
                     <field name="marca"/>
                     <field name="tipo_maquina"/>
-                    <field name="estado_maquina"
-                           decoration-danger="estado_maquina == 'con_problemas'"
-                           decoration-warning="estado_maquina == 'partes'"
-                           decoration-info="estado_maquina == 'sin_revisar'"
-                           decoration-success="estado_maquina in ('revisada', 'lista')"/>
+                    <field name="estado_maquina" decoration-danger="estado_maquina == 'con_problemas'" decoration-warning="estado_maquina == 'partes'" decoration-info="estado_maquina == 'sin_revisar'" decoration-success="estado_maquina in ('revisada', 'lista')"/>
                     <field name="contador_total"/>
                     <field name="ubicacion_fisica"/>
                     <field name="ultimo_ticket_fecha"/>
@@ -30,7 +25,6 @@
                 </list>
             </field>
         </record>
-
         <!-- ============================================ -->
         <!-- VISTA FORM: Reporte Estado Máquina -->
         <!-- ============================================ -->
@@ -40,24 +34,16 @@
             <field name="arch" type="xml">
                 <form string="Reporte Estado Máquina" create="false" edit="false" delete="false">
                     <sheet>
-
                         <div class="oe_button_box" name="button_box">
                         </div>
-
                         <div class="oe_title">
                             <h1>
                                 <field name="display_name"/>
                             </h1>
                             <div class="o_row">
-                                <field name="estado_maquina"
-                                       widget="badge"
-                                       decoration-danger="estado_maquina == 'con_problemas'"
-                                       decoration-warning="estado_maquina == 'partes'"
-                                       decoration-info="estado_maquina == 'sin_revisar'"
-                                       decoration-success="estado_maquina in ('revisada', 'lista')"/>
+                                <field name="estado_maquina" widget="badge" decoration-danger="estado_maquina == 'con_problemas'" decoration-warning="estado_maquina == 'partes'" decoration-info="estado_maquina == 'sin_revisar'" decoration-success="estado_maquina in ('revisada', 'lista')"/>
                             </div>
                         </div>
-
                         <group>
                             <group name="informacion_basica" string="Información Básica">
                                 <field name="fecha_generacion"/>
@@ -69,7 +55,6 @@
                                 <field name="tipo_maquina"/>
                                 <field name="ubicacion_fisica"/>
                             </group>
-
                             <group name="contadores" string="Contadores">
                                 <field name="contador_bn"/>
                                 <field name="contador_color" invisible="tipo_maquina == 'monocromatica'"/>
@@ -77,7 +62,6 @@
                                 <field name="contador_scanner"/>
                             </group>
                         </group>
-
                         <group name="ultimo_ticket" string="Último Ticket de Servicio">
                             <group>
                                 <field name="ultimo_ticket_id"/>
@@ -85,16 +69,13 @@
                                 <field name="ultimo_ticket_tipo"/>
                                 <field name="tecnico_responsable"/>
                             </group>
-
                             <group name="cliente_anterior" string="Cliente Anterior">
                                 <field name="cliente_anterior_id"/>
                                 <field name="direccion_anterior"/>
                                 <field name="fecha_ultimo_retiro"/>
                             </group>
                         </group>
-
                         <notebook>
-
                             <!-- ============================================ -->
                             <!-- NUEVO: Resumen dinámico del último ticket -->
                             <!-- ============================================ -->
@@ -104,25 +85,20 @@
                                         <field name="componentes_resumen" widget="html" nolabel="1"/>
                                     </group>
                                 </group>
-
                                 <group>
                                     <group string="Accesorios Evaluados">
                                         <field name="accesorios_resumen" widget="html" nolabel="1"/>
                                     </group>
                                 </group>
-
                                 <group>
                                     <group string="Intervenciones / Subpartes">
                                         <field name="intervenciones_resumen" widget="html" nolabel="1"/>
                                     </group>
                                 </group>
                             </page>
-
-                           
                             <page string="Informe Técnico" name="informe_tecnico">
                                 <field name="informe_tecnico" widget="html" nolabel="1"/>
                             </page>
-
                             <page string="Partes Retiradas" name="partes_retiradas">
                                 <field name="partes_retiradas_ids" nolabel="1">
                                     <list>
@@ -135,7 +111,6 @@
                                     </list>
                                 </field>
                             </page>
-
                             <page string="Historial de Alquileres" name="historial_alquileres">
                                 <field name="historial_alquileres_ids" nolabel="1">
                                     <list>
@@ -148,15 +123,12 @@
                                     </list>
                                 </field>
                             </page>
-
                         </notebook>
                     </sheet>
-
                     <chatter/>
                 </form>
             </field>
         </record>
-
         <!-- ============================================ -->
         <!-- VISTA SEARCH: Reporte Estado Máquina -->
         <!-- ============================================ -->
@@ -170,74 +142,33 @@
                     <field name="marca" string="Marca" filter_domain="[('marca', 'ilike', self)]"/>
                     <field name="tecnico_responsable" string="Técnico" filter_domain="[('tecnico_responsable', 'ilike', self)]"/>
                     <field name="cliente_anterior_id" string="Cliente Anterior"/>
-
                     <separator/>
-
-                    <filter string="Sin Revisar" name="filter_sin_revisar"
-                            domain="[('estado_maquina', '=', 'sin_revisar')]"/>
-
-                    <filter string="Revisadas" name="filter_revisadas"
-                            domain="[('estado_maquina', '=', 'revisada')]"/>
-
-                    <filter string="Listas" name="filter_listas"
-                            domain="[('estado_maquina', '=', 'lista')]"/>
-
-                    <filter string="Con Problemas" name="filter_con_problemas"
-                            domain="[('estado_maquina', '=', 'con_problemas')]"/>
-
-                    <filter string="De Partes" name="filter_partes"
-                            domain="[('estado_maquina', '=', 'partes')]"/>
-
+                    <filter string="Sin Revisar" name="filter_sin_revisar" domain="[('estado_maquina', '=', 'sin_revisar')]"/>
+                    <filter string="Revisadas" name="filter_revisadas" domain="[('estado_maquina', '=', 'revisada')]"/>
+                    <filter string="Listas" name="filter_listas" domain="[('estado_maquina', '=', 'lista')]"/>
+                    <filter string="Con Problemas" name="filter_con_problemas" domain="[('estado_maquina', '=', 'con_problemas')]"/>
+                    <filter string="De Partes" name="filter_partes" domain="[('estado_maquina', '=', 'partes')]"/>
                     <separator/>
-
-                    <filter string="Equipos Color" name="filter_color"
-                            domain="[('tipo_maquina', '=', 'color')]"/>
-
-                    <filter string="Equipos Monocromáticos" name="filter_mono"
-                            domain="[('tipo_maquina', '=', 'monocromatica')]"/>
-
+                    <filter string="Equipos Color" name="filter_color" domain="[('tipo_maquina', '=', 'color')]"/>
+                    <filter string="Equipos Monocromáticos" name="filter_mono" domain="[('tipo_maquina', '=', 'monocromatica')]"/>
                     <separator/>
-
-                    <filter string="Esta Semana" name="filter_esta_semana"
-                            domain="[('fecha_generacion', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
-
-                    <filter string="Este Mes" name="filter_este_mes"
-                            domain="[('fecha_generacion', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
-
+                    <filter string="Esta Semana" name="filter_esta_semana" domain="[('fecha_generacion', '&gt;=', (context_today() - relativedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+                    <filter string="Este Mes" name="filter_este_mes" domain="[('fecha_generacion', '&gt;=', (context_today().replace(day=1)).strftime('%Y-%m-%d'))]"/>
                     <separator/>
-
-                    <filter string="Alta Utilización (&gt;100k)" name="filter_alta_utilizacion"
-                            domain="[('contador_total', '&gt;', 100000)]"/>
-
-                    <filter string="Media Utilización (50k-100k)" name="filter_media_utilizacion"
-                            domain="[('contador_total', '&gt;=', 50000), ('contador_total', '&lt;=', 100000)]"/>
-
-                    <filter string="Baja Utilización (&lt;50k)" name="filter_baja_utilizacion"
-                            domain="[('contador_total', '&lt;', 50000)]"/>
-
-                    <group expand="0" string="Agrupar Por">
-                        <filter string="Estado de Máquina" name="group_by_estado"
-                                context="{'group_by': 'estado_maquina'}"/>
-
-                        <filter string="Marca" name="group_by_marca"
-                                context="{'group_by': 'marca'}"/>
-
-                        <filter string="Tipo de Máquina" name="group_by_tipo"
-                                context="{'group_by': 'tipo_maquina'}"/>
-
-                        <filter string="Ubicación" name="group_by_ubicacion"
-                                context="{'group_by': 'ubicacion_fisica'}"/>
-
-                        <filter string="Semana de Reporte" name="group_by_semana"
-                                context="{'group_by': 'semana_reporte'}"/>
-
-                        <filter string="Técnico Responsable" name="group_by_tecnico"
-                                context="{'group_by': 'tecnico_responsable'}"/>
+                    <filter string="Alta Utilización (&gt;100k)" name="filter_alta_utilizacion" domain="[('contador_total', '&gt;', 100000)]"/>
+                    <filter string="Media Utilización (50k-100k)" name="filter_media_utilizacion" domain="[('contador_total', '&gt;=', 50000), ('contador_total', '&lt;=', 100000)]"/>
+                    <filter string="Baja Utilización (&lt;50k)" name="filter_baja_utilizacion" domain="[('contador_total', '&lt;', 50000)]"/>
+                    <group>
+                        <filter string="Estado de Máquina" name="group_by_estado" context="{'group_by': 'estado_maquina'}"/>
+                        <filter string="Marca" name="group_by_marca" context="{'group_by': 'marca'}"/>
+                        <filter string="Tipo de Máquina" name="group_by_tipo" context="{'group_by': 'tipo_maquina'}"/>
+                        <filter string="Ubicación" name="group_by_ubicacion" context="{'group_by': 'ubicacion_fisica'}"/>
+                        <filter string="Semana de Reporte" name="group_by_semana" context="{'group_by': 'semana_reporte'}"/>
+                        <filter string="Técnico Responsable" name="group_by_tecnico" context="{'group_by': 'tecnico_responsable'}"/>
                     </group>
                 </search>
             </field>
         </record>
-
         <!-- ============================================ -->
         <!-- WIZARD: Generar Reporte -->
         <!-- ============================================ -->
@@ -256,32 +187,25 @@
                                 Genere reportes detallados del inventario y estado actual de las máquinas.
                             </p>
                         </div>
-
                         <group>
                             <group name="filtros_fecha" string="Período del Reporte">
                                 <field name="fecha_desde" widget="date"/>
                                 <field name="fecha_hasta" widget="date"/>
                             </group>
-
                             <group name="filtros_estado" string="Filtros de Estado">
                                 <field name="estados_maquina"/>
-                                <field name="estados_personalizados"
-                                       invisible="estados_maquina != 'personalizado'"
-                                       placeholder="Seleccione un estado específico"/>
+                                <field name="estados_personalizados" invisible="estados_maquina != 'personalizado'" placeholder="Seleccione un estado específico"/>
                             </group>
                         </group>
-
                         <group>
                             <group name="opciones_contenido" string="Contenido del Reporte">
                                 <field name="incluir_historial"/>
                                 <field name="incluir_partes"/>
                             </group>
-
                             <group name="opciones_formato" string="Formato de Salida">
                                 <field name="formato_salida" widget="radio"/>
                             </group>
                         </group>
-
                         <div class="alert alert-info" role="alert" style="margin: 20px 0;">
                             <h4>
                                 <i class="fa fa-info-circle"/>
@@ -303,26 +227,13 @@
                             </ul>
                         </div>
                     </sheet>
-
                     <footer>
-                        <button string="Generar Reporte"
-                                name="action_generar_reporte"
-                                type="object"
-                                class="btn-primary"/>
-
-                        <button string="Generar Datos Ahora"
-                                name="action_generar_reporte_ahora"
-                                type="object"
-                                class="btn-secondary"
-                                help="Ejecuta el proceso de generación de reportes semanales"/>
-
-                        <button string="Cancelar"
-                                class="btn-secondary"
-                                special="cancel"/>
+                        <button string="Generar Reporte" name="action_generar_reporte" type="object" class="btn-primary"/>
+                        <button string="Generar Datos Ahora" name="action_generar_reporte_ahora" type="object" class="btn-secondary" help="Ejecuta el proceso de generación de reportes semanales"/>
+                        <button string="Cancelar" class="btn-secondary" special="cancel"/>
                     </footer>
                 </form>
             </field>
         </record>
-
     </data>
 </odoo>

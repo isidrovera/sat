@@ -1,87 +1,114 @@
+
+# -*- coding: utf-8 -*-
+
 from odoo import http
-
 from odoo.addons.web.controllers.report import ReportController
 
+
 class DashboardController(http.Controller):
-    @http.route('/dashboard/data', auth='public', type='json')
+
+    @http.route(
+        '/dashboard/data',
+        auth='user',
+        type='jsonrpc',
+        methods=['POST'],
+    )
     def get_dashboard_data(self, **kw):
+        """
+        Obtiene estadísticas de servicios agrupadas por
+        técnico responsable y tipo de servicio.
+        Compatible con Odoo 19.
+        """
         env = http.request.env
+
         start_date = kw.get('start_date')
         end_date = kw.get('end_date')
-        domain = []
-        if start_date and end_date:
-            domain.append(('agenda', '>=', start_date))
-            domain.append(('agenda', '<=', end_date))
 
-        # Asegúrate de usar env para acceder a los modelos
+        domain = []
+
+        if start_date:
+            domain.append(
+                ('agenda', '>=', start_date)
+            )
+
+        if end_date:
+            domain.append(
+                ('agenda', '<=', end_date)
+            )
+
         data = env['ticket.alquiler'].read_group(
             domain,
             ['responsable', 'tipo_servicio_id'],
             ['responsable', 'tipo_servicio_id'],
-            lazy=False
+            lazy=False,
         )
 
         results = {}
+
         for record in data:
-            tech = record['responsable'][1]
+            responsable = record.get('responsable')
+            tipo_servicio = record.get('tipo_servicio_id')
+
+            if not responsable or not tipo_servicio:
+                continue
+
+            tech = (
+                responsable[1]
+                if isinstance(responsable, (list, tuple))
+                else str(responsable)
+            )
+
+            service_type = (
+                tipo_servicio[1]
+                if isinstance(tipo_servicio, (list, tuple))
+                else str(tipo_servicio)
+            )
+
             if tech not in results:
                 results[tech] = {}
-            service_type = record['tipo_servicio_id'][1]
-            results[tech][service_type] = record['tipo_servicio_id_count']
+
+            count = record.get(
+                '__count',
+                record.get(
+                    'tipo_servicio_id_count',
+                    0,
+                ),
+            )
+
+            results[tech][service_type] = (
+                results[tech].get(service_type, 0)
+                + count
+            )
 
         return results
 
 
-
-
-
 class EquipmentVisitReportController(ReportController):
-    from odoo import http
 
-from odoo.addons.web.controllers.report import ReportController
-
-class DashboardController(http.Controller):
-    @http.route('/dashboard/data', auth='public', type='json')
-    def get_dashboard_data(self, **kw):
-        env = http.request.env
-        start_date = kw.get('start_date')
-        end_date = kw.get('end_date')
-        domain = []
-        if start_date and end_date:
-            domain.append(('agenda', '>=', start_date))
-            domain.append(('agenda', '<=', end_date))
-
-        # Asegúrate de usar env para acceder a los modelos
-        data = env['ticket.alquiler'].read_group(
-            domain,
-            ['responsable', 'tipo_servicio_id'],
-            ['responsable', 'tipo_servicio_id'],
-            lazy=False
-        )
-
-        results = {}
-        for record in data:
-            tech = record['responsable'][1]
-            if tech not in results:
-                results[tech] = {}
-            service_type = record['tipo_servicio_id'][1]
-            results[tech][service_type] = record['tipo_servicio_id_count']
-
-        return results
-
-
-
-
-class EquipmentVisitReportController(ReportController):
-    @http.route(['/report/pdf/sat.report_equipment_visit/<int:id>'], type='http', auth='user')
+    @http.route(
+        ['/report/pdf/sat.report_equipment_visit/<int:id>'],
+        type='http',
+        auth='user',
+        methods=['GET'],
+    )
     def report_equipment_visit_pdf(self, id, **kwargs):
-        """Genera imágenes de gráficos antes de renderizar el PDF."""
-        report = http.request.env['equipment.visit.report'].browse(int(id))
+        """
+        Genera las imágenes de gráficos antes de
+        renderizar el informe PDF.
+        Compatible con Odoo 19.
+        """
+        report = http.request.env[
+            'equipment.visit.report'
+        ].browse(id).exists()
+
+        if not report:
+            return http.request.not_found()
+
         report.generate_chart_images()
-        
+
         return super().report_routes(
             reportname='sat.report_equipment_visit',
-            docids=str(id),  # 👈 Convertido a string
+            docids=str(report.id),
             converter='pdf',
             **kwargs
         )

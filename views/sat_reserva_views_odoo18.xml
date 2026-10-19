@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
     <data>
 
@@ -64,21 +64,13 @@
                     <filter name="filter_reglas_generales" string="Generales" domain="[('tipo_aplicacion', '=', 'general')]"/>
                     <filter name="filter_reglas_cliente" string="Por cliente" domain="[('tipo_aplicacion', '=', 'cliente')]"/>
                     <filter name="filter_reglas_cliente_importacion" string="Cliente + importación" domain="[('tipo_aplicacion', '=', 'cliente_importacion')]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="group_regla_tipo" string="Tipo" context="{'group_by': 'tipo_aplicacion'}"/>
                         <filter name="group_regla_cliente" string="Cliente" context="{'group_by': 'cliente_id'}"/>
                         <filter name="group_regla_activa" string="Activa" context="{'group_by': 'active'}"/>
                     </group>
                 </search>
             </field>
-        </record>
-
-        <record id="action_sat_reserva_regla" model="ir.actions.act_window">
-            <field name="name">Reglas y plazos</field>
-            <field name="res_model">sat.reserva.regla</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_sat_reserva_regla_search"/>
-            <field name="context">{'search_default_filter_reglas_activas': 1}</field>
         </record>
 
         <!-- ============================================================= -->
@@ -213,7 +205,7 @@
                     <filter name="filter_solicitudes_aprobadas" string="Aprobadas" domain="[('state', '=', 'approved')]"/>
                     <filter name="filter_solicitudes_rechazadas" string="Rechazadas" domain="[('state', '=', 'rejected')]"/>
                     <filter name="filter_solicitudes_finalizadas" string="Finalizadas" domain="[('state', 'in', ('done', 'cancelled'))]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="group_solicitud_estado" string="Estado" context="{'group_by': 'state'}"/>
                         <filter name="group_solicitud_tipo" string="Tipo de solicitud" context="{'group_by': 'tipo_solicitud'}"/>
                         <filter name="group_solicitud_solicitante" string="Solicitante" context="{'group_by': 'solicitante_id'}"/>
@@ -222,22 +214,6 @@
                     </group>
                 </search>
             </field>
-        </record>
-
-        <record id="action_sat_reserva_solicitudes" model="ir.actions.act_window">
-            <field name="name">Solicitudes de reservas</field>
-            <field name="res_model">sat.reserva.solicitud</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_sat_reserva_solicitud_search"/>
-        </record>
-
-        <record id="action_sat_reserva_por_autorizar" model="ir.actions.act_window">
-            <field name="name">Reservas por autorizar</field>
-            <field name="res_model">sat.reserva.solicitud</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_sat_reserva_solicitud_search"/>
-            <field name="domain">[('state', 'in', ('pending', 'partial'))]</field>
-            <field name="context">{'search_default_filter_solicitudes_pendientes': 1}</field>
         </record>
 
         <!-- ============================================================= -->
@@ -318,7 +294,7 @@
                     <filter name="filter_historial_liberaciones" string="Liberaciones" domain="[('tipo_evento', 'in', ('liberacion_manual', 'liberacion_automatica'))]"/>
                     <filter name="filter_historial_aprobaciones" string="Aprobaciones" domain="[('tipo_evento', 'in', ('aprobacion', 'extension', 'reduccion'))]"/>
                     <filter name="filter_historial_cambios" string="Cambios comerciales" domain="[('tipo_evento', 'in', ('cambio_cliente', 'cambio_asesora'))]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="group_historial_evento" string="Evento" context="{'group_by': 'tipo_evento'}"/>
                         <filter name="group_historial_asesora" string="Asesora" context="{'group_by': 'asesora_id'}"/>
                         <filter name="group_historial_cliente" string="Cliente" context="{'group_by': 'cliente_id'}"/>
@@ -326,13 +302,6 @@
                     </group>
                 </search>
             </field>
-        </record>
-
-        <record id="action_sat_reserva_historial" model="ir.actions.act_window">
-            <field name="name">Historial de reservas</field>
-            <field name="res_model">sat.reserva.historial</field>
-            <field name="view_mode">list,form</field>
-            <field name="search_view_id" ref="view_sat_reserva_historial_search"/>
         </record>
 
         <!-- ============================================================= -->
@@ -559,7 +528,7 @@
                     <filter name="filter_reserva_especiales" string="Reserva especial" domain="[('reserva_estado', '=', 'especial')]"/>
                     <filter name="filter_reserva_confirmadas" string="Confirmadas" domain="[('reserva_estado', '=', 'confirmada')]"/>
                     <filter name="filter_reserva_con_solicitud" string="Con solicitud pendiente" domain="[('reserva_solicitud_pendiente_id', '!=', False)]"/>
-                    <group expand="0" string="Reserva comercial">
+                    <group>
                         <filter name="group_reserva_estado" string="Estado reserva" context="{'group_by': 'reserva_estado'}"/>
                         <filter name="group_reserva_asesora" string="Asesora reserva" context="{'group_by': 'reserva_asesora_id'}"/>
                         <filter name="group_reserva_cliente" string="Cliente reserva" context="{'group_by': 'reserva_cliente_id'}"/>
@@ -574,11 +543,5 @@
         <!-- Va después de Reclamos y Garantías (sequence 50).             -->
         <!-- ============================================================= -->
 
-        <menuitem id="menu_reservas_comerciales_root" name="Reservas Comerciales" parent="menu_corapsac_root" sequence="60"/>
-        <menuitem id="menu_sat_reserva_solicitudes" name="Solicitudes" parent="menu_reservas_comerciales_root" action="action_sat_reserva_solicitudes" sequence="10"/>
-        <menuitem id="menu_sat_reserva_por_autorizar" name="Por autorizar" parent="menu_reservas_comerciales_root" action="action_sat_reserva_por_autorizar" groups="sat.group_reserva_comercial_autorizado" sequence="20"/>
-        <menuitem id="menu_sat_reserva_reglas" name="Reglas y plazos" parent="menu_reservas_comerciales_root" action="action_sat_reserva_regla" groups="sat.group_reserva_comercial_autorizado" sequence="30"/>
-        <menuitem id="menu_sat_reserva_historial" name="Historial" parent="menu_reservas_comerciales_root" action="action_sat_reserva_historial" groups="sat.group_reserva_comercial_autorizado" sequence="40"/>
-
-    </data>
+        </data>
 </odoo>

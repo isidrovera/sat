@@ -1,358 +1,705 @@
 # -*- coding: utf-8 -*-
+
 {
+
     'name': "Sistema de Administración de Taller",
-    'version': '1.0',
+
+    'version': '19.0.1.0.0',
+
     'summary': "Administra las operaciones de un taller de fotocopiadoras",
+
     'sequence': -100,
+
     'description': """Gestiona reparaciones, mantenimientos y más.""",
+
     'author': "Isidro vera polo",
+
     'website': "https://copiercompanysac.com",
+
     'category': 'Services',
-    
+
+
+
     'depends': [
+
         'base',
+
         'mail',
+
         'contacts',
+
         'sale_management',
+
         'portal',
+
         'web',
+
         'stock',
+
         'crm',
+
         'purchase',
+
         'project',
+
         'hr_holidays',
+
         'calendar',
+
         'im_livechat',
+
         'survey',
+
         'hr_attendance',
+
         'hr',
+
         'website',
+
         'bus'
+
     ],
+
     'external_dependencies': {
+
         'python': ['matplotlib', 'numpy'],
+
     },
-    
+
+
+
     'data': [
+
         'security/acceso.xml',
-        'security/ir.model.access.csv',        
+
+        'security/ir.model.access.csv',
+
         'data/ir_secuense.xml',
+
         'data/ir_secuense_ticket.xml',
+
         'data/ir.secuense_info.xml',
+
         'data/ir_secuense_ev.xml',
-        'data/print.xml',
-        'data/cron_data.xml',        
-        'data/cron_evaluador_diario.xml',
-        'data/cron_tickets.xml',
-        'data/ir.secuence_incidencia.xml',
-        'data/snmp_credential_default_data.xml',
-        'data/snmp_profiles_base_data.xml',     
+         'report/evaluacion.xml',
+
+        'report/evaluacion_enlace.xml',
+
+        'report/report_qr_codes_reparaciones.xml',
+
+        'report/reporte_estado_maquinas_report.xml',
+
+        'report/qr_alquiler.xml',
+
+        'report/evaluacion_servicio.xml',        
         'report/report_reparaciones_ventas.xml',
         'report/ticket_enlace.xml',
         'report/ticket_reporte.xml',
         'report/informes.xml',
-        'report/evaluacion.xml',
-        'report/evaluacion_enlace.xml',
-        'report/report_qr_codes_reparaciones.xml',
-        'report/reporte_estado_maquinas_report.xml',       
-        'report/qr_alquiler.xml',                
-        'report/evaluacion_servicio.xml',
+
+
+        'data/print.xml',
+
+        'data/cron_data.xml',
+
+        'data/cron_evaluador_diario.xml',
+
+        'data/cron_tickets.xml',
+
+        'data/ir.secuence_incidencia.xml',
+
         'data/plantillas_correo.xml',
+
         'data/correos_reparaciones.xml',
+
         'data/correos_tickets.xml',
+
         'data/correos_informes.xml',
+
         'data/correos_maquinas.xml',
+
         'data/correos_alquiler.xml',
+
         'data/incidencias_email_templates.xml',
+
         'data/mail_permisos.xml',
+
         'data/correos_evaluaciones_tecnicos.xml',
+
         'data/email_templates_consolidated.xml',
-        'data/componente_color_data.xml', 
+
+        'data/componente_color_data.xml',
+
         'data/color_tipo_data.xml',
+
         'data/accesorio_tipo_data.xml',
+
         'data/componente_tipo_data.xml',
+
         'data/componente_subparte_data.xml',
+
         'data/componente_estado_data.xml',
+
         'data/accesorio_estado_data.xml',
+
         "data/whatsapp_initial_data.xml",
+
         'data/ir_actions_server_migration.xml',
+
         'data/mantenimiento_zonas_lima.xml',
+
         "data/whatsapp_templates_rules.xml",
+
         'data/whatsapp_session_config_data.xml',
+
         'data/whatsapp_session_cron_data.xml',
+
         'data/reparaciones_avance_data.xml',
+
         'data/sat_notificacion_log_data.xml',
+
         'data/marcas_data.xml',
+        'data/tipos_maquina_data.xml',
         'data/modelos_maquina_data.xml',
+
         'data/sat_reserva_mail_templates.xml',
+
         'data/sat_automation_prompts.xml',
+
         'data/sat_automation_rules.xml',
+
         'data/sat_automation_cron.xml',
+
         'data/modelo_maquina_familia_data.xml',
-        'data/modelo_toner_data.xml',    
-        'views/ventas.xml',   
+
+        'data/modelo_toner_data.xml',
+
+        'data/snmp_credential_default_data.xml',
+
+        'data/snmp_profiles_base_data.xml',
+       
+        'views/ventas.xml',
+
         'views/modelos.xml',
+
         'views/repuestos_alquiler.xml',
+
         'views/marcas.xml',
+
         'views/informes.xml',
+
         'views/fallas.xml',
+
         'views/reporte_cotizacion.xml',
+
         'views/reparaciones.xml',
+
         'views/opciones_cliente.xml',
+
         'views/alquiler.xml',
+
         'views/opciones_product.xml',
+
         'views/sale_order_.xml',
+
         'views/linea_pedido.xml',
+
         'views/mail_maquinas.xml',
+
         'views/evaluacion.xml',
+
         'views/crear_ticket_portal.xml',
+
         'views/incidencias.xml',
+
         'views/soporte.alquiler.xml',
+
         'views/template_formulario_ticket.xml',
+
         'views/pagina_con_opciones.xml',
+
         'views/reportar_incidencia_form.xml',
+
         'views/pagina_confirmacion.xml',
+
         'views/solicitar_toner_form_template.xml',
+
         'views/pagina_confirmacion_toner.xml',
+
         'views/repuestos_alquiler_list.xml',
+
         'views/soporte_dashboard.xml',
+
         'views/transportistas.xml',
+
         'views/graficos.xml',
+
         'views/customer_records_page.xml',
+
         'views/importacionexcel.xml',
+
         'views/reparacion_autenticacion_wizard_view.xml',
+
         'views/fotos_reparaciones.xml',
+
         'views/gallery_templates.xml',
-        'views/ticket_create_import_views.xml',        
+
+        'views/ticket_create_import_views.xml',
+
         'views/templates_mantenimientos.xml',
+
         'views/alquiler_views.xml',
+
         'views/evaluacion_tecnicos_alquiler.xml',
+
         'views/template_evaluacion_tecnicos.xml',
+
         'views/levantamiento.xml',
+
         'views/inspeccion_vista.xml',
+
         'views/solicitud_partes.xml',
+
         'views/solicitud_template.xml',
+
         'views/solicitud_partes_views.xml',
+
         'views/partes_templates_alquiler.xml',
+
         'views/envio_masivo_evaluaciones.xml',
+
         'views/sat_prueba_maquina.xml',
+
         'views/equipment_visit_report_views.xml',
+
         'views/leave_request_template.xml',
+
         'report/equipment_visit_report.xml',
+
         'views/whatsapp_notification_wizard_views.xml',
+
         'views/view_toner_counter_submission.xml',
+
         'views/view_toner_delivery_confirmation.xml',
+
         'views/view_toner_delivery_schedule.xml',
+
         'views/view_contador_automatico.xml',
-        'views/view_patron_contador.xml',        
+
+        'views/view_patron_contador.xml',
+
         'views/printtracker_views.xml',
+
         'views/reporte_maquinas_alquiler.xml',
+
         'views/tickets_masivos.xml',
+
         'views/componente.tipo.xml',
+
         'views/componente.subparte.xml',
+
         'views/modelo.maquina.componente.xml',
+
         'views/informe.regla.xml',
+
         'views/checklist.componente.map.xml',
+
         'views/reparacion_intervencion_views.xml',
+
         'views/componente_estado_views.xml',
+
         'views/accesorio_catalogos_views.xml',
+
         'views/reparacion_componente_evaluacion_views.xml',
+
         'views/solicitud_partes_wizards_views.xml',
+
         'views/partes_templates_publicos.xml',
+
         'views/reparacion_accesorio_evaluacion_views.xml',
+
         'views/wizard_asignar_componentes_views.xml',
+
         'views/gemini_config_views.xml',
+
         'views/modelo_accesorios.xml',
+
         'views/sat_import_line_views.xml',
+
         'views/portal_templates.xml',
+
         'views/traccar_tracking_views.xml',
+
         'views/mdm_views.xml',
-        'views/tracking_diagnostico_views.xml',      
+
+        'views/tracking_diagnostico_views.xml',
+
         'wizards/sat_import_assign_header_wizard_views.xml',
+
         'wizards/sat_entrega_wizard_view.xml',
+
         'views/solicitud_parte_tecnico_views.xml',
+
         'views/solicitud_partes_portal.xml',
+
         'views/ticket_evaluacion_mobile_views.xml',
+
         'views/mantenimiento_zona_views.xml',
+
         'views/mantenimiento_disponibilidad_views.xml',
+
         'views/mantenimiento_ausencia_views.xml',
+
         'views/mantenimiento_planificador_views.xml',
+
         'views/alquiler_inherit_views.xml',
+
         'views/ticket_alquiler_inherit_views.xml',
+
         'views/evidencia_page_template.xml',
+
         'views/ticket_alquiler_evidencia_view.xml',
+
         'views/permisos_templates.xml',
+
         "views/res_partner_views.xml",
+
         "views/whatsapp_views.xml",
-        'views/whatsapp_inbox_app_views.xml',
+
+
         'views/reparaciones_avance_templates.xml',
-        'views/sat_notificacion_log_views.xml',
-        'views/evaluacion_personal_dashboard_views.xml',
+
+        'views/sat_notificacion_log_views.xml',    
+
         'views/evaluacion_cierre_mensual_views.xml',
+
         'views/modelo_maquina_familia_views.xml',
+
         'views/app_push_device_views.xml',
+
         'views/app_push_config_views.xml',
+
         'views/sat_reserva_views_odoo18.xml',
+
         'views/monitoring/monitoring_device_views.xml',
+
         'views/monitoring/monitoring_snapshot_views.xml',
+
         'views/monitoring/monitoring_reading_views.xml',
+
         'views/monitoring/monitoring_alert_views.xml',
+
         'views/monitoring/monitoring_device_feature_views.xml',
+
         'views/monitoring/snmp_profile_views.xml',
+
         'views/monitoring/snmp_profile_metric_views.xml',
+
         'views/monitoring/snmp_credential_views.xml',
+
         'views/monitoring/monitoring_agent_views.xml',
-        'views/monitoring/monitoring_network_views.xml',
-        'views/monitoring/monitoring_menu.xml',
+
+        'views/monitoring/monitoring_network_views.xml',       
+
         'views/toner_management_views.xml',
+
         'views/sat_automation_views.xml',
+
         'views/modelo_toner_views.xml',
+
         'views/acciones_menus.xml',
-        
+
+
+
     ],
-    
+
+
+
     'assets': {
+
         'web.assets_backend': [
+
             # Chart.js y Font Awesome existentes
+
             'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js',
+
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
-            
+
+
+
             # Bootstrap 5
+
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css',
+
             'https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js',
-            
+
+
+
             # Animate.css para animaciones
+
             'https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css',
-            
+
+
+
             # AOS (Animate On Scroll)
+
             'https://unpkg.com/aos@2.3.1/dist/aos.css',
+
             'https://unpkg.com/aos@2.3.1/dist/aos.js',
-            
+
+
+
             # Tailwind CSS
+
             'https://cdn.tailwindcss.com',
-            
+
+
+
             # Lucide Icons
+
             'https://unpkg.com/lucide@latest/dist/umd/lucide.js',
-            
+
+
+
             # Particles.js
+
             'https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js',
-            
+
+
+
             # Typed.js
+
             'https://cdn.jsdelivr.net/npm/typed.js@2.0.12',
-            
+
+
+
             # CSS Files existentes
+
             'sat/static/src/css/dashboard.css',
+
             'sat/static/src/css/style.css',
+
             'sat/static/src/css/tree_dashboard.css',
+
             'sat/static/src/css/evaluation_form.css',
+
             'sat/static/src/css/parts_request_message.css',
+
             'sat/static/src/css/image-viewer.css',
+
             'sat/static/src/css/sat_table_styles.css',
+
             'sat/static/src/css/gallery.css',
+
             'sat/static/src/css/geo_map_widget.css',
+
             'sat/static/src/css/alquiler_styles_mejorado.css',
+
             'sat/static/src/css/reparaciones_styles_mejorado.css',
+
             'sat/static/src/css/ticket_alquiler_styles_mejorado.css',
+
             #'sat/static/src/css/contadores_dashboard.css',
-            
+
+
+
             # SCSS existente
+
             '/sat/static/src/scss/list_dashboard.scss',
+
             'sat/static/src/scss/sat_dashboard.scss',
+
             'sat/static/src/scss/alquiler_dashboard.scss',
+
             'sat/static/src/scss/gallery_widget.scss',
+
             'sat/static/src/scss/pedido_dashboard.scss',
+
             'sat/static/src/scss/toner_counter_submission_kanban.scss',
+
             'sat/static/src/scss/sat_equipment_views.scss',
+
             'sat/static/src/scss/ticket_repuesto_pedido.scss',
+
             'sat/static/src/scss/toner_counter_submission.scss',
-      
-            
-            
+
+
+
+
+
+
+
             # XML existente
+
             'sat/static/src/xml/dashboard.xml',
+
             'sat/static/src/xml/photo_gallery_template.xml',
+
             'sat/static/src/xml/list_view.xml',
+
             'sat/static/src/xml/selection_subparts_template.xml',
+
             'sat/static/src/xml/sat_dashboard.xml',
+
             'sat/static/src/xml/alquiler_dashboard.xml',
+
             'sat/static/src/xml/geo_map_widget.xml',
+
             'sat/static/src/xml/pedido_dashboard.xml',
-            
+
+
+
             # JS Files existentes (listado explícito en lugar del glob)
+
             'sat/static/src/js/selection_subparts.js',
+
             'sat/static/src/js/gallery_widget.js',
+
             'sat/static/src/js/alquiler_dashboard.js',
+
             'sat/static/src/js/dashboard.js',
+
             'sat/static/src/js/equipment_visit_report.js',
+
             'sat/static/src/js/estilo_dashboard.js',
+
             'sat/static/src/js/gallery_widget_v18.js',
+
             'sat/static/src/js/geo_map_widget.js',
+
             'sat/static/src/js/image-viewer_v1.js',
+
             'sat/static/src/js/inspeccion_form.js',
+
             'sat/static/src/js/list_dashboard.js',
+
             'sat/static/src/js/parts_request_message.js',
+
             'sat/static/src/js/pedido_dashboard.js',
+
             'sat/static/src/js/sat_dashboard.js',
+
             'sat/static/src/js/sat_table_enhancements.js',
-            
+
+
+
             'sat/static/src/js/subpartes_selector.js',
+
             'sat/static/src/xml/subpartes_selector.xml',
+
             'sat/static/src/scss/subpartes_selector.scss',
+
             'sat/static/src/scss/componente_eval_kanban.scss',
 
+
+
             'sat/static/src/scss/chip_select_field.scss',
+
             'sat/static/src/xml/chip_select_field.xml',
+
             'sat/static/src/js/chip_select_field.js',
+
             'sat/static/src/js/reparacion_subpartes_selector.js',
+
             'sat/static/src/xml/reparacion_subpartes_selector.xml',
+
             'sat/static/src/scss/reparacion_subpartes_selector.scss',
 
+
+
             'sat/static/src/scss/mobile_ticket_layout.scss',
+
             'sat/static/src/scss/mobile_ticket_retorno.scss',
+
             'sat/static/src/xml/mobile_ticket_layout.xml',
+
             'sat/static/src/js/mobile_ticket_layout.js',
 
+
+
             'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.js',
+
             'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.xml',
+
             'sat/static/src/whatsapp_inbox/whatsapp_inbox_app.scss',
+
             'sat/static/src/js/evaluacion_personal_dashboard.js',
+
             'sat/static/src/xml/evaluacion_personal_dashboard.xml',
+
             'sat/static/src/scss/evaluacion_personal_dashboard.scss',
 
+
+
             'sat/static/src/js/pruebas_dashboard_widget.js',
+
             'sat/static/src/scss/pruebas_dashboard.scss',
+
             'sat/static/src/xml/pruebas_dashboard_widget.xml',
-                    
-                
+
+
+
+
+
             # External Libraries existentes
+
             'https://cdn.jsdelivr.net/npm/echarts/dist/echarts.min.js',
+
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css',
+
             'https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js',
+
             'https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css',
+
             'https://unicons.iconscout.com/release/v4.0.8/css/line.css',
+
             'https://cdn.lordicon.com/lordicon.js'
+
         ],
-        
+
+
+
         'web.assets_frontend': [
+
             'sat/static/src/js/searchFilter.js',
+
             'sat/static/src/js/evidencia_publicv1.js',
+
             'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+
             'sat/static/src/css/permisos.css',
+
             'sat/static/src/js/permisos.js',
-            
+
+
+
         ],
-        
+
+
+
         'web.assets_qweb': [
-            
+
+
+
         ],
+
     },
-    
+
+
+
     'demo': [
-        'demo/demo_data.xml',
+
+
     ],
-    
+
+
+
     'installable': True,
+
     'application': True,
+
     'auto_install': False,
+
     'license': 'LGPL-3',
+
 }

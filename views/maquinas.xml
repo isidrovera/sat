@@ -76,7 +76,7 @@
             <field name="model">sat.sat</field>
             <field name="arch" type="xml">
                 <search string="ModelTitle">
-                    <group expand="1" string="Group By">
+                    <group>
                         <filter string="name" name="name" domain="[]"
                                 context="{'group_by':'name'}"/>
                     </group>

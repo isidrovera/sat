@@ -196,7 +196,7 @@
             />
 
             <!-- Agrupaciones -->
-            <group string="Agrupar por">
+            <group>
 
                 <filter
                     name="group_by_state"

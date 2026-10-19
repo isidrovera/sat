@@ -1110,38 +1110,40 @@ class SatMonitoringDevice(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_monitoring_device_snmp_port_valid',
-            'CHECK(snmp_port > 0 AND snmp_port <= 65535)',
-            'El puerto SNMP debe estar entre 1 y 65535.',
-        ),
-        (
-            'sat_monitoring_device_failures_positive',
-            'CHECK(consecutive_failures >= 0)',
-            'Los fallos consecutivos no pueden ser negativos.',
-        ),
-        (
-            'sat_monitoring_device_alert_count_positive',
-            'CHECK(active_alert_count >= 0)',
-            'La cantidad de alertas no puede ser negativa.',
-        ),
-        (
-            'sat_monitoring_device_tray_count_positive',
-            'CHECK(tray_count >= 0)',
-            'La cantidad de bandejas no puede ser negativa.',
-        ),
-        (
-            'sat_monitoring_device_accessory_count_positive',
-            'CHECK(accessory_count >= 0)',
-            'La cantidad de accesorios no puede ser negativa.',
-        ),
-        (
-            'sat_monitoring_device_component_count_positive',
-            'CHECK(component_count >= 0)',
-            'La cantidad de componentes no puede ser negativa.',
-        ),
-    ]
+    
+    # ========================================================
+    # RESTRICCIONES SQL - ODOO 19
+    # ========================================================
+
+    _sat_monitoring_device_snmp_port_valid = models.Constraint(
+        'CHECK(snmp_port > 0 AND snmp_port <= 65535)',
+        'El puerto SNMP debe estar entre 1 y 65535.',
+    )
+
+    _sat_monitoring_device_failures_positive = models.Constraint(
+        'CHECK(consecutive_failures >= 0)',
+        'Los fallos consecutivos no pueden ser negativos.',
+    )
+
+    _sat_monitoring_device_alert_count_positive = models.Constraint(
+        'CHECK(active_alert_count >= 0)',
+        'La cantidad de alertas no puede ser negativa.',
+    )
+
+    _sat_monitoring_device_tray_count_positive = models.Constraint(
+        'CHECK(tray_count >= 0)',
+        'La cantidad de bandejas no puede ser negativa.',
+    )
+
+    _sat_monitoring_device_accessory_count_positive = models.Constraint(
+        'CHECK(accessory_count >= 0)',
+        'La cantidad de accesorios no puede ser negativa.',
+    )
+
+    _sat_monitoring_device_component_count_positive = models.Constraint(
+        'CHECK(component_count >= 0)',
+        'La cantidad de componentes no puede ser negativa.',
+    )
 
     # ========================================================
     # COMPUTES

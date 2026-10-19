@@ -28,13 +28,13 @@ class ComponenteSubparte(models.Model):
 
     display_name = fields.Char(compute='_compute_display_name', store=True)
 
-    _sql_constraints = [
-        ('code_uniq', 'unique(code)', 'El código debe ser único.'),
-    ]
-    # Si quieres unicidad por tipo:
-    # _sql_constraints = [
-    #     ('code_tipo_uniq', 'unique(code, tipo_id)', 'Código repetido para este tipo.'),
-    # ]
+    
+    _code_uniq = models.Constraint(
+        'UNIQUE(code)',
+        'El código debe ser único.',
+    )
+
+    
 
     @api.depends('code', 'name', 'tipo_id', 'color_id')
     def _compute_display_name(self):

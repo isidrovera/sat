@@ -359,7 +359,7 @@
                             string="Activos"
                             domain="[('estado', 'in', ['borrador', 'generado', 'en_proceso'])]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="group_estado"
                                 string="Estado"
                                 context="{'group_by': 'estado'}"/>
@@ -675,7 +675,7 @@
                             string="Esta semana"
                             domain="[('fecha_programada', '&gt;=', context_today())]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="group_estado"
                                 string="Estado"
                                 context="{'group_by': 'estado'}"/>
@@ -696,41 +696,7 @@
             </field>
         </record>
 
-        <!-- ========================================================= -->
-        <!-- ACCIONES                                                  -->
-        <!-- ========================================================= -->
-
-        <record id="action_mantenimiento_planificador" model="ir.actions.act_window">
-            <field name="name">Planificador inteligente</field>
-            <field name="res_model">mantenimiento.planificador</field>
-            <field name="view_mode">kanban,list,form</field>
-            <field name="search_view_id" ref="view_mantenimiento_planificador_search"/>
-            <field name="context">{'search_default_filter_activos': 1}</field>
-            <field name="help" type="html">
-                <p class="o_view_nocontent_smiling_face">
-                    Crea tu planificación mensual de mantenimientos
-                </p>
-                <p>
-                    Genera líneas desde máquinas alquiladas, asigna técnicos y crea tickets automáticamente.
-                </p>
-            </field>
-        </record>
-
-        <record id="action_mantenimiento_planificador_linea" model="ir.actions.act_window">
-            <field name="name">Líneas de planificación</field>
-            <field name="res_model">mantenimiento.planificador.linea</field>
-            <field name="view_mode">kanban,calendar,list,form</field>
-            <field name="search_view_id" ref="view_mantenimiento_planificador_linea_search"/>
-            <field name="context">{'search_default_filter_pendiente': 1}</field>
-            <field name="help" type="html">
-                <p class="o_view_nocontent_smiling_face">
-                    No hay líneas de planificación
-                </p>
-                <p>
-                    Genéralas desde un planificador mensual.
-                </p>
-            </field>
-        </record>
+       
 
     </data>
 </odoo>

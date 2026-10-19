@@ -39,13 +39,12 @@ class TicketComponenteIntervencion(models.Model):
         string='Subpartes'
     )
 
-    _sql_constraints = [
-        (
-            'ticket_componente_code_unique',
-            'unique(ticket_id, componente_code)',
-            'Ya existe una intervención para este componente en este ticket.'
-        )
-    ]
+    
+    _ticket_componente_code_unique = models.Constraint(
+        'UNIQUE(ticket_id, componente_code)',
+        'Ya existe una intervención para este componente en este ticket.',
+    )
+
 
     @api.depends('componente_code')
     def _compute_componente_display(self):
@@ -120,13 +119,12 @@ class TicketComponenteIntervencionDetalle(models.Model):
         string='Observación'
     )
 
-    _sql_constraints = [
-        (
-            'intervencion_subparte_unique',
-            'unique(intervencion_id, subparte_id)',
-            'Esta subparte ya está registrada para esta intervención.'
-        )
-    ]
+    
+    _intervencion_subparte_unique = models.Constraint(
+        'UNIQUE(intervencion_id, subparte_id)',
+        'Esta subparte ya está registrada para esta intervención.',
+    )
+
 
     @api.model
     def create(self, vals):

@@ -296,7 +296,7 @@
     <field name="model_id" ref="model_copier_parts_request"/>
     <field name="auto_delete" eval="True"/>
     <field name="email_from">soporte@andescopiers.com.pe</field>
-    <field name="email_to">logistica@corapsac.com</field>
+    <field name="email_to">logistica@corapsac.com, asistentelogistico@corapsac.com.pe</field>
     <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
@@ -806,7 +806,7 @@
             <field name="auto_delete" eval="True"/>
             <field name="email_from">soporte@andescopiers.com.pe</field>
             <field name="email_to">campuero@corapsac.com.pe</field>
-            <field name="email_cc">lincoln@corapsac.com,asistentecontable@corapsac.com,gerencia@corapsac.com,logistica@corapsac.com</field>
+            <field name="email_cc">lincoln@corapsac.com,asistentecontable@corapsac.com,gerencia@corapsac.com,, asistentelogistico@corapsac.com.pe</field>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
@@ -1000,7 +1000,7 @@
             <field name="model_id" ref="model_solicitud_parte_tecnico"/>
             <field name="auto_delete" eval="True"/>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">logistica@corapsac.com</field>
+            <field name="email_to">logistica@corapsac.com, asistentelogistico@corapsac.com.pe</field>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
@@ -1283,7 +1283,7 @@
             <field name="model_id" ref="model_solicitud_parte_tecnico"/>
             <field name="auto_delete" eval="True"/>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">logistica@corapsac.com</field>
+            <field name="email_to">logistica@corapsac.com, asistentelogistico@corapsac.com.pe</field>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>
@@ -1367,7 +1367,7 @@
             <field name="model_id" ref="model_solicitud_parte_tecnico"/>
             <field name="auto_delete" eval="True"/>
             <field name="email_from">soporte@andescopiers.com.pe</field>
-            <field name="email_to">logistica@corapsac.com</field>
+            <field name="email_to">logistica@corapsac.com, asistentelogistico@corapsac.com.pe</field>
             <field name="body_html"><![CDATA[
 <!DOCTYPE html>
 <html>

@@ -6,5 +6,8 @@ class tipo_maquina(models.Model):
     name = fields.Char(
         string='Tipo de maquina',
         required=True)
-    _sql_constraints = [("unique_name", "unique (name)",
-                         "El tipo de maquina que intenta agregar ya existe")]
+    
+    _unique_name = models.Constraint(
+        'UNIQUE(name)',
+        'El tipo de maquina que intenta agregar ya existe',
+    )

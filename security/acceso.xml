@@ -2,71 +2,177 @@
 <odoo>
     <data>
 
-        <record model="ir.module.category" id="module_sat_category">
+        <!-- =========================================== -->
+        <!-- CATEGORÍA DEL MÓDULO SAT -->
+        <!-- =========================================== -->
+
+        <record id="module_sat_category"
+                model="ir.module.category">
             <field name="name">Taller</field>
             <field name="description">Taller</field>
             <field name="sequence">20</field>
         </record>
 
-        <record id="Sat_ventas_group_user" model="res.groups">
+        <!-- =========================================== -->
+        <!-- PRIVILEGIO DE SEGURIDAD ODOO 19 -->
+        <!-- =========================================== -->
+
+        <record id="sat_taller_privilege"
+                model="res.groups.privilege">
+            <field name="name">Taller</field>
+            <field name="category_id"
+                   ref="module_sat_category"/>
+            <field name="sequence">20</field>
+        </record>
+
+        <!-- =========================================== -->
+        <!-- GRUPO: ÁREA VENTAS TALLER -->
+        <!-- =========================================== -->
+
+        <record id="Sat_ventas_group_user"
+                model="res.groups">
             <field name="name">Área ventas taller</field>
-            <field name="category_id" ref="module_sat_category"/>
-            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="privilege_id"
+                   ref="sat_taller_privilege"/>
+            <field name="implied_ids"
+                   eval="[(4, ref('base.group_user'))]"/>
         </record>
 
-        <record id="sat_tecnica_group_user" model="res.groups">
+        <!-- =========================================== -->
+        <!-- GRUPO: ÁREA TÉCNICA TALLER -->
+        <!-- =========================================== -->
+
+        <record id="sat_tecnica_group_user"
+                model="res.groups">
             <field name="name">Área técnica taller</field>
-            <field name="category_id" ref="module_sat_category"/>
-            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="privilege_id"
+                   ref="sat_taller_privilege"/>
+            <field name="implied_ids"
+                   eval="[(4, ref('base.group_user'))]"/>
         </record>
 
-        <record id="sat_jefes_group_user" model="res.groups">
+        <!-- =========================================== -->
+        <!-- GRUPO: JEFES DE ÁREA -->
+        <!-- =========================================== -->
+
+        <record id="sat_jefes_group_user"
+                model="res.groups">
             <field name="name">Jefes de Área</field>
-            <field name="category_id" ref="module_sat_category"/>
-            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <field name="privilege_id"
+                   ref="sat_taller_privilege"/>
+            <field name="implied_ids"
+                   eval="[(4, ref('base.group_user'))]"/>
         </record>
 
-        <record id="group_reserva_comercial_autorizado" model="res.groups">
-            <field name="name">Autorizados Reservas Comerciales</field>
-            <field name="category_id" ref="module_sat_category"/>
-            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-            <field name="comment">Usuarios autorizados para modificar o aprobar condiciones de reservas comerciales.</field>
+        <!-- =========================================== -->
+        <!-- GRUPO: RESERVAS COMERCIALES -->
+        <!-- =========================================== -->
+
+        <record id="group_reserva_comercial_autorizado"
+                model="res.groups">
+            <field name="name">
+                Autorizados Reservas Comerciales
+            </field>
+            <field name="privilege_id"
+                   ref="sat_taller_privilege"/>
+            <field name="implied_ids"
+                   eval="[(4, ref('base.group_user'))]"/>
+            <field name="comment">
+                Usuarios autorizados para modificar o
+                aprobar condiciones de reservas comerciales.
+            </field>
         </record>
 
-        <record id="repair_order_technician_rule" model="ir.rule">
-            <field name="name">Técnicos: ver solo sus reparaciones</field>
-            <field name="model_id" ref="sat.model_reparaciones_reparaciones"/>
-            <field name="groups" eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
-            <field name="domain_force">[('responsable_id', '=', user.id), ('estado_id', '=', 'en_revision')]</field>
+        <!-- =========================================== -->
+        <!-- GRUPO: ÁREA ALQUILER -->
+        <!-- =========================================== -->
+
+        <record id="sat_alquiler_group_user"
+                model="res.groups">
+            <field name="name">Área alquiler</field>
+            <field name="privilege_id"
+                   ref="sat_taller_privilege"/>
+            <field name="implied_ids"
+                   eval="[(4, ref('base.group_user'))]"/>
+        </record>
+
+        <!-- =========================================== -->
+        <!-- GRUPO: LOGÍSTICA TALLER -->
+        <!-- =========================================== -->
+
+        <record id="sat_logistica_group_user"
+                model="res.groups">
+            <field name="name">
+                Área logística taller
+            </field>
+            <field name="privilege_id"
+                   ref="sat_taller_privilege"/>
+            <field name="implied_ids"
+                   eval="[(4, ref('base.group_user'))]"/>
+            <field name="comment">
+                Usuarios autorizados para registrar descargas,
+                cambios de ubicación, entregas y regresos
+                de máquinas.
+            </field>
+        </record>
+
+        <!-- =========================================== -->
+        <!-- REGLA: REPARACIONES DE TÉCNICOS -->
+        <!-- =========================================== -->
+
+        <record id="repair_order_technician_rule"
+                model="ir.rule">
+
+            <field name="name">
+                Técnicos: ver solo sus reparaciones
+            </field>
+
+            <field name="model_id"
+                   ref="sat.model_reparaciones_reparaciones"/>
+
+            <field name="groups"
+                   eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
+
+            <field name="domain_force">
+                [('responsable_id', '=', user.id),
+                 ('estado_id', '=', 'en_revision')]
+            </field>
+
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="True"/>
+
         </record>
 
-        <record id="ticket_order_technician_rule" model="ir.rule">
-            <field name="name">Técnicos: ver solo sus ticket</field>
-            <field name="model_id" ref="sat.model_ticket_alquiler"/>
-            <field name="groups" eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
-            <field name="domain_force">[('responsable', '=', user.id), ('estado', '!=', 'finalizado')]</field>
+        <!-- =========================================== -->
+        <!-- REGLA: TICKETS DE TÉCNICOS -->
+        <!-- =========================================== -->
+
+        <record id="ticket_order_technician_rule"
+                model="ir.rule">
+
+            <field name="name">
+                Técnicos: ver solo sus ticket
+            </field>
+
+            <field name="model_id"
+                   ref="sat.model_ticket_alquiler"/>
+
+            <field name="groups"
+                   eval="[(4, ref('sat.sat_tecnica_group_user'))]"/>
+
+            <field name="domain_force">
+                [('responsable', '=', user.id),
+                 ('estado', '!=', 'finalizado')]
+            </field>
+
             <field name="perm_read" eval="True"/>
             <field name="perm_write" eval="True"/>
             <field name="perm_create" eval="True"/>
             <field name="perm_unlink" eval="True"/>
+
         </record>
-        <record id="sat_alquiler_group_user" model="res.groups">
-    <field name="name">Área alquiler</field>
-    <field name="category_id" ref="module_sat_category"/>
-    <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-</record>
-<record id="sat_logistica_group_user" model="res.groups">
-    <field name="name">Área logística taller</field>
-    <field name="category_id" ref="module_sat_category"/>
-    <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
-    <field name="comment">
-        Usuarios autorizados para registrar descargas,
-        cambios de ubicación, entregas y regresos de máquinas.
-    </field>
-</record>
+
     </data>
 </odoo>

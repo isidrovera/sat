@@ -44,13 +44,12 @@ class TicketComponenteEvaluacion(models.Model):
         string='Observaciones'
     )
 
-    _sql_constraints = [
-        (
-            'ticket_componente_color_unique',
-            'unique(ticket_id, componente_tipo_id, color_id)',
-            'Ya existe una evaluación de este componente y color para este ticket.'
-        )
-    ]
+    
+    _ticket_componente_color_unique = models.Constraint(
+        'UNIQUE(ticket_id, componente_tipo_id, color_id)',
+        'Ya existe una evaluación de este componente y color para este ticket.',
+    )
+
 
     @api.model
     def create(self, vals):

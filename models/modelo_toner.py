@@ -4,11 +4,14 @@ from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
 
+
 class ModeloToner(models.Model):
     _name = 'modelo.toner'
     _description = 'Modelo de tóner'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'marca_id, name, color'
     _rec_name = 'display_name'
+
 
     # =========================================================
     # IDENTIFICACIÓN

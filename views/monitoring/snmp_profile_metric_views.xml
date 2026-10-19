@@ -31,7 +31,7 @@
                             string="Con histórico"
                             domain="[('store_history','=',True)]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
 
                         <filter name="group_profile"
                                 string="Perfil"
@@ -459,17 +459,7 @@
         </record>
 
 
-        <record id="action_snmp_profile_metric"
-                model="ir.actions.act_window">
-
-            <field name="name">Métricas / OIDs</field>
-            <field name="res_model">sat.snmp.profile.metric</field>
-            <field name="view_mode">list,form</field>
-
-            <field name="search_view_id"
-                   ref="view_snmp_profile_metric_search"/>
-
-        </record>
+        
 
     </data>
 </odoo>

@@ -39,7 +39,7 @@
                             string="Pendiente sincronizar"
                             domain="[('needs_config_sync','=',True)]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
 
                         <filter name="group_partner"
                                 string="Cliente"
@@ -500,17 +500,6 @@
         </record>
 
 
-        <record id="action_monitoring_agent"
-                model="ir.actions.act_window">
-
-            <field name="name">Agentes de Monitoreo</field>
-            <field name="res_model">sat.monitoring.agent</field>
-            <field name="view_mode">list,form</field>
-
-            <field name="search_view_id"
-                   ref="view_monitoring_agent_search"/>
-
-        </record>
-
+       
     </data>
 </odoo>

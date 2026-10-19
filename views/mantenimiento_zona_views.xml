@@ -415,7 +415,7 @@
 
                             domain="[('flexible', '=', True)]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
 
                         <filter name="group_flexible"
 
@@ -611,7 +611,7 @@
 
 
 
-                    <group expand="0" string="Agrupar por">
+                    <group >
 
                         <filter name="group_zona"
 
@@ -653,67 +653,7 @@
 
 
 
-        <record id="action_mantenimiento_zona" model="ir.actions.act_window">
-
-            <field name="name">Zonas de mantenimiento</field>
-
-            <field name="res_model">mantenimiento.zona</field>
-
-            <field name="view_mode">kanban,list,form</field>
-
-            <field name="search_view_id" ref="view_mantenimiento_zona_search"/>
-
-            <field name="context">{'search_default_filter_active': 1}</field>
-
-            <field name="help" type="html">
-
-                <p class="o_view_nocontent_smiling_face">
-
-                    Configura tus zonas de mantenimiento
-
-                </p>
-
-                <p>
-
-                    Agrupa distritos como Lima Norte, Lima Centro, Lima Sur, Lima Este o Callao.
-
-                </p>
-
-            </field>
-
-        </record>
-
-
-
-        <record id="action_mantenimiento_zona_distrito" model="ir.actions.act_window">
-
-            <field name="name">Distritos por zona</field>
-
-            <field name="res_model">mantenimiento.zona.distrito</field>
-
-            <field name="view_mode">list,form</field>
-
-            <field name="search_view_id" ref="view_mantenimiento_zona_distrito_search"/>
-
-            <field name="context">{'search_default_filter_active': 1, 'search_default_group_zona': 1}</field>
-
-            <field name="help" type="html">
-
-                <p class="o_view_nocontent_smiling_face">
-
-                    Registra distritos y asígnalos a zonas
-
-                </p>
-
-                <p>
-
-                    Estos distritos se compararán con el distrito obtenido desde Google Maps.
-
-                </p>
-
-            </field>
-
-        </record>
+       
 
 
 

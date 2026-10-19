@@ -144,7 +144,7 @@
                     <filter string="Magenta" name="magenta" domain="[('color', '=', 'magenta')]"/>
                     <filter string="Amarillo" name="yellow" domain="[('color', '=', 'yellow')]"/>
 
-                    <group expand="1" string="Agrupar por">
+                    <group>
                         <filter string="Marca" name="group_brand" context="{'group_by': 'marca_id'}"/>
                         <filter string="Color" name="group_color" context="{'group_by': 'color'}"/>
                         <filter string="Fuente" name="group_source" context="{'group_by': 'fuente_informacion'}"/>

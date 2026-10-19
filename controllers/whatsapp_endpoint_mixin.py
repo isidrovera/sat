@@ -86,7 +86,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: perfil
     # ==========================================================
-    @http.route("/sat/whatsapp/profile", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route("/sat/whatsapp/profile", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
     def whatsapp_profile(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/profile"
@@ -197,7 +197,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: intención
     # ==========================================================
-    @http.route("/sat/whatsapp/intent", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route("/sat/whatsapp/intent", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
     def whatsapp_intent(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/intent"
@@ -260,7 +260,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: render plantilla
     # ==========================================================
-    @http.route("/sat/whatsapp/template/render", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route("/sat/whatsapp/template/render", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
     def whatsapp_template_render(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/template/render"
@@ -349,7 +349,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     # Endpoint: mensaje saliente / outbox
     # ==========================================================
-    @http.route("/sat/whatsapp/message/out", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route("/sat/whatsapp/message/out", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
     def whatsapp_message_out(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/message/out"
@@ -463,7 +463,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     @http.route(
         "/sat/whatsapp/outbox/pending",
-        type="json",
+        type="jsonrpc",
         auth="public",
         methods=["POST"],
         csrf=False,
@@ -538,7 +538,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     @http.route(
         "/sat/whatsapp/human/take",
-        type="json",
+        type="jsonrpc",
         auth="public",
         methods=["POST"],
         csrf=False,
@@ -745,7 +745,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     @http.route(
         "/sat/whatsapp/human/release",
-        type="json",
+        type="jsonrpc",
         auth="public",
         methods=["POST"],
         csrf=False,
@@ -936,7 +936,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     @http.route(
         "/sat/whatsapp/outbox/mark-sent",
-        type="json",
+        type="jsonrpc",
         auth="public",
         methods=["POST"],
         csrf=False,
@@ -1066,7 +1066,7 @@ class WhatsAppEndpointMixin:
     # ==========================================================
     @http.route(
         "/sat/whatsapp/outbox/mark-failed",
-        type="json",
+        type="jsonrpc",
         auth="public",
         methods=["POST"],
         csrf=False,

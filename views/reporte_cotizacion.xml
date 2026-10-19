@@ -1,29 +1,80 @@
-<?xml version='1.0' encoding='utf-8'?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
-        <template id="report_saleorder_document_inherit" inherit_id="sale.report_saleorder_document">
-            <xpath expr="//div[@class='row mb-4' and @id='informations']" position="after">
-                <div class="border rounded" style="background-color: #f8f9fa; margin-bottom: 1rem;">
-                    <div class="row p-2">
-                        <div class="col-4 border-end">
-                            <strong>Equipo:</strong>
+
+    <!-- =========================================================
+         REPORTE DE COTIZACIÓN - ODOO 19
+         Hereda la plantilla estándar de Ventas.
+    ========================================================= -->
+
+    <template
+        id="report_saleorder_document_inherit"
+        inherit_id="sale.report_saleorder_document">
+
+        <!-- =====================================================
+             INFORMACIÓN ADICIONAL DEL EQUIPO
+        ====================================================== -->
+
+        <xpath
+            expr="//div[@id='informations']"
+            position="after">
+
+            <div class="border rounded"
+                 style="background-color: #f8f9fa; margin-bottom: 1rem;"
+                 t-if="doc.equipo_id or doc.serie_id or doc.obs">
+
+                <div class="row p-2">
+
+                    <div class="col-4 border-end">
+                        <strong>Equipo:</strong>
+                        <div t-if="doc.equipo_id">
                             <span t-field="doc.equipo_id"/>
                         </div>
-                        <div class="col-4 border-end">
-                            <strong>Serie:</strong>
+                    </div>
+
+                    <div class="col-4 border-end">
+                        <strong>Serie:</strong>
+                        <div t-if="doc.serie_id">
                             <span t-field="doc.serie_id"/>
                         </div>
-                        <div class="col-4">
-                            <strong>Observaciones:</strong>
+                    </div>
+
+                    <div class="col-4">
+                        <strong>Observaciones:</strong>
+                        <div t-if="doc.obs">
                             <span t-field="doc.obs"/>
                         </div>
                     </div>
+
                 </div>
-            </xpath>
-            <xpath expr="//td[@name='td_name']" position="inside">
-                <span style="color: darkblue;">Total de copias:</span>
+
+            </div>
+
+        </xpath>
+
+        <!-- =====================================================
+             TOTAL DE COPIAS EN LAS LÍNEAS DE COTIZACIÓN
+
+             En Odoo 19 no dependemos del atributo td_name.
+             Se utiliza la columna de descripción de línea.
+        ====================================================== -->
+
+        <xpath
+            expr="//td[@name='td_product_name']"
+            position="inside">
+
+            <div t-if="line.total_copias_id"
+                 style="margin-top: 4px; font-size: 12px;">
+
+                <strong style="color: darkblue;">
+                    Total de copias:
+                </strong>
+
                 <span t-field="line.total_copias_id"/>
-            </xpath>
-        </template>
-    
+
+            </div>
+
+        </xpath>
+
+    </template>
+
 </odoo>

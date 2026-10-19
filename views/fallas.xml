@@ -1,71 +1,165 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
+
+        <!-- ======================================================
+             FORMULARIO DE FALLAS - ODOO 19
+        ======================================================= -->
         <record id="fallas_form_view" model="ir.ui.view">
             <field name="name">Fallas_de_maquinas.form</field>
             <field name="model">fallas</field>
             <field name="arch" type="xml">
-                <form string="ModelTitle">
+
+                <form string="Fallas de máquinas">
                     <sheet>
+
+                        <!-- TÍTULO -->
                         <div class="oe_title">
                             <label for="name"/>
                             <h1>
-                                <field name="name" placeholder="Modelo de maquina"/>
+                                <field name="name"
+                                       placeholder="Modelo de máquina"/>
                             </h1>
                         </div>
+
+                        <!-- INFORMACIÓN PRINCIPAL -->
                         <group>
-                            <group>
-                                <field name="name"/>
-                                <field name="importacion" />
-                                <field name="proveedor_id" />
-                                <field name="marca" />
-                                <field name="modelo_id" />
-                                <field name="serie" />
+
+                            <group string="Datos del equipo">
+
+                                <field name="importacion"/>
+
+                                <field name="proveedor_id"/>
+
+                                <field name="marca"/>
+
+                                <field name="modelo_id"/>
+
+                                <field name="serie"/>
+
                             </group>
-                            <group>
-                                <field name="foto" widget="image" 
-                                class="oe_avatar"
-                                />
-                                <field name="descripcion" />
-                                <field name="usuario_id" />
+
+                            <group string="Información de la falla">
+
+                                <field name="foto"
+                                       widget="image"
+                                       class="oe_avatar"
+                                       options="{'size': [256, 256]}"/>
+
+                                <field name="descripcion"/>
+
+                                <field name="usuario_id"/>
+
                             </group>
+
                         </group>
+
                     </sheet>
                 </form>
+
             </field>
         </record>
+
+        <!-- ======================================================
+             VISTA LISTA - ODOO 19
+        ======================================================= -->
         <record id="fallas_maquina_tree_view" model="ir.ui.view">
-            <field name="name">Fallas_de_maquina.tree</field>
+            <field name="name">Fallas_de_maquina.list</field>
             <field name="model">fallas</field>
             <field name="arch" type="xml">
-                <list string="ModelTitle">
-                    <field name="name"/>
-                    <field name="importacion" />
-                    <field name="proveedor_id" />
-                    <field name="marca" />
-                    <field name="modelo_id" />
-                    <field name="serie" />
-                    <field name="descripcion_procesada" />
-                    <field name="foto" widget="image" class="oe_avatar"/>
-                    <field name="usuario_id" />
+
+                <list string="Fallas de máquinas"
+                      default_order="id desc">
+
+                    <field name="name"
+                           string="Falla"/>
+
+                    <field name="importacion"
+                           optional="show"/>
+
+                    <field name="proveedor_id"
+                           optional="show"/>
+
+                    <field name="marca"
+                           optional="show"/>
+
+                    <field name="modelo_id"
+                           optional="show"/>
+
+                    <field name="serie"
+                           optional="show"/>
+
+                    <field name="descripcion_procesada"
+                           optional="show"/>
+
+                    <field name="foto"
+                           widget="image"
+                           class="oe_avatar"
+                           optional="show"/>
+
+                    <field name="usuario_id"
+                           optional="show"/>
+
                 </list>
+
             </field>
         </record>
+
+        <!-- ======================================================
+             VISTA DE BÚSQUEDA - ODOO 19
+        ======================================================= -->
         <record id="fallas_maquina_search_view" model="ir.ui.view">
             <field name="name">Fallas_de_maquina.search</field>
             <field name="model">fallas</field>
             <field name="arch" type="xml">
-                <search string="ModelTitle">
-                    <group expand="1" string="Group By">
-                        <field name="name"/>
-                        <field name="importacion" />
-                        <field name="proveedor_id" />
-                        <field name="marca" />
-                        <field name="modelo_id" />
-                        <field name="serie" />
+
+                <search string="Buscar fallas de máquinas">
+
+                    <!-- CAMPOS DE BÚSQUEDA -->
+
+                    <field name="name"
+                           string="Falla"/>
+
+                    <field name="importacion"
+                           string="Importación"/>
+
+                    <field name="proveedor_id"
+                           string="Proveedor"/>
+
+                    <field name="marca"
+                           string="Marca"/>
+
+                    <field name="modelo_id"
+                           string="Modelo"/>
+
+                    <field name="serie"
+                           string="Serie"/>
+
+                    <!-- AGRUPACIONES -->
+                    <group>
+
+                        <filter name="group_importacion"
+                                string="Importación"
+                                context="{'group_by': 'importacion'}"/>
+
+                        <filter name="group_proveedor"
+                                string="Proveedor"
+                                context="{'group_by': 'proveedor_id'}"/>
+
+                        <filter name="group_marca"
+                                string="Marca"
+                                context="{'group_by': 'marca'}"/>
+
+                        <filter name="group_modelo"
+                                string="Modelo"
+                                context="{'group_by': 'modelo_id'}"/>
+
                     </group>
+
                 </search>
+
             </field>
         </record>
+
     </data>
 </odoo>

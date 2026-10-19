@@ -254,7 +254,7 @@
                             string="Trabaja sábado"
                             domain="[('trabaja_sabado', '=', True)]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group >
                         <filter name="group_tecnico"
                                 string="Técnico"
                                 context="{'group_by': 'tecnico_id'}"/>
@@ -516,7 +516,7 @@
                             string="Próximas"
                             domain="[('fecha', '&gt;=', context_today())]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="group_tecnico"
                                 string="Técnico"
                                 context="{'group_by': 'tecnico_id'}"/>
@@ -534,41 +534,7 @@
             </field>
         </record>
 
-        <!-- ========================================================= -->
-        <!-- ACCIONES                                                  -->
-        <!-- ========================================================= -->
-
-        <record id="action_mantenimiento_tecnico_perfil" model="ir.actions.act_window">
-            <field name="name">Perfiles técnicos</field>
-            <field name="res_model">mantenimiento.tecnico.perfil</field>
-            <field name="view_mode">kanban,list,form</field>
-            <field name="search_view_id" ref="view_mantenimiento_tecnico_perfil_search"/>
-            <field name="context">{'search_default_filter_active': 1}</field>
-            <field name="help" type="html">
-                <p class="o_view_nocontent_smiling_face">
-                    Configura perfiles técnicos
-                </p>
-                <p>
-                    Define horarios, capacidad diaria, capacidad de sábado y zonas preferidas.
-                </p>
-            </field>
-        </record>
-
-        <record id="action_mantenimiento_tecnico_disponibilidad" model="ir.actions.act_window">
-            <field name="name">Disponibilidad técnica</field>
-            <field name="res_model">mantenimiento.tecnico.disponibilidad</field>
-            <field name="view_mode">calendar,kanban,list,form</field>
-            <field name="search_view_id" ref="view_mantenimiento_tecnico_disponibilidad_search"/>
-            <field name="context">{'search_default_filter_future': 1}</field>
-            <field name="help" type="html">
-                <p class="o_view_nocontent_smiling_face">
-                    Registra disponibilidades o bloqueos excepcionales
-                </p>
-                <p>
-                    Ejemplo: técnico que trabaja un sábado especial o bloqueo manual por capacitación.
-                </p>
-            </field>
-        </record>
+       
 
     </data>
 </odoo>

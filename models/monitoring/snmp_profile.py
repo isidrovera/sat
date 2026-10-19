@@ -693,43 +693,46 @@ class SatSnmpProfile(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_snmp_profile_code_unique',
-            'unique(code)',
-            'El código técnico del perfil SNMP ya está siendo utilizado.',
-        ),
-        (
-            'sat_snmp_profile_revision_positive',
-            'CHECK(revision > 0)',
-            'La revisión del perfil debe ser mayor que cero.',
-        ),
-        (
-            'sat_snmp_profile_priority_positive',
-            'CHECK(priority >= 0)',
-            'La prioridad del perfil no puede ser negativa.',
-        ),
-        (
-            'sat_snmp_profile_min_score_positive',
-            'CHECK(minimum_match_score >= 0)',
-            'La puntuación mínima no puede ser negativa.',
-        ),
-        (
-            'sat_snmp_profile_test_count_positive',
-            'CHECK(tested_device_count >= 0)',
-            'La cantidad de equipos probados no puede ser negativa.',
-        ),
-        (
-            'sat_snmp_profile_success_count_positive',
-            'CHECK(successful_device_count >= 0)',
-            'La cantidad de pruebas exitosas no puede ser negativa.',
-        ),
-        (
-            'sat_snmp_profile_failed_count_positive',
-            'CHECK(failed_device_count >= 0)',
-            'La cantidad de pruebas fallidas no puede ser negativa.',
-        ),
-    ]
+    
+    # ========================================================
+    # RESTRICCIONES SQL - ODOO 19
+    # ========================================================
+
+    _sat_snmp_profile_code_unique = models.Constraint(
+        'UNIQUE(code)',
+        'El código técnico del perfil SNMP ya está siendo utilizado.',
+    )
+
+    _sat_snmp_profile_revision_positive = models.Constraint(
+        'CHECK(revision > 0)',
+        'La revisión del perfil debe ser mayor que cero.',
+    )
+
+    _sat_snmp_profile_priority_positive = models.Constraint(
+        'CHECK(priority >= 0)',
+        'La prioridad del perfil no puede ser negativa.',
+    )
+
+    _sat_snmp_profile_min_score_positive = models.Constraint(
+        'CHECK(minimum_match_score >= 0)',
+        'La puntuación mínima no puede ser negativa.',
+    )
+
+    _sat_snmp_profile_test_count_positive = models.Constraint(
+        'CHECK(tested_device_count >= 0)',
+        'La cantidad de equipos probados no puede ser negativa.',
+    )
+
+    _sat_snmp_profile_success_count_positive = models.Constraint(
+        'CHECK(successful_device_count >= 0)',
+        'La cantidad de pruebas exitosas no puede ser negativa.',
+    )
+
+    _sat_snmp_profile_failed_count_positive = models.Constraint(
+        'CHECK(failed_device_count >= 0)',
+        'La cantidad de pruebas fallidas no puede ser negativa.',
+    )
+
 
     # ========================================================
     # ONCHANGE / CREATE

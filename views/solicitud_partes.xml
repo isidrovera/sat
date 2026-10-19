@@ -1,173 +1,336 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-    <!-- Vista Form -->
-    <record id="view_copier_parts_request_form" model="ir.ui.view">
-        <field name="name">copier.parts.request.form</field>
-        <field name="model">copier.parts.request</field>
-        <field name="arch" type="xml">
-            <form>
-                <header>
-                    <button name="action_approve" string="Aprobar" type="object" 
-                            
-                            invisible="state != 'draft'"/>
-                    <button name="action_deliver" string="Entregar" type="object"
-                            
-                            invisible="state != 'approved'"/>
-                    <field name="state" widget="statusbar"/>
-                </header>
-                <sheet>
-                    <div class="oe_button_box" name="button_box">
-                    </div>
-                    <div class="oe_title">
-                        <h1>
-                            <field name="name" readonly="1"/>
-                        </h1>
-                    </div>
-                    <group>
+
+        <!-- =====================================================
+             FORMULARIO DE SOLICITUD DE REPUESTOS
+             ODOO 19
+        ====================================================== -->
+        <record id="view_copier_parts_request_form" model="ir.ui.view">
+            <field name="name">copier.parts.request.form</field>
+            <field name="model">copier.parts.request</field>
+            <field name="arch" type="xml">
+
+                <form string="Solicitud de Repuestos">
+
+                    <header>
+
+                        <button name="action_approve"
+                                string="Aprobar"
+                                type="object"
+                                class="btn-primary"
+                                invisible="state != 'draft'"/>
+
+                        <button name="action_deliver"
+                                string="Entregar"
+                                type="object"
+                                class="btn-success"
+                                invisible="state != 'approved'"/>
+
+                        <field name="state"
+                               widget="statusbar"
+                               statusbar_visible="draft,approved,delivered"/>
+
+                    </header>
+
+                    <sheet>
+
+                        <div class="oe_button_box" name="button_box"/>
+
+                        <div class="oe_title">
+                            <h1>
+                                <field name="name" readonly="1"/>
+                            </h1>
+                        </div>
+
                         <group>
-                            <field name="fecha"/>
-                            <field name="maquina_id"/>
-                            <field name="solicitante_id"/>
-                        </group>
-                        <group>
-                            <field name="proveedor"/>
-                            <field name="importacion"/>
-                            <field name="marca"/>
-                            <field name="modelo"/>
-                            <field name="serie"/>
-                        </group>
-                    </group>
-                    <notebook>
-                        <page string="Detalles de Solicitud">
-                            <group>
-                                <group string="Disco Duro" >
-                                    <field name="disco_duro_requerido" icon="fa-hdd-o"/>
-                                    <field name="motivo_disco" 
-                                           invisible="not disco_duro_requerido"
-                                           required="disco_duro_requerido"/>
-                                </group>
-                                <group string="Ruedas" >
-                                    <field name="ruedas_requeridas" icon="fa-circle"/>
-                                    <field name="cantidad_ruedas" 
-                                           invisible="not ruedas_requeridas"/>
-                                </group>
-                                <group string="Cable de Poder" >
-                                    <field name="cable_poder_requerido" icon="fa-plug"/>
-                                    <field name="motivo_cable"
-                                           invisible="not cable_poder_requerido"
-                                           required="cable_poder_requerido"/>
-                                </group>
+
+                            <group string="Información de la solicitud">
+
+                                <field name="fecha"/>
+
+                                <field name="maquina_id"/>
+
+                                <field name="solicitante_id"/>
+
                             </group>
-                        </page>
-                    </notebook>
-                </sheet>
-                <chatter/>
-            </form>
-        </field>
-    </record>
 
-    <!-- Vista List -->
-    <record id="view_copier_parts_request_list" model="ir.ui.view">
-        <field name="name">copier.parts.request.list</field>
-        <field name="model">copier.parts.request</field>
-        <field name="arch" type="xml">
-            <list>
-                <field name="name"/>
-                <field name="fecha"/>
-                <field name="maquina_id"/>
-                <field name="serie"/>
-                <field name="solicitante_id"/>
-                <field name="disco_duro_requerido"/>
-                <field name="ruedas_requeridas"/>
-                <field name="cable_poder_requerido"/>
-                <field name="state" widget="badge"
-                       decoration-info="state == 'draft'"
-                       decoration-success="state == 'approved'"
-                       decoration-muted="state == 'delivered'"/>
-            </list>
-        </field>
-    </record>
+                            <group string="Información del equipo">
 
-    <!-- Vista Kanban -->
-    <record id="view_copier_parts_request_kanban" model="ir.ui.view">
-        <field name="name">copier.parts.request.kanban</field>
-        <field name="model">copier.parts.request</field>
-        <field name="arch" type="xml">
-            <kanban default_group_by="state" class="o_kanban_small_column">
-                <field name="name"/>
-                <field name="fecha"/>
-                <field name="maquina_id"/>
-                <field name="serie"/>
-                <field name="solicitante_id"/>
-                <field name="state"/>
-                <field name="disco_duro_requerido"/>
-                <field name="ruedas_requeridas"/>
-                <field name="cable_poder_requerido"/>
-                <templates>
-                    <t t-name="kanban-box">
-                        <div class="oe_kanban_global_click">
-                            <div class="oe_kanban_details">
-                                <strong class="o_kanban_record_title">
-                                    <field name="name"/>
-                                </strong>
-                                <div class="o_kanban_record_subtitle">
+                                <field name="proveedor"/>
+
+                                <field name="importacion"/>
+
+                                <field name="marca"/>
+
+                                <field name="modelo"/>
+
+                                <field name="serie"/>
+
+                            </group>
+
+                        </group>
+
+                        <notebook>
+
+                            <page string="Detalles de Solicitud"
+                                  name="detalles_solicitud">
+
+                                <group>
+
+                                    <group string="Disco Duro">
+
+                                        <field name="disco_duro_requerido"/>
+
+                                        <field name="motivo_disco"
+                                               invisible="not disco_duro_requerido"
+                                               required="disco_duro_requerido"/>
+
+                                    </group>
+
+                                    <group string="Ruedas">
+
+                                        <field name="ruedas_requeridas"/>
+
+                                        <field name="cantidad_ruedas"
+                                               invisible="not ruedas_requeridas"/>
+
+                                    </group>
+
+                                    <group string="Cable de Poder">
+
+                                        <field name="cable_poder_requerido"/>
+
+                                        <field name="motivo_cable"
+                                               invisible="not cable_poder_requerido"
+                                               required="cable_poder_requerido"/>
+
+                                    </group>
+
+                                </group>
+
+                            </page>
+
+                        </notebook>
+
+                    </sheet>
+
+                    <chatter/>
+
+                </form>
+
+            </field>
+        </record>
+
+        <!-- =====================================================
+             VISTA LISTA
+             ODOO 19
+        ====================================================== -->
+        <record id="view_copier_parts_request_list" model="ir.ui.view">
+            <field name="name">copier.parts.request.list</field>
+            <field name="model">copier.parts.request</field>
+            <field name="arch" type="xml">
+
+                <list string="Solicitudes de Repuestos"
+                      default_order="fecha desc">
+
+                    <field name="name"/>
+
+                    <field name="fecha"/>
+
+                    <field name="maquina_id"/>
+
+                    <field name="serie"/>
+
+                    <field name="solicitante_id"/>
+
+                    <field name="disco_duro_requerido"/>
+
+                    <field name="ruedas_requeridas"/>
+
+                    <field name="cable_poder_requerido"/>
+
+                    <field name="state"
+                           widget="badge"
+                           decoration-info="state == 'draft'"
+                           decoration-success="state == 'approved'"
+                           decoration-muted="state == 'delivered'"/>
+
+                </list>
+
+            </field>
+        </record>
+
+        <!-- =====================================================
+             VISTA KANBAN
+             ODOO 19
+        ====================================================== -->
+        <record id="view_copier_parts_request_kanban" model="ir.ui.view">
+            <field name="name">copier.parts.request.kanban</field>
+            <field name="model">copier.parts.request</field>
+            <field name="arch" type="xml">
+
+                <kanban default_group_by="state"
+                        class="o_kanban_small_column">
+
+                    <field name="name"/>
+                    <field name="fecha"/>
+                    <field name="maquina_id"/>
+                    <field name="serie"/>
+                    <field name="solicitante_id"/>
+                    <field name="state"/>
+                    <field name="disco_duro_requerido"/>
+                    <field name="ruedas_requeridas"/>
+                    <field name="cable_poder_requerido"/>
+
+                    <templates>
+
+                        <t t-name="card">
+
+                            <div class="d-flex flex-column gap-2">
+
+                                <div class="d-flex justify-content-between align-items-center">
+
+                                    <strong class="fs-5">
+                                        <field name="name"/>
+                                    </strong>
+
+                                    <field name="state"
+                                           widget="badge"
+                                           decoration-info="state == 'draft'"
+                                           decoration-success="state == 'approved'"
+                                           decoration-muted="state == 'delivered'"/>
+
+                                </div>
+
+                                <div class="text-muted">
+                                    <strong>Máquina:</strong>
                                     <field name="maquina_id"/>
                                 </div>
-                                <div class="o_kanban_record_bottom">
-                                    <div class="oe_kanban_bottom_left">
-                                        <field name="fecha"/>
-                                    </div>
-                                    <div class="oe_kanban_bottom_right">
-                                        <field name="solicitante_id" widget="many2one_avatar_user"/>
-                                    </div>
-                                </div>
-                                <div class="o_kanban_tags_section">
-                                    <span t-if="record.disco_duro_requerido.raw_value" 
-                                          class="badge text-bg-info">Disco Duro</span>
-                                    <span t-if="record.ruedas_requeridas.raw_value" 
-                                          class="badge text-bg-warning">Ruedas</span>
-                                    <span t-if="record.cable_poder_requerido.raw_value" 
-                                          class="badge text-bg-danger">Cable Poder</span>
-                                </div>
-                            </div>
-                        </div>
-                    </t>
-                </templates>
-            </kanban>
-        </field>
-    </record>
 
-    <!-- Vista Search -->
-    <record id="view_copier_parts_request_search" model="ir.ui.view">
-        <field name="name">copier.parts.request.search</field>
-        <field name="model">copier.parts.request</field>
-        <field name="arch" type="xml">
-            <search>
-                <field name="name"/>
-                <field name="maquina_id"/>
-                <field name="serie"/>
-                <field name="solicitante_id"/>
-                
-                <filter string="Mis Solicitudes" name="my_requests" 
-                        domain="[('solicitante_id', '=', uid)]"/>
-                <separator/>
-                <filter string="Pendientes" name="draft" domain="[('state', '=', 'draft')]"/>
-                <filter string="Aprobadas" name="approved" domain="[('state', '=', 'approved')]"/>
-                <filter string="Entregadas" name="delivered" domain="[('state', '=', 'delivered')]"/>
-                
-                <group expand="0" string="Agrupar Por">
-                    <filter string="Estado" name="group_by_state" context="{'group_by': 'state'}"/>
-                    <filter string="Solicitante" name="group_by_solicitante" context="{'group_by': 'solicitante_id'}"/>
-                    <filter string="Máquina" name="group_by_maquina" context="{'group_by': 'maquina_id'}"/>
+                                <div t-if="record.serie.raw_value">
+                                    <strong>Serie:</strong>
+                                    <field name="serie"/>
+                                </div>
+
+                                <div>
+                                    <strong>Fecha:</strong>
+                                    <field name="fecha"/>
+                                </div>
+
+                                <div>
+                                    <strong>Solicitante:</strong>
+                                    <field name="solicitante_id"
+                                           widget="many2one_avatar_user"/>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-1 mt-2">
+
+                                    <span t-if="record.disco_duro_requerido.raw_value"
+                                          class="badge text-bg-info">
+                                        Disco Duro
+                                    </span>
+
+                                    <span t-if="record.ruedas_requeridas.raw_value"
+                                          class="badge text-bg-warning">
+                                        Ruedas
+                                    </span>
+
+                                    <span t-if="record.cable_poder_requerido.raw_value"
+                                          class="badge text-bg-danger">
+                                        Cable Poder
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+                        </t>
+
+                    </templates>
+
+                </kanban>
+
+            </field>
+        </record>
+
+        <!-- =====================================================
+             VISTA DE BÚSQUEDA
+             ODOO 19
+        ====================================================== -->
+        <record id="view_copier_parts_request_search" model="ir.ui.view">
+            <field name="name">copier.parts.request.search</field>
+            <field name="model">copier.parts.request</field>
+            <field name="arch" type="xml">
+
+                <search string="Buscar solicitudes de repuestos">
+
+                    <field name="name"/>
+
+                    <field name="maquina_id"/>
+
+                    <field name="serie"/>
+
+                    <field name="solicitante_id"/>
+
                     <separator/>
-                    <filter string="Semana" name="group_by_week" 
-                            context="{'group_by': 'fecha:week'}"/>
-                    <filter string="Mes" name="group_by_month" 
-                            context="{'group_by': 'fecha:month'}"/>
-                </group>
-            </search>
-        </field>
-    </record>
-  </data>
+
+                    <!-- SOLICITUDES DEL USUARIO -->
+
+                    <filter string="Mis Solicitudes"
+                            name="my_requests"
+                            domain="[('solicitante_id', '=', uid)]"/>
+
+                    <separator/>
+
+                    <!-- FILTROS POR ESTADO -->
+
+                    <filter string="Pendientes"
+                            name="draft"
+                            domain="[('state', '=', 'draft')]"/>
+
+                    <filter string="Aprobadas"
+                            name="approved"
+                            domain="[('state', '=', 'approved')]"/>
+
+                    <filter string="Entregadas"
+                            name="delivered"
+                            domain="[('state', '=', 'delivered')]"/>
+
+                    <separator/>
+
+                    <!-- AGRUPACIONES ODOO 19 -->
+
+                    <group>
+
+                        <filter string="Estado"
+                                name="group_by_state"
+                                context="{'group_by': 'state'}"/>
+
+                        <filter string="Solicitante"
+                                name="group_by_solicitante"
+                                context="{'group_by': 'solicitante_id'}"/>
+
+                        <filter string="Máquina"
+                                name="group_by_maquina"
+                                context="{'group_by': 'maquina_id'}"/>
+
+                        <separator/>
+
+                        <filter string="Semana"
+                                name="group_by_week"
+                                context="{'group_by': 'fecha:week'}"/>
+
+                        <filter string="Mes"
+                                name="group_by_month"
+                                context="{'group_by': 'fecha:month'}"/>
+
+                    </group>
+
+                </search>
+
+            </field>
+        </record>
+
+    </data>
 </odoo>

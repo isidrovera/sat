@@ -85,9 +85,12 @@ class TicketRetiroToken(models.Model):
         store=True,
     )
 
-    _sql_constraints = [
-        ('token_unique', 'unique(token)', 'El token debe ser único.'),
-    ]
+    
+    _token_unique = models.Constraint(
+        'UNIQUE(token)',
+        'El token debe ser único.',
+    )
+
 
     # ═══════════════════════════════════════════════════════════════
     #  COMPUTE

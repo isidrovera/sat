@@ -44,10 +44,12 @@ class ModeloMaquinaAccesorio(models.Model):
             modelo = rec.modelo_id.name if rec.modelo_id else ''
             rec.display_name = f"{tipo} ({modelo})" if modelo else tipo
 
-    _sql_constraints = [
-        ('uniq_modelo_accesorio', 'unique(modelo_id, tipo_id)', 
-         'Este accesorio ya está definido para el modelo.')
-    ]
+    
+    _uniq_modelo_accesorio = models.Constraint(
+        'UNIQUE(modelo_id, tipo_id)',
+        'Este accesorio ya está definido para el modelo.',
+    )
+
 
 
 class ModelosMaquin(models.Model):

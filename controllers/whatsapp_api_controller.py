@@ -268,7 +268,7 @@ class WhatsAppPartnerApiController(
     # ==========================================================
     # Endpoint central: procesar conversación completa
     # ==========================================================
-    @http.route("/sat/whatsapp/process", type="json", auth="public", methods=["POST"], csrf=False)
+    @http.route("/sat/whatsapp/process", type="jsonrpc", auth="public", methods=["POST"], csrf=False)
     def whatsapp_process(self, **kwargs):
         start_ts = time.time()
         endpoint = "/sat/whatsapp/process"

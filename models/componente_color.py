@@ -11,4 +11,9 @@ class ComponenteColor(models.Model):
     key = fields.Selection([('k','K'), ('c','C'), ('m','M'), ('y','Y')], required=True, index=True)
     sequence = fields.Integer(default=10)
 
-    _sql_constraints = [('key_uniq', 'unique(key)', 'Color repetido.')]
+    
+    _key_uniq = models.Constraint(
+        'UNIQUE(key)',
+        'Color repetido.',
+    )
+

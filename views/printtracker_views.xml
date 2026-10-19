@@ -401,7 +401,7 @@
                     <!-- Origen de sincronización disponible para búsqueda libre -->
                     <field name="sync_source" string="Origen"/>
                     <!-- Agrupar por -->
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="grp_reading_day" string="Fecha (día)"
                         context="{'group_by':'reading_date'}"/>
                         <filter name="grp_reading_week" string="Fecha (semana)"
@@ -797,29 +797,6 @@
                 </form>
             </field>
         </record>
-        <!-- Vista List - PrintTracker Supply -->
-        <record id="view_printtracker_supply_list" model="ir.ui.view">
-            <field name="name">printtracker.supply.list</field>
-            <field name="model">printtracker.supply</field>
-            <field name="arch" type="xml">
-                <list default_order="device_id, supply_type, installed_date desc">
-                    <field name="device_id"/>
-                    <field name="supply_type"/>
-                    <field name="supply_color"/>
-                    <field name="displayable_name"/>
-                    <field name="percent_remaining" 
-                       widget="percentage"
-                       decoration-danger="percent_remaining &lt; 10"
-                       decoration-warning="percent_remaining &lt; 25"/>
-                    <field name="estimated_depletion_date"/>
-                    <field name="is_active" widget="boolean_toggle"/>
-                    <field name="is_replaced"/>
-                    <field name="low_supply_alert" 
-                       decoration-danger="low_supply_alert"/>
-                    <field name="supply_cost" widget="monetary" optional="hide"/>
-                </list>
-            </field>
-        </record>
         <!-- =============================================== -->
         <!-- PRINTTRACKER DAILY READING - LECTURAS DIARIAS -->
         <!-- =============================================== -->
@@ -979,7 +956,7 @@
                     <!-- Conflictos -->
                     <separator/>
                     <!-- Agrupar por -->
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <!-- Fecha (día / semana / mes) -->
                         <filter name="grp_fecha_dia" string="Fecha (día)"
                         context="{'group_by': 'fecha'}"/>
@@ -1264,7 +1241,7 @@
                     <filter name="fin_semana" string="Fin: esta semana" domain="[]"
                     context="{'group_by': 'fecha_fin:week'}"/>
                     <!-- Agrupar por -->
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="grp_inicio_dia" string="Inicio (día)" context="{'group_by': 'fecha_inicio'}"/>
                         <filter name="grp_inicio_semana" string="Inicio (semana)" context="{'group_by': 'fecha_inicio:week'}"/>
                         <filter name="grp_inicio_mes" string="Inicio (mes)" context="{'group_by': 'fecha_inicio:month'}"/>

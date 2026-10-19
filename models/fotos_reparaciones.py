@@ -54,14 +54,16 @@ class ReparacionFoto(models.Model):
     download_count = fields.Integer(string="Descargas", default=0)
     unique_id = fields.Char(string="ID Único", readonly=True)
 
-    _sql_constraints = [
-        ('unique_sequence_per_repair', 
-         'UNIQUE(reparacion_id, sequence)',
-         'La secuencia debe ser única por reparación'),
-        ('unique_file_name',
-         'UNIQUE(reparacion_id, unique_id)',
-         'El nombre del archivo debe ser único por reparación')
-    ]
+    
+    _unique_sequence_per_repair = models.Constraint(
+        'UNIQUE(reparacion_id, sequence)',
+        'La secuencia debe ser única por reparación',
+    )
+
+    _unique_file_name = models.Constraint(
+        'UNIQUE(reparacion_id, unique_id)',
+        'El nombre del archivo debe ser único por reparación',
+    )
 
     
 

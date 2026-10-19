@@ -50,11 +50,12 @@ class ReparacionComponenteEvaluacion(models.Model):
     
     observaciones = fields.Text(string='Observaciones')
 
-    _sql_constraints = [
-        ('reparacion_componente_color_unique', 
-         'unique(reparacion_id, componente_tipo_id, color_id)',
-         'Ya existe una evaluación de este componente y color para esta reparación.')
-    ]
+    
+    _reparacion_componente_color_unique = models.Constraint(
+        'UNIQUE(reparacion_id, componente_tipo_id, color_id)',
+        'Ya existe una evaluación de este componente y color para esta reparación.',
+    )
+
 
     @api.model
     def create(self, vals):

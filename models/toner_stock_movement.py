@@ -345,23 +345,22 @@ class TonerStockMovement(models.Model):
     # SQL
     # ============================================================
 
-    _sql_constraints = [
-        (
-            "toner_stock_non_negative_before",
-            "CHECK(stock_before >= 0)",
-            "El stock anterior no puede ser negativo.",
-        ),
-        (
-            "toner_stock_non_negative_after",
-            "CHECK(stock_after >= 0)",
-            "El stock posterior no puede ser negativo.",
-        ),
-        (
-            "toner_stock_external_key_unique",
-            "UNIQUE(external_key)",
-            "Este movimiento de stock ya fue registrado.",
-        ),
-    ]
+    
+    _toner_stock_non_negative_before = models.Constraint(
+        'CHECK(stock_before >= 0)',
+        'El stock anterior no puede ser negativo.',
+    )
+
+    _toner_stock_non_negative_after = models.Constraint(
+        'CHECK(stock_after >= 0)',
+        'El stock posterior no puede ser negativo.',
+    )
+
+    _toner_stock_external_key_unique = models.Constraint(
+        'UNIQUE(external_key)',
+        'Este movimiento de stock ya fue registrado.',
+    )
+
 
     # ============================================================
     # COMPUTES

@@ -65,13 +65,12 @@ class AppPushDevice(models.Model):
         default=fields.Datetime.now,
     )
 
-    _sql_constraints = [
-        (
-            "app_push_device_token_unique",
-            "unique(token)",
-            "Este token FCM ya está registrado.",
-        ),
-    ]
+    
+    _app_push_device_token_unique = models.Constraint(
+        'UNIQUE(token)',
+        'Este token FCM ya está registrado.',
+    )
+
 
     @api.model
     def register_device(

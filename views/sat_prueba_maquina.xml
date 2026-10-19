@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
   <data>
-
     <!-- ============================================================ -->
     <!-- VISTA LIST - sat.prueba.maquina                              -->
     <!-- ============================================================ -->
@@ -15,22 +14,18 @@
               decoration-danger="estado_prueba == 'con_alertas'"
               decoration-muted="estado_prueba == 'pendiente'"
               default_order="fecha_ultima_actualizacion desc, id desc">
-
           <field name="fecha_inicio" string="Fecha Inicio" optional="show"/>
           <field name="fecha_ultima_actualizacion" string="Últ. SNMP" optional="show"/>
           <field name="maquina_id" string="Máquina"/>
           <field name="reparacion_id" string="Reparación" optional="hide"/>
           <field name="tecnico_id" string="Técnico" optional="show"/>
-
           <field name="snmp_ip" string="IP" optional="hide"/>
           <field name="snmp_serie" string="Serie SNMP" optional="hide"/>
           <field name="snmp_marca" string="Marca" optional="hide"/>
           <field name="snmp_modelo" string="Modelo SNMP" optional="hide"/>
-
           <field name="contador_actual_total" string="Total" optional="show"/>
           <field name="contador_actual_bn" string="B/N" optional="hide"/>
           <field name="contador_actual_color" string="Color" optional="hide"/>
-
           <field name="delta_total" string="Δ Total" optional="show"/>
           <field name="delta_copias" string="Δ Cop." optional="show"/>
           <field name="delta_impresiones" string="Δ Imp." optional="show"/>
@@ -40,14 +35,12 @@
           <field name="delta_copias_color" string="Δ Cop. Color" optional="hide"/>
           <field name="delta_impresiones_bn" string="Δ Imp. B/N" optional="hide"/>
           <field name="delta_impresiones_color" string="Δ Imp. Color" optional="hide"/>
-
           <field name="prueba_copia_ok" string="✔ Cop." widget="boolean_toggle" readonly="1"/>
           <field name="prueba_impresion_ok" string="✔ Imp." widget="boolean_toggle" readonly="1"/>
           <field name="prueba_scanner_ok" string="✔ Scan" widget="boolean_toggle" readonly="1" optional="show"/>
           <field name="prueba_color_ok" string="✔ Color" widget="boolean_toggle" readonly="1" optional="show"/>
           <field name="prueba_bn_ok" string="✔ B/N" widget="boolean_toggle" readonly="1" optional="show"/>
           <field name="prueba_duplex_ok" string="✔ Dúplex" widget="boolean_toggle" readonly="1" optional="show"/>
-
           <field name="cantidad_alertas_snmp" string="Alertas" optional="show"/>
           <field name="estado_toner" string="Tóner"
                  decoration-danger="estado_toner == 'critico'"
@@ -55,19 +48,15 @@
                  decoration-success="estado_toner == 'ok'"
                  decoration-muted="estado_toner == 'sin_datos'"
                  optional="show"/>
-
           <field name="nivel_prueba" string="Nivel" optional="show"/>
           <field name="estado_prueba" string="Estado"
                  decoration-success="estado_prueba == 'completado'"
                  decoration-warning="estado_prueba == 'incompleto'"
                  decoration-danger="estado_prueba == 'con_alertas'"
                  decoration-muted="estado_prueba == 'pendiente'"/>
-
         </list>
       </field>
     </record>
-
-
     <!-- ============================================================ -->
     <!-- VISTA FORM - sat.prueba.maquina                              -->
     <!-- ============================================================ -->
@@ -76,15 +65,12 @@
       <field name="model">sat.prueba.maquina</field>
       <field name="arch" type="xml">
         <form string="Prueba de Máquina">
-
           <header>
             <field name="estado_prueba"
                    widget="statusbar"
                    statusbar_visible="pendiente,en_proceso,completado,incompleto,con_alertas"/>
           </header>
-
           <sheet>
-
             <div class="oe_title">
               <h1>
                 <field name="maquina_id" placeholder="Máquina"/>
@@ -93,26 +79,21 @@
                 <field name="reparacion_id" placeholder="Reparación"/>
               </h2>
             </div>
-
             <div class="o_row mb-3">
               <field name="nivel_prueba" widget="badge"
                      decoration-success="nivel_prueba in ('avanzado','completo')"
                      decoration-warning="nivel_prueba == 'intermedio'"
                      decoration-info="nivel_prueba == 'basico'"
                      decoration-muted="nivel_prueba == 'sin_prueba'"/>
-
               <field name="estado_toner" widget="badge"
                      decoration-danger="estado_toner == 'critico'"
                      decoration-warning="estado_toner == 'bajo'"
                      decoration-success="estado_toner == 'ok'"
                      decoration-muted="estado_toner == 'sin_datos'"/>
-
               <field name="cantidad_alertas_snmp" widget="badge"
                      decoration-danger="cantidad_alertas_snmp &gt; 0"/>
-
               <field name="origen" widget="badge"/>
             </div>
-
             <group string="Información General">
               <group>
                 <field name="tecnico_id"/>
@@ -130,9 +111,7 @@
                 <field name="snmp_config"/>
               </group>
             </group>
-
             <notebook>
-
               <!-- ==================================================== -->
               <!-- RESUMEN -->
               <!-- ==================================================== -->
@@ -153,18 +132,14 @@
                     <field name="prueba_impresion_color_ok" widget="boolean_toggle" readonly="1"/>
                   </group>
                 </group>
-
                 <group string="Resumen automático para ventas / reclamos">
                   <field name="resumen_prueba" nolabel="1" readonly="1"/>
                 </group>
               </page>
-
-
               <!-- ==================================================== -->
               <!-- CONTADORES GENERALES -->
               <!-- ==================================================== -->
               <page string="Contadores Generales" name="contadores_generales">
-
                 <group string="Inicial vs Actual">
                   <group string="Inicial">
                     <field name="contador_inicial_total"/>
@@ -177,7 +152,6 @@
                     <field name="contador_inicial_fax"/>
                     <field name="contador_inicial_gran_total"/>
                   </group>
-
                   <group string="Actual">
                     <field name="contador_actual_total"/>
                     <field name="contador_actual_bn"/>
@@ -189,7 +163,6 @@
                     <field name="contador_fax"/>
                     <field name="contador_gran_total"/>
                   </group>
-
                   <group string="Diferencia">
                     <field name="delta_total" readonly="1"/>
                     <field name="delta_bn" readonly="1"/>
@@ -202,15 +175,11 @@
                     <field name="delta_gran_total" readonly="1"/>
                   </group>
                 </group>
-
               </page>
-
-
               <!-- ==================================================== -->
               <!-- DETALLE B/N Y COLOR -->
               <!-- ==================================================== -->
               <page string="Detalle B/N y Color" name="detalle_bn_color">
-
                 <group string="Copias B/N">
                   <group>
                     <field name="contador_inicial_copias_bn"/>
@@ -221,7 +190,6 @@
                     <field name="prueba_copia_bn_ok" widget="boolean_toggle" readonly="1"/>
                   </group>
                 </group>
-
                 <group string="Impresiones B/N">
                   <group>
                     <field name="contador_inicial_impresiones_bn"/>
@@ -232,7 +200,6 @@
                     <field name="prueba_impresion_bn_ok" widget="boolean_toggle" readonly="1"/>
                   </group>
                 </group>
-
                 <group string="Copias Color">
                   <group>
                     <field name="contador_inicial_copias_color"/>
@@ -243,7 +210,6 @@
                     <field name="prueba_copia_color_ok" widget="boolean_toggle" readonly="1"/>
                   </group>
                 </group>
-
                 <group string="Impresiones Color">
                   <group>
                     <field name="contador_inicial_impresiones_color"/>
@@ -254,15 +220,11 @@
                     <field name="prueba_impresion_color_ok" widget="boolean_toggle" readonly="1"/>
                   </group>
                 </group>
-
               </page>
-
-
               <!-- ==================================================== -->
               <!-- TÓNER -->
               <!-- ==================================================== -->
               <page string="Tóner" name="toner">
-
                 <group string="Tóner Negro">
                   <group>
                     <field name="toner_inicial_negro"/>
@@ -270,7 +232,6 @@
                     <field name="delta_toner_negro" readonly="1"/>
                   </group>
                 </group>
-
                 <group string="Tóner Color">
                   <group>
                     <field name="toner_inicial_cyan"/>
@@ -288,7 +249,6 @@
                     <field name="delta_toner_amarillo" readonly="1"/>
                   </group>
                 </group>
-
                 <group string="Estado General de Tóner">
                   <field name="estado_toner" widget="badge"
                          decoration-danger="estado_toner == 'critico'"
@@ -296,10 +256,7 @@
                          decoration-success="estado_toner == 'ok'"
                          decoration-muted="estado_toner == 'sin_datos'"/>
                 </group>
-
               </page>
-
-
               <!-- ==================================================== -->
               <!-- HISTORIAL SNMP -->
               <!-- ==================================================== -->
@@ -350,7 +307,6 @@
                           <field name="duplex"/>
                         </group>
                       </group>
-
                       <notebook>
                         <page string="Detalle B/N Color">
                           <group>
@@ -360,7 +316,6 @@
                             <field name="impresiones_color"/>
                           </group>
                         </page>
-
                         <page string="Tóner">
                           <group>
                             <field name="toner_negro"/>
@@ -369,13 +324,11 @@
                             <field name="toner_amarillo"/>
                           </group>
                         </page>
-
                         <page string="JSON">
                           <field name="payload_json" nolabel="1"/>
                           <field name="counters_json" nolabel="1"/>
                           <field name="toner_json" nolabel="1"/>
                         </page>
-
                         <page string="Resumen TXT">
                           <field name="summary_text" nolabel="1"/>
                         </page>
@@ -384,8 +337,6 @@
                   </form>
                 </field>
               </page>
-
-
               <!-- ==================================================== -->
               <!-- DETALLE SNMP COMPLETO -->
               <!-- ==================================================== -->
@@ -429,7 +380,6 @@
                           <field name="oid_name"/>
                         </group>
                       </group>
-
                       <group string="Valores">
                         <group>
                           <field name="valor_inicial_texto"/>
@@ -442,7 +392,6 @@
                           <field name="tiene_valor_numerico"/>
                         </group>
                       </group>
-
                       <notebook>
                         <page string="Raw JSON">
                           <field name="raw_json" nolabel="1"/>
@@ -452,8 +401,6 @@
                   </form>
                 </field>
               </page>
-
-
               <!-- ==================================================== -->
               <!-- ALERTAS SNMP -->
               <!-- ==================================================== -->
@@ -462,7 +409,6 @@
                   <field name="tiene_alertas_snmp" widget="boolean_toggle" readonly="1"/>
                   <field name="cantidad_alertas_snmp" readonly="1"/>
                 </group>
-
                 <field name="snmp_alerta_ids" readonly="1">
                   <list string="Alertas SNMP"
                         decoration-danger="activa == True"
@@ -503,8 +449,6 @@
                   </form>
                 </field>
               </page>
-
-
               <!-- ==================================================== -->
               <!-- PAYLOAD TÉCNICO -->
               <!-- ==================================================== -->
@@ -512,19 +456,15 @@
                 <group>
                   <field name="snmp_summary_file"/>
                 </group>
-
                 <notebook>
                   <page string="Payload JSON">
                     <field name="raw_payload_json" nolabel="1"/>
                   </page>
-
                   <page string="Resumen TXT">
                     <field name="raw_summary_text" nolabel="1"/>
                   </page>
                 </notebook>
               </page>
-
-
               <!-- ==================================================== -->
               <!-- EVIDENCIA -->
               <!-- ==================================================== -->
@@ -537,17 +477,12 @@
                   <field name="observaciones"/>
                 </group>
               </page>
-
             </notebook>
           </sheet>
-
           <chatter/>
-
         </form>
       </field>
     </record>
-
-
     <!-- ============================================================ -->
     <!-- VISTA SEARCH - sat.prueba.maquina                            -->
     <!-- ============================================================ -->
@@ -562,24 +497,19 @@
           <field name="snmp_serie"/>
           <field name="snmp_modelo"/>
           <field name="snmp_marca"/>
-
           <filter name="con_alertas"
                   string="Con alertas"
                   domain="[('tiene_alertas_snmp','=',True)]"/>
-
           <filter name="completadas"
                   string="Completadas"
                   domain="[('estado_prueba','=','completado')]"/>
-
           <filter name="incompletas"
                   string="Incompletas"
                   domain="[('estado_prueba','=','incompleto')]"/>
-
           <filter name="toner_bajo"
                   string="Tóner bajo/crítico"
                   domain="[('estado_toner','in',['bajo','critico'])]"/>
-
-          <group expand="0" string="Agrupar por">
+          <group>
             <filter name="group_estado"
                     string="Estado"
                     context="{'group_by': 'estado_prueba'}"/>
@@ -599,46 +529,21 @@
         </search>
       </field>
     </record>
-
-
-    <!-- ============================================================ -->
-    <!-- ACCIÓN                                                       -->
-    <!-- ============================================================ -->
-    <record id="action_prueba_maquina" model="ir.actions.act_window">
-      <field name="name">Pruebas de Máquina</field>
-      <field name="res_model">sat.prueba.maquina</field>
-      <field name="view_mode">list,form</field>
-      <field name="view_id" ref="view_prueba_maquina_list"/>
-      <field name="search_view_id" ref="view_prueba_maquina_search"/>
-    </record>
-
-
     <record id="view_sat_reserva_liberacion_forzada_form" model="ir.ui.view">
-        <field name="name">sat.reserva.liberacion.forzada.form</field>
-        <field name="model">sat.reserva.liberacion.forzada</field>
-        <field name="arch" type="xml">
-            <form string="Liberar reserva antes del vencimiento">
-                <group>
-                    <field name="maquina_id" readonly="1"/>
-                    <field name="motivo" placeholder="Explique por qué se libera antes del vencimiento" required="1"/>
-                </group>
-                <footer>
-                    <button name="action_confirmar" type="object" string="Liberar ahora" class="btn-primary"/>
-                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
-                </footer>
-            </form>
-        </field>
+      <field name="name">sat.reserva.liberacion.forzada.form</field>
+      <field name="model">sat.reserva.liberacion.forzada</field>
+      <field name="arch" type="xml">
+        <form string="Liberar reserva antes del vencimiento">
+          <group>
+            <field name="maquina_id" readonly="1"/>
+            <field name="motivo" placeholder="Explique por qué se libera antes del vencimiento" required="1"/>
+          </group>
+          <footer>
+            <button name="action_confirmar" type="object" string="Liberar ahora" class="btn-primary"/>
+            <button string="Cancelar" special="cancel" class="btn-secondary"/>
+          </footer>
+        </form>
+      </field>
     </record>
-
-    <!-- Acción disponible en el menú Acción de una máquina sat.sat. -->
-    <record id="action_sat_reserva_liberacion_forzada" model="ir.actions.server">
-        <field name="name">Liberar reserva ahora</field>
-        <field name="model_id" ref="model_sat_sat"/>
-        <field name="binding_model_id" ref="model_sat_sat"/>
-        <field name="binding_view_types">form,list</field>
-        <field name="state">code</field>
-        <field name="code">action = records.action_abrir_liberacion_forzada()</field>
-    </record>
-
   </data>
 </odoo>

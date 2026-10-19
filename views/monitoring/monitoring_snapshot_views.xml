@@ -31,7 +31,7 @@
                             string="Requiere revisión"
                             domain="[('requires_review','=',True)]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter name="group_device"
                                 string="Equipo"
                                 context="{'group_by':'device_id'}"/>
@@ -343,17 +343,6 @@
         </record>
 
 
-        <record id="action_monitoring_snapshot"
-                model="ir.actions.act_window">
-
-            <field name="name">Historial de Monitoreo</field>
-            <field name="res_model">sat.monitoring.snapshot</field>
-            <field name="view_mode">list,form,graph,pivot</field>
-
-            <field name="search_view_id"
-                   ref="view_monitoring_snapshot_search"/>
-
-        </record>
-
+        
     </data>
 </odoo>

@@ -16,6 +16,7 @@ _logger = logging.getLogger(__name__)
 
 class TicketAlquiler(models.Model):
     _name = 'ticket.alquiler'
+    _description = 'Ticket de Servicio Técnico'
     _inherit = ['mail.thread', 'mail.activity.mixin', 'ticket.informe.mixin']
 
     name = fields.Char('TICKET N°', default='New', copy=False, required=True, readonly=True)
@@ -214,8 +215,12 @@ class TicketAlquiler(models.Model):
 
     product_alquiler = fields.Many2one('alquiler', string='Modelo', tracking=True)
 
-    tipo_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')],
-                               string='Tipo de maquina', related='product_alquiler.tipo_maquina_id')
+    
+    tipo_id = fields.Selection(
+        string='Tipo de maquina',
+        related='product_alquiler.tipo_maquina_id'
+    )
+
     serie_id_r = fields.Char(related='product_alquiler.serie', string="Serie", store=True, readonly=False)
     marca_id_r = fields.Char(related='product_alquiler.marca', string="Marca", store=True)
     modelo_id_r = fields.Char(related='product_alquiler.name.name', string='Modelo', store=True)
@@ -3768,8 +3773,11 @@ class TicketAlquiler(models.Model):
             },
         }
 
+
 class ReportTicketAlquiler(models.AbstractModel):
     _name = 'report.sat.ticket_alquiler'
+    _description = 'Reporte de Ticket de Alquiler'
+
  
     @api.model
     def _get_report_values(self, docids, data=None):

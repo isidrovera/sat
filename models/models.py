@@ -243,8 +243,7 @@ class SatSat(models.Model):
         copy=False,
         readonly=True,
     )
-    #_sql_constraints = [("unique_serie_id", "unique (serie_id)",
-                        # "El numero de serie que intenta agregar ya existe")]
+
 
     tipo_revision = fields.Selection([('paso_papel', 'Paso papel'), (
         'regular', 'Regular'), ('cliente_final', 'Cliente final')], tracking=True)
@@ -601,8 +600,14 @@ class SatSat(models.Model):
     marca = fields.Char(string='Marca', related='name.marca_id.name', readonly=True, store=True, tracking=True
                         )
     precio_venta = fields.Float(string='Precio de venta', related='name.precio_venta', readonly=True, tracking=True)
-    tipo_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')],
-                               string='Tipo de maquina', related='name.tipo_id', readonly=True, tracking=True)
+    
+    tipo_id = fields.Selection(
+        string='Tipo de maquina',
+        related='name.tipo_id',
+        readonly=True,
+        tracking=True,
+    )
+
     
     tipo_maquina = fields.Char(related='name.tipo_maquina_id.name', readonly=True, string='Tipo de maquina', tracking=True)
 
@@ -615,14 +620,28 @@ class SatSat(models.Model):
         string='Foto problema',
     )
     
-    @api.depends('cliente_id.asesora_id.mobile')
+    
+    @api.depends('cliente_id.asesora_id.phone')
     def _compute_asesora_mobile_clean(self):
         for record in self:
-            if record.cliente_id.asesora_id.mobile:
-                phone = record.cliente_id.asesora_id.mobile.replace('+', '')
-                phone = ''.join(phone.split())
-                if not phone.startswith('51'):
+            asesora = record.cliente_id.asesora_id
+            phone = asesora.phone or ''
+
+            if phone:
+                # Eliminar espacios y caracteres especiales
+                phone = ''.join(
+                    char for char in phone
+                    if char.isdigit()
+                )
+
+                # Eliminar prefijo internacional 00
+                if phone.startswith('00'):
+                    phone = phone[2:]
+
+                # Agregar código de Perú si no existe
+                if phone and not phone.startswith('51'):
                     phone = '51' + phone
+
                 record.asesora_mobile_clean = phone
             else:
                 record.asesora_mobile_clean = ''
@@ -746,7 +765,14 @@ class SatSat(models.Model):
             },
         }
 
-    fecha_para_revision = fields.Datetime(string="Fecha para Revisión", readonly=True, traking=True, store=True)
+    
+    fecha_para_revision = fields.Datetime(
+        string="Fecha para Revisión",
+        readonly=True,
+        tracking=True,
+        store=True,
+    )
+
 
     posicion_cola = fields.Integer(
         string="Puesto en cola",

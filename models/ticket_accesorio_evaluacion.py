@@ -38,13 +38,12 @@ class TicketAccesorioEvaluacion(models.Model):
         string='Observaciones'
     )
 
-    _sql_constraints = [
-        (
-            'ticket_accesorio_unique',
-            'unique(ticket_id, tipo_id)',
-            'Ya existe una evaluación de este accesorio para este ticket.'
-        )
-    ]
+    
+    _ticket_accesorio_unique = models.Constraint(
+        'UNIQUE(ticket_id, tipo_id)',
+        'Ya existe una evaluación de este accesorio para este ticket.',
+    )
+
 
     @api.model
     def create(self, vals):

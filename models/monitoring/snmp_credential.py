@@ -578,39 +578,42 @@ class SatSnmpCredential(models.Model):
     # ========================================================
     # SQL
     # ========================================================
+    
+    # ========================================================
+    # RESTRICCIONES SQL - ODOO 19
+    # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_snmp_credential_code_unique',
-            'unique(code)',
-            'El código técnico de la credencial ya está siendo utilizado.',
-        ),
-        (
-            'sat_snmp_credential_port_valid',
-            'CHECK(port > 0 AND port <= 65535)',
-            'El puerto SNMP debe estar entre 1 y 65535.',
-        ),
-        (
-            'sat_snmp_credential_timeout_positive',
-            'CHECK(timeout >= 0)',
-            'El timeout no puede ser negativo.',
-        ),
-        (
-            'sat_snmp_credential_retries_positive',
-            'CHECK(retries >= 0)',
-            'Los reintentos no pueden ser negativos.',
-        ),
-        (
-            'sat_snmp_credential_priority_positive',
-            'CHECK(priority >= 0)',
-            'La prioridad no puede ser negativa.',
-        ),
-        (
-            'sat_snmp_credential_secret_revision_positive',
-            'CHECK(secret_revision > 0)',
-            'La revisión de secretos debe ser mayor que cero.',
-        ),
-    ]
+    _sat_snmp_credential_code_unique = models.Constraint(
+        'UNIQUE(code)',
+        'El código técnico de la credencial ya está siendo utilizado.',
+    )
+
+    _sat_snmp_credential_port_valid = models.Constraint(
+        'CHECK(port > 0 AND port <= 65535)',
+        'El puerto SNMP debe estar entre 1 y 65535.',
+    )
+
+    _sat_snmp_credential_timeout_positive = models.Constraint(
+        'CHECK(timeout >= 0)',
+        'El timeout no puede ser negativo.',
+    )
+
+    _sat_snmp_credential_retries_positive = models.Constraint(
+        'CHECK(retries >= 0)',
+        'Los reintentos no pueden ser negativos.',
+    )
+
+    _sat_snmp_credential_priority_positive = models.Constraint(
+        'CHECK(priority >= 0)',
+        'La prioridad no puede ser negativa.',
+    )
+
+    _sat_snmp_credential_secret_revision_positive = models.Constraint(
+        'CHECK(secret_revision > 0)',
+        'La revisión de secretos debe ser mayor que cero.',
+    )
+
+    
 
     # ========================================================
     # COMPUTES

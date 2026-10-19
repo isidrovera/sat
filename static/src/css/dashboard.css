@@ -1,726 +1,348 @@
-/* dashboard.css — SAT Dashboard rediseño moderno */
+/* ========================================================================
+   SAT Dashboard · Odoo 19 · Diseño moderno + analítico (v2)
+   Archivo 2/3. Solo presentación: no crea campos ni indicadores.
+   Se aplica únicamente dentro de .sat-dashboard-v2.
+   ======================================================================== */
 
-/* ========================================
-   RESET Y BASE
-======================================== */
-.dashboard-container * {
+.sat-dashboard-v2 {
+    --sat-bg: #f5f7fb;
+    --sat-card: #ffffff;
+    --sat-border: #e4e9f2;
+    --sat-text: #1a2440;
+    --sat-muted: #738099;
+    --sat-primary: #6554bb;
+    --sat-shadow: 0 4px 20px rgba(28, 43, 78, 0.035);
     box-sizing: border-box;
-}
-
-.dashboard-container {
-    padding: 12px;
-    background: #f5f6fa;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    color: #1a1a2e;
     width: 100%;
-}
-
-.dashboard-container .content-scroll {
-    overflow-y: auto;
-    flex: 1;
-    width: 100%;
-    padding: 10px;
-}
-
-/* ========================================
-   HEADER
-======================================== */
-.dashboard-container .dashboard-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 28px;
-    padding: 20px 24px;
-    background: #ffffff;
-    border-radius: 14px;
-    border: 1px solid #e8eaf0;
-}
-
-.dashboard-container .dashboard-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #1a1a2e;
-    margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.dashboard-container .dashboard-title i {
-    font-size: 22px;
-    color: #4361ee;
-}
-
-.dashboard-container .dashboard-header .text-muted {
-    font-size: 13px;
-    color: #8b8fa8;
-    margin-top: 3px;
-}
-
-.dashboard-container .dashboard-actions {
-    display: flex;
-    gap: 10px;
-    align-items: center;
-}
-
-/* ========================================
-   SECCIÓN LABELS
-======================================== */
-.dashboard-container .section-title {
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.7px;
-    color: #8b8fa8;
-    margin-bottom: 12px;
-    padding: 0 4px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: none;
-    background: none;
-    backdrop-filter: none;
-    border-radius: 0;
-}
-
-.dashboard-container .section-title i {
-    font-size: 14px;
-    color: #8b8fa8;
-    filter: none;
-}
-
-.dashboard-container .dashboard-section {
-    margin-bottom: 28px;
-}
-
-/* ========================================
-   TILES CONTAINER
-======================================== */
-.dashboard-container .dashboard-tiles {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-bottom: 0;
-    padding: 0;
-    background: none;
-    border-radius: 0;
-    backdrop-filter: none;
-    border: none;
-}
-
-.dashboard-container .tot_tasks {
-    flex: 0 0 auto;
-    width: 180px;
-    min-width: 180px;
-    padding: 0;
-    margin: 0;
-}
-
-/* ========================================
-   KPI CARDS
-======================================== */
-.dashboard-container .oh-card {
-    background: #ffffff;
-    border: 1px solid #e8eaf0;
-    border-radius: 12px;
-    padding: 12px 14px;
-    height: auto;
-    min-height: unset;
-    width: 100%;
-    cursor: pointer;
-    transition: border-color 0.15s ease, transform 0.15s ease;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: none;
-}
-
-.dashboard-container .oh-card:hover {
-    border-color: #c5cae9;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-}
-
-/* Quitar gradientes específicos por tile — todos usan el mismo estilo blanco */
-.dashboard-container [id^="tile_"] {
-    background: #ffffff !important;
-    box-shadow: none !important;
-}
-
-/* Hover por sección — tinte sutil en el borde */
-.dashboard-container .maquinas-tiles .oh-card:hover {
-    border-color: #85B7EB;
-}
-.dashboard-container .reparaciones-tiles .oh-card:hover {
-    border-color: #9FE1CB;
-}
-.dashboard-container .tickets-tiles .oh-card:hover {
-    border-color: #AFA9EC;
-}
-.dashboard-container .alquiler-tiles .oh-card:hover {
-    border-color: #FAC775;
-}
-.dashboard-container .bloqueo-tiles .oh-card:hover {
-    border-color: #85B7EB;
-}
-
-/* ========================================
-   CARD BODY — REESTRUCTURADO
-======================================== */
-.dashboard-container .oh-card-body {
-    padding: 0;
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 12px;
-    text-align: left;
-    position: relative;
-}
-
-.dashboard-container .oh-card-body .kpi-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-/* Icono — cuadrito tintado pequeño */
-.dashboard-container .oh-card-body i {
-    font-size: 18px !important;
-    width: 38px !important;
-    height: 38px !important;
-    border-radius: 10px !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    text-shadow: none !important;
-    animation: none !important;
-    flex-shrink: 0;
-}
-
-/* Colores de iconos por sección */
-.dashboard-container .maquinas-tiles .oh-card-body i {
-    background: #E6F1FB;
-    color: #185FA5 !important;
-}
-.dashboard-container #tile_maquinas_disponibles .oh-card-body i {
-    background: #EAF3DE;
-    color: #3B6D11 !important;
-}
-.dashboard-container #tile_maquinas_separadas .oh-card-body i {
-    background: #FAEEDA;
-    color: #854F0B !important;
-}
-.dashboard-container #tile_maquinas_con_problemas .oh-card-body i,
-.dashboard-container #tile_maquinas_sin_revisar .oh-card-body i {
-    background: #FCEBEB;
-    color: #A32D2D !important;
-}
-.dashboard-container #tile_maquinas_de_partes .oh-card-body i {
-    background: #F1EFE8;
-    color: #5F5E5A !important;
-}
-
-.dashboard-container .reparaciones-tiles .oh-card-body i {
-    background: #E1F5EE;
-    color: #0F6E56 !important;
-}
-.dashboard-container #tile_total_reparaciones .oh-card-body i {
-    background: #FCEBEB;
-    color: #A32D2D !important;
-}
-.dashboard-container #tile_reparaciones_finalizado .oh-card-body i {
-    background: #EAF3DE;
-    color: #3B6D11 !important;
-}
-.dashboard-container #tile_maquinas_para_revision .oh-card-body i {
-    background: #E6F1FB;
-    color: #185FA5 !important;
-}
-.dashboard-container #tile_reparaciones_en_revision .oh-card-body i {
-    background: #FAEEDA;
-    color: #854F0B !important;
-}
-
-.dashboard-container .tickets-tiles .oh-card-body i {
-    background: #EEEDFE;
-    color: #534AB7 !important;
-}
-.dashboard-container #tile_tickets_nuevos .oh-card-body i {
-    background: #E6F1FB;
-    color: #185FA5 !important;
-}
-.dashboard-container #tile_tickets_proceso .oh-card-body i {
-    background: #FAEEDA;
-    color: #854F0B !important;
-}
-.dashboard-container #tile_tickets_en_ruta .oh-card-body i {
-    background: #E1F5EE;
-    color: #0F6E56 !important;
-}
-.dashboard-container #tile_tickets_en_sitio .oh-card-body i {
-    background: #EAF3DE;
-    color: #3B6D11 !important;
-}
-.dashboard-container #tile_tickets_en_revision .oh-card-body i {
-    background: #FCEBEB;
-    color: #A32D2D !important;
-}
-.dashboard-container #tile_tickets_finalizado .oh-card-body i {
-    background: #EAF3DE;
-    color: #3B6D11 !important;
-}
-
-.dashboard-container .alquiler-tiles .oh-card-body i {
-    background: #FAEEDA;
-    color: #854F0B !important;
-}
-.dashboard-container #tile_total_maquinas_alquiler .oh-card-body i {
-    background: #F1EFE8;
-    color: #444441 !important;
-}
-.dashboard-container #tile_alquiler_revisada .oh-card-body i,
-.dashboard-container #tile_alquiler_lista .oh-card-body i {
-    background: #EAF3DE;
-    color: #3B6D11 !important;
-}
-.dashboard-container #tile_alquiler_sin_revisar .oh-card-body i,
-.dashboard-container #tile_alquiler_con_problemas .oh-card-body i {
-    background: #FCEBEB;
-    color: #A32D2D !important;
-}
-
-.dashboard-container .bloqueo-tiles .oh-card-body i {
-    background: #EAF3DE;
-    color: #3B6D11 !important;
-}
-.dashboard-container #tile_equipos_suspendidos .oh-card-body i {
-    background: #FAEEDA;
-    color: #854F0B !important;
-}
-.dashboard-container #tile_equipos_bloqueados .oh-card-body i {
-    background: #FCEBEB;
-    color: #A32D2D !important;
-}
-.dashboard-container #tile_equipos_no_accesibles .oh-card-body i {
-    background: #F1EFE8;
-    color: #5F5E5A !important;
-}
-.dashboard-container #tile_equipos_pendiente_bloqueo .oh-card-body i,
-.dashboard-container #tile_equipos_pendiente_desbloqueo .oh-card-body i {
-    background: #E6F1FB;
-    color: #185FA5 !important;
-}
-
-/* Texto h3 — etiqueta pequeña */
-.dashboard-container .oh-card-body h3 {
-    font-size: 12px !important;
-    font-weight: 400 !important;
-    color: #8b8fa8 !important;
-    margin: 0 !important;
-    white-space: normal !important;
-    overflow: visible !important;
-    text-overflow: clip !important;
-    text-shadow: none !important;
-    background: none !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-    backdrop-filter: none !important;
-    line-height: 1.2 !important;
-    text-align: left !important;
-    width: 100%;
-}
-
-/* Valor numérico */
-.dashboard-container .metric-value {
-    font-size: 22px !important;
-    font-weight: 600 !important;
-    color: #1a1a2e !important;
-    text-shadow: none !important;
-    letter-spacing: -0.3px;
-    background: none !important;
-    padding: 0 !important;
-    border-radius: 0 !important;
-    backdrop-filter: none !important;
-    animation: none !important;
-    line-height: 1;
-    display: block;
-}
-
-.dashboard-container .oh-card:hover .metric-value {
-    transform: none;
-    text-shadow: none;
-}
-
-.dashboard-container .oh-card:hover .oh-card-body i {
-    transform: none;
-    filter: none;
-}
-
-/* ========================================
-   PANEL DE ALERTAS
-======================================== */
-.dashboard-container .alert-panel {
-    background: #ffffff;
-    border-radius: 14px;
-    border: 1px solid #e8eaf0;
-    overflow: hidden;
-}
-
-.dashboard-container .alert-header {
-    background: #ffffff;
-    padding: 16px 20px;
-    border-bottom: 1px solid #e8eaf0;
-}
-
-.dashboard-container .alert-header h4 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #1a1a2e;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    text-shadow: none;
-}
-
-.dashboard-container .alert-header i {
-    font-size: 16px;
-    color: #e24b4a;
-    filter: none;
-}
-
-.dashboard-container .alert-body {
-    padding: 16px 20px;
-    max-height: 300px;
-    overflow-y: auto;
-}
-
-.dashboard-container .alert-body .alert {
-    border-radius: 10px;
-    border: 1px solid #e8eaf0;
-    background: #f9fafb;
-    box-shadow: none;
-    padding: 10px 14px;
-    margin-bottom: 8px;
-    font-size: 13px;
-}
-
-/* Badges dentro del panel de alertas */
-.dashboard-container .alert-body .badge {
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-weight: 500;
-}
-.dashboard-container .alert-body .badge-info {
-    background: #FAEEDA;
-    color: #854F0B;
-}
-.dashboard-container .alert-body .badge-primary {
-    background: #E6F1FB;
-    color: #185FA5;
-}
-.dashboard-container .alert-body .badge-secondary {
-    background: #F1EFE8;
-    color: #5F5E5A;
-}
-.dashboard-container .alert-body .badge-warning {
-    background: #FCEBEB;
-    color: #A32D2D;
-}
-
-/* ========================================
-   GRÁFICOS
-======================================== */
-.dashboard-container .dashboard-charts {
-    padding: 0;
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-}
-
-.dashboard-container .dashboard-charts > div {
-    flex: 1 1 calc(50% - 16px);
-    min-width: 320px;
-}
-
-.dashboard-container .chart-wrapper {
-    background: #ffffff;
-    border-radius: 14px;
-    border: 1px solid #e8eaf0;
-    padding: 20px;
+    min-width: 0;
     height: 100%;
+    min-height: 0;
+    padding: 0;
     display: flex;
     flex-direction: column;
-    transition: border-color 0.15s ease, transform 0.15s ease;
-    box-shadow: none;
+    background: var(--sat-bg);
+    color: var(--sat-text);
+    font-family: inherit;
+    overflow: hidden;
 }
 
-.dashboard-container .modern-chart:hover {
-    transform: translateY(-2px);
-    border-color: #c5cae9;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+.sat-dashboard-v2 *,
+.sat-dashboard-v2 *::before,
+.sat-dashboard-v2 *::after { box-sizing: border-box; }
+
+.sat-dashboard-v2 .content-scroll {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 24px clamp(14px, 2.5vw, 36px) 32px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
 }
 
-.dashboard-container .chart-header {
+/* Encabezado */
+.sat-dashboard-v2 .dashboard-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid #f0f1f5;
+    gap: 16px;
+    padding: 19px 22px;
+    margin: 0 0 15px;
+    background: var(--sat-card);
+    border: 1px solid var(--sat-border);
+    border-radius: 16px;
+    box-shadow: var(--sat-shadow);
+}
+.sat-dashboard-v2 .dashboard-brand { display: flex; align-items: center; gap: 15px; min-width: 0; }
+.sat-dashboard-v2 .dashboard-brand-icon {
+    width: 46px; height: 46px; border-radius: 12px;
+    display: grid; place-items: center; flex-shrink: 0;
+    background: #efeafd; color: #6554bb; font-size: 23px;
+}
+.sat-dashboard-v2 .dashboard-brand-copy { min-width: 0; }
+.sat-dashboard-v2 .dashboard-title {
+    margin: 0; font-size: clamp(19px, 2vw, 24px); line-height: 1.25;
+    color: var(--sat-text); font-weight: 700; letter-spacing: -.45px;
+}
+.sat-dashboard-v2 .dashboard-subtitle {
+    margin: 4px 0 0; color: var(--sat-muted); font-size: 12.5px; line-height: 1.4;
 }
 
-.dashboard-container .chart-header h4 {
-    margin: 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: #1a1a2e;
-    display: flex;
-    align-items: center;
-    gap: 8px;
+/* Navegación rápida: anclas a secciones ya existentes */
+.sat-dashboard-v2 .dashboard-quick-nav {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    padding: 9px; margin: 0 0 25px;
+    background: var(--sat-card); border: 1px solid var(--sat-border);
+    border-radius: 13px; box-shadow: var(--sat-shadow);
+}
+.sat-dashboard-v2 .dashboard-nav-link {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 13px; font-size: 12.5px; font-weight: 600;
+    text-decoration: none; white-space: nowrap;
+    color: #59667e; background: transparent;
+    border: 1px solid transparent; border-radius: 9px;
+    transition: background-color .15s, color .15s, border-color .15s;
+}
+.sat-dashboard-v2 .dashboard-nav-link i { font-size: 16px; }
+.sat-dashboard-v2 .dashboard-nav-link:hover,
+.sat-dashboard-v2 .dashboard-nav-link:focus-visible {
+    color: #5542ad; background: #f1edff; border-color: #e1d8ff;
+    text-decoration: none; outline: none;
 }
 
-.dashboard-container .chart-header h4 i {
-    font-size: 16px;
-    color: #4361ee;
-    filter: none;
+/* Secciones */
+.sat-dashboard-v2 .dashboard-section {
+    margin: 0 0 25px;
+    scroll-margin-top: 14px;
+}
+.sat-dashboard-v2 .dashboard-section-heading { margin: 0 0 12px; }
+.sat-dashboard-v2 .section-title {
+    margin: 0; display: flex; align-items: center; gap: 9px;
+    color: #293452; font-size: 14px; line-height: 1.4; font-weight: 700;
+    text-transform: none; letter-spacing: 0;
+    background: transparent; border: none; padding: 0;
+}
+.sat-dashboard-v2 .section-title i {
+    color: var(--sat-primary); font-size: 18px;
 }
 
-.dashboard-container .chart-container {
-    flex: 1;
-    min-height: 320px;
-    position: relative;
-    width: 100%;
+/* KPIs: mismo HTML, mismos IDs, disposición más legible */
+.sat-dashboard-v2 .dashboard-tiles {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch; gap: 12px; width: 100%; margin: 0; padding: 0;
+}
+.sat-dashboard-v2 .dashboard-tiles .tot_tasks {
+    width: auto; min-width: 0; margin: 0; padding: 0; flex: initial;
+}
+.sat-dashboard-v2 .oh-card,
+.sat-dashboard-v2 [id^="tile_"] {
+    width: 100%; height: 100%; min-height: 96px;
+    padding: 16px 14px; display: flex; align-items: center;
+    border-radius: 13px; border: 1px solid var(--sat-border);
+    background: var(--sat-card); box-shadow: var(--sat-shadow);
+    cursor: pointer; overflow: hidden;
+    transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.sat-dashboard-v2 .oh-card:hover,
+.sat-dashboard-v2 [id^="tile_"]:hover {
+    border-color: #c7bdf1;
+    box-shadow: 0 8px 26px rgba(46, 46, 93, .09);
+    transform: translateY(-2px);
+}
+.sat-dashboard-v2 .oh-card:focus-visible { outline: 2px solid var(--sat-primary); outline-offset: 2px; }
+.sat-dashboard-v2 .oh-card-body {
+    display: flex; align-items: center; flex-direction: row;
+    gap: 12px; width: 100%; min-width: 0; padding: 0;
+    text-align: left;
+}
+.sat-dashboard-v2 .oh-card-body > i {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 43px; width: 43px; height: 43px;
+    border-radius: 12px; background: #e9f1ff; color: #3272c9;
+    font-size: 21px; margin: 0; padding: 0;
+}
+.sat-dashboard-v2 .kpi-info {
+    min-width: 0; display: flex; flex-direction: column; gap: 5px;
+}
+.sat-dashboard-v2 .metric-value {
+    display: block; font-size: clamp(21px, 1.8vw, 28px);
+    font-weight: 750; line-height: 1; letter-spacing: -.6px;
+    color: #202945; background: transparent; padding: 0; border-radius: 0;
+    text-shadow: none; animation: none;
+}
+.sat-dashboard-v2 .oh-card-body h3 {
+    margin: 0; padding: 0; font-size: 12px; font-weight: 500;
+    color: var(--sat-muted); line-height: 1.3; white-space: normal;
+    overflow-wrap: break-word; text-transform: none; text-align: left;
+    text-shadow: none; background: transparent;
 }
 
-/* ========================================
-   FILTROS
-======================================== */
-.dashboard-container .filter-section {
-    margin: 0 0 14px 0;
-    padding: 12px 14px;
-    background: #f9fafb;
-    border-radius: 10px;
-    border: 1px solid #e8eaf0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    box-shadow: none;
+/* Acentos por grupo, sin asociar porcentajes ficticios */
+.sat-dashboard-v2 .maquinas-tiles .oh-card-body > i { background: #e8f1ff; color: #296bca; }
+.sat-dashboard-v2 .reparaciones-tiles .oh-card-body > i { background: #e4f7f2; color: #159476; }
+.sat-dashboard-v2 .tickets-tiles .oh-card-body > i { background: #f0edff; color: #6654c4; }
+.sat-dashboard-v2 .alquiler-tiles .oh-card-body > i { background: #fff3df; color: #c18122; }
+.sat-dashboard-v2 .bloqueo-tiles .oh-card-body > i { background: #e9f1ff; color: #3272c9; }
+
+.sat-dashboard-v2 #tile_maquinas_disponibles .oh-card-body > i,
+.sat-dashboard-v2 #tile_reparaciones_finalizado .oh-card-body > i,
+.sat-dashboard-v2 #tile_tickets_finalizado .oh-card-body > i,
+.sat-dashboard-v2 #tile_alquiler_lista .oh-card-body > i,
+.sat-dashboard-v2 #tile_alquiler_revisada .oh-card-body > i,
+.sat-dashboard-v2 #tile_equipos_activos .oh-card-body > i {
+    background: #ddf7e8; color: #17824b;
+}
+.sat-dashboard-v2 #tile_maquinas_con_problemas .oh-card-body > i,
+.sat-dashboard-v2 #tile_maquinas_sin_revisar .oh-card-body > i,
+.sat-dashboard-v2 #tile_alquiler_con_problemas .oh-card-body > i,
+.sat-dashboard-v2 #tile_alquiler_sin_revisar .oh-card-body > i,
+.sat-dashboard-v2 #tile_equipos_bloqueados .oh-card-body > i,
+.sat-dashboard-v2 #tile_tickets_en_revision .oh-card-body > i {
+    background: #ffeaed; color: #cf4458;
+}
+.sat-dashboard-v2 #tile_maquinas_separadas .oh-card-body > i,
+.sat-dashboard-v2 #tile_reparaciones_en_revision .oh-card-body > i,
+.sat-dashboard-v2 #tile_tickets_proceso .oh-card-body > i,
+.sat-dashboard-v2 #tile_equipos_suspendidos .oh-card-body > i {
+    background: #fff1d9; color: #ba7818;
+}
+.sat-dashboard-v2 #tile_maquinas_de_partes .oh-card-body > i,
+.sat-dashboard-v2 #tile_equipos_no_accesibles .oh-card-body > i {
+    background: #edf0f5; color: #667487;
 }
 
-.dashboard-container .filter-section label {
-    font-size: 12px;
-    font-weight: 500;
-    color: #8b8fa8;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 5px;
+/* Panel existente de equipos que requieren atención */
+.sat-dashboard-v2 .alert-panel,
+.sat-dashboard-v2 .chart-wrapper {
+    background: var(--sat-card); border: 1px solid var(--sat-border);
+    border-radius: 14px; box-shadow: var(--sat-shadow);
 }
+.sat-dashboard-v2 .alert-panel { overflow: hidden; }
+.sat-dashboard-v2 .alert-header {
+    display: flex; align-items: center; padding: 16px 20px;
+    border-bottom: 1px solid var(--sat-border); background: #fff;
+}
+.sat-dashboard-v2 .alert-header h4 {
+    margin: 0; font-size: 14px; font-weight: 700; color: var(--sat-text);
+    display: flex; align-items: center; gap: 8px;
+}
+.sat-dashboard-v2 .alert-header h4 i { font-size: 18px; color: #d45556; }
+.sat-dashboard-v2 .alert-body { padding: 16px 20px; max-height: 310px; overflow-y: auto; }
+.sat-dashboard-v2 .alert-body .alert {
+    border: 1px solid #e9edf4; border-radius: 9px;
+    padding: 11px 13px; margin-bottom: 9px;
+    background: #fafbfd; color: #3d4960; box-shadow: none;
+    font-size: 12.5px; line-height: 1.5;
+}
+.sat-dashboard-v2 .alert-body .alert:last-child { margin-bottom: 0; }
+.sat-dashboard-v2 .alert-body .badge {
+    display: inline-flex; border-radius: 999px; padding: 3px 9px;
+    font-size: 11px; line-height: 1.5; font-weight: 600;
+}
+.sat-dashboard-v2 .alert-body .badge-info { color: #895b12; background: #fff0d6; }
+.sat-dashboard-v2 .alert-body .badge-primary { color: #2869b1; background: #e3efff; }
+.sat-dashboard-v2 .alert-body .badge-secondary { color: #637084; background: #edf0f4; }
+.sat-dashboard-v2 .alert-body .badge-warning { color: #af3746; background: #ffe5e9; }
 
-.dashboard-container .filter-section label i {
-    font-size: 14px;
-    color: #8b8fa8;
+/* Gráficos: mantenemos los 9 contenedores ECharts */
+.sat-dashboard-v2 .dashboard-charts {
+    display: flex; flex-wrap: wrap; gap: 16px;
+    width: 100%; padding: 0; margin: 0;
 }
+.sat-dashboard-v2 .dashboard-charts > div {
+    flex: 0 0 calc(50% - 8px); width: calc(50% - 8px);
+    max-width: calc(50% - 8px); min-width: 0; padding: 0;
+}
+.sat-dashboard-v2 .dashboard-charts > div.col-12 {
+    flex: 0 0 100%; width: 100%; max-width: 100%;
+}
+.sat-dashboard-v2 .chart-wrapper {
+    display: flex; flex-direction: column;
+    width: 100%; height: 100%; min-width: 0; padding: 19px;
+    transition: box-shadow .15s ease, border-color .15s ease;
+}
+.sat-dashboard-v2 .modern-chart:hover {
+    border-color: #d3ccef;
+    box-shadow: 0 8px 26px rgba(46, 46, 93, .07);
+}
+.sat-dashboard-v2 .chart-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px; margin: 0 0 15px; padding: 0 0 13px;
+    border-bottom: 1px solid #edf0f5;
+}
+.sat-dashboard-v2 .chart-header h4 {
+    display: flex; align-items: center; gap: 8px; margin: 0;
+    color: #28334f; font-size: 13.5px; font-weight: 700;
+}
+.sat-dashboard-v2 .chart-header h4 i { font-size: 17px; color: #6752ba; }
+.sat-dashboard-v2 .expand-button {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 30px; width: 30px; height: 30px;
+    border: 1px solid #e6eaf2; border-radius: 8px;
+    background: #fff; color: #7e8899; font-size: 16px;
+    cursor: pointer; transition: background-color .15s, color .15s;
+}
+.sat-dashboard-v2 .expand-button:hover { background: #f3f0ff; color: #5b49ad; }
+.sat-dashboard-v2 .chart-container {
+    flex: 1 1 auto; position: relative; min-width: 0;
+    width: 100%; min-height: 300px; overflow: hidden;
+}
+.sat-dashboard-v2 .chart-container > div[id] { max-width: 100%; }
 
-.dashboard-container .filter-section input[type="date"] {
-    padding: 7px 11px;
-    border: 1px solid #e8eaf0;
-    border-radius: 8px;
-    font-size: 13px;
-    max-width: 155px;
-    background: #ffffff;
-    color: #1a1a2e;
-    transition: border-color 0.15s;
-    font-weight: 400;
+/* Filtros originales por técnico y tickets */
+.sat-dashboard-v2 .filter-section {
+    display: flex !important; flex-wrap: wrap; align-items: center !important;
+    gap: 8px 10px; margin: 0 0 14px !important;
+    padding: 11px 12px; border-radius: 9px;
+    background: #f8f9fc; border: 1px solid #edf0f6;
 }
+.sat-dashboard-v2 .filter-section label {
+    display: inline-flex; gap: 5px; align-items: center;
+    margin: 0; color: #63718a; font-size: 12px; font-weight: 600;
+}
+.sat-dashboard-v2 .filter-section label i { color: #7886a0; }
+.sat-dashboard-v2 .filter-section input[type="date"] {
+    width: auto !important; max-width: 155px; min-width: 120px;
+    padding: 7px 9px; border-radius: 7px;
+    border: 1px solid #dbe1ec; background: #fff; color: #25324d;
+    font-size: 12px; box-shadow: none;
+}
+.sat-dashboard-v2 .filter-section input[type="date"]:focus {
+    border-color: #7868cb; outline: 2px solid rgba(101, 84, 187, .12);
+}
+.sat-dashboard-v2 .filter-section button {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    padding: 8px 13px; border: none; border-radius: 7px;
+    font-size: 12px; font-weight: 600; color: #fff;
+    background: #6654bb; box-shadow: none; cursor: pointer;
+}
+.sat-dashboard-v2 .filter-section button:hover { background: #5645a4; }
 
-.dashboard-container .filter-section input[type="date"]:focus {
-    border-color: #4361ee;
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
-    transform: none;
+/* Pie existente */
+.sat-dashboard-v2 .footer-section {
+    padding: 15px 12px 4px; color: var(--sat-muted);
+    font-size: 12px; text-align: center;
 }
+.sat-dashboard-v2 .footer-section p { margin: 0; }
+.sat-dashboard-v2 .text-muted { color: var(--sat-muted) !important; }
 
-.dashboard-container .filter-section button {
-    padding: 7px 16px;
-    background: #4361ee;
-    color: #ffffff;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: background 0.15s, transform 0.1s;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: none;
-    text-transform: none;
-    letter-spacing: 0;
+/* Adaptación a resoluciones */
+@media (max-width: 1320px) {
+    .sat-dashboard-v2 .dashboard-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-
-.dashboard-container .filter-section button:hover {
-    background: #3451d1;
-    transform: translateY(-1px);
-    box-shadow: none;
-}
-
-/* ========================================
-   BOTONES
-======================================== */
-.dashboard-container .btn {
-    padding: 9px 18px;
-    border-radius: 9px;
-    font-weight: 600;
-    font-size: 13px;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: all 0.15s;
-    border: none;
-    cursor: pointer;
-    text-transform: none;
-    letter-spacing: 0;
-}
-
-.dashboard-container .btn-primary {
-    background: #4361ee;
-    color: #ffffff;
-    box-shadow: none;
-}
-
-.dashboard-container .btn-primary:hover {
-    background: #3451d1;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.25);
-}
-
-.dashboard-container .expand-button {
-    background: #f5f6fa;
-    border: 1px solid #e8eaf0;
-    color: #8b8fa8;
-    cursor: pointer;
-    padding: 6px 8px;
-    border-radius: 7px;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-}
-
-.dashboard-container .expand-button:hover {
-    background: #e8eaf0;
-    color: #1a1a2e;
-    transform: none;
-}
-
-/* ========================================
-   FOOTER
-======================================== */
-.dashboard-container .footer-section {
-    background: #ffffff;
-    border-radius: 10px;
-    border: 1px solid #e8eaf0;
-    padding: 14px 20px;
-    margin-top: 20px;
-    box-shadow: none;
-    backdrop-filter: none;
-}
-
-.dashboard-container .footer-section p {
-    margin: 0;
-    font-size: 12px;
-    font-weight: 400;
-    color: #8b8fa8;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
-}
-
-.dashboard-container .footer-section i {
-    color: #8b8fa8;
-}
-
-/* ========================================
-   SCROLLBARS
-======================================== */
-.dashboard-container .alert-body::-webkit-scrollbar {
-    width: 5px;
-}
-.dashboard-container .alert-body::-webkit-scrollbar-track {
-    background: #f5f6fa;
-    border-radius: 3px;
-}
-.dashboard-container .alert-body::-webkit-scrollbar-thumb {
-    background: #d0d3e0;
-    border-radius: 3px;
-}
-
-/* ========================================
-   RESPONSIVE
-======================================== */
-@media (max-width: 1199px) {
-    .dashboard-container .dashboard-charts > div {
-        flex: 1 1 100%;
+@media (max-width: 1050px) {
+    .sat-dashboard-v2 .dashboard-tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .sat-dashboard-v2 .dashboard-charts > div,
+    .sat-dashboard-v2 .dashboard-charts > div.col-12 {
+        flex: 0 0 100%; width: 100%; max-width: 100%;
     }
-    .dashboard-container .tot_tasks {
-        width: 160px;
-        min-width: 160px;
-    }
 }
-
-@media (max-width: 767px) {
-    .dashboard-container {
-        padding: 12px;
-    }
-    .dashboard-container .tot_tasks {
-        width: 145px;
-        min-width: 145px;
-    }
-    .dashboard-container .oh-card {
-        height: 108px;
-        min-height: 108px;
-    }
-    .dashboard-container .metric-value {
-        font-size: 24px !important;
-    }
-    .dashboard-container .dashboard-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
-        padding: 16px;
-    }
-    .dashboard-container .dashboard-title {
-        font-size: 17px;
-    }
-    .dashboard-container .filter-section {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .dashboard-container .filter-section input[type="date"] {
-        max-width: none;
-        width: 100%;
-    }
-    .dashboard-container .filter-section button {
-        justify-content: center;
-    }
-    .dashboard-container .chart-container {
-        min-height: 260px;
-    }
+@media (max-width: 690px) {
+    .sat-dashboard-v2 .content-scroll { padding: 13px 12px 24px; }
+    .sat-dashboard-v2 .dashboard-header { padding: 15px; }
+    .sat-dashboard-v2 .dashboard-brand-icon { width: 40px; height: 40px; font-size: 20px; }
+    .sat-dashboard-v2 .dashboard-subtitle { font-size: 11px; }
+    .sat-dashboard-v2 .dashboard-quick-nav { flex-wrap: nowrap; overflow-x: auto; padding: 7px; }
+    .sat-dashboard-v2 .dashboard-nav-link { padding: 8px 10px; }
+    .sat-dashboard-v2 .dashboard-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+    .sat-dashboard-v2 .oh-card, .sat-dashboard-v2 [id^="tile_"] { min-height: 88px; padding: 12px 10px; }
+    .sat-dashboard-v2 .oh-card-body { gap: 9px; }
+    .sat-dashboard-v2 .oh-card-body > i { flex-basis: 35px; width: 35px; height: 35px; font-size: 18px; }
+    .sat-dashboard-v2 .metric-value { font-size: 22px; }
+    .sat-dashboard-v2 .oh-card-body h3 { font-size: 11px; }
+    .sat-dashboard-v2 .chart-wrapper { padding: 14px 12px; }
+    .sat-dashboard-v2 .chart-container { min-height: 260px; }
+    .sat-dashboard-v2 .filter-section { align-items: stretch !important; }
+    .sat-dashboard-v2 .filter-section input[type="date"] { max-width: none; }
+}
+@media (max-width: 375px) {
+    .sat-dashboard-v2 .dashboard-tiles { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sat-dashboard-v2 .content-scroll { scroll-behavior: auto; }
+    .sat-dashboard-v2 .oh-card,
+    .sat-dashboard-v2 .modern-chart,
+    .sat-dashboard-v2 .dashboard-nav-link { transition: none; }
 }

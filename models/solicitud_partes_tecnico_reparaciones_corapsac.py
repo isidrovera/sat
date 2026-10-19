@@ -579,9 +579,12 @@ class SolicitudParteTecnico(models.Model):
 # LÍNEAS
 # ══════════════════════════════════════════════════════════════════════════
 
+
 class SolicitudParteTecnicoLinea(models.Model):
-    _name        = 'solicitud.parte.tecnico.linea'
+    _name = 'solicitud.parte.tecnico.linea'
     _description = 'Línea de Solicitud de Parte'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+
 
     solicitud_id = fields.Many2one(
         'solicitud.parte.tecnico', required=True, ondelete='cascade')

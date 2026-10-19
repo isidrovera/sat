@@ -31,8 +31,12 @@ class UnidadAlquiler(models.Model):
     serie = fields.Char(string='Serie', required=True, tracking=True)
     tipo_maquina = fields.Char(related='name.tipo_maquina_id.name', readonly=True, store=True,
                                string='Tipo de maquina')
-    tipo_maquina_id = fields.Selection([('color', 'Color'), ('monocromatica', 'Monocromatica')],
-                                       string="Tipo de Equipo", related='name.tipo_id')
+    
+    tipo_maquina_id = fields.Selection(
+        string='Tipo de Equipo',
+        related='name.tipo_id'
+    )
+
 
     precio_venta = fields.Float(string='Precio de venta', tracking=True)
     precio_compra = fields.Float(string='Precio de compra', tracking=True)

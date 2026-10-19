@@ -228,13 +228,11 @@ class ModeloMaquinaComponente(models.Model):
         )
         return super().unlink()
 
-    _sql_constraints = [
-        (
-            'uniq_modelo_tipo_color',
-            'unique(modelo_id, tipo_id, color)',
-            'Ya existe este tipo/color de componente para el modelo.'
-        )
-    ]
+    
+    _uniq_modelo_tipo_color = models.Constraint(
+        'UNIQUE(modelo_id, tipo_id, color)',
+        'Ya existe este tipo/color de componente para el modelo.',
+    )
 
 
 class ModeloMaquinaComponenteSubparte(models.Model):
@@ -344,13 +342,12 @@ class ModeloMaquinaComponenteSubparte(models.Model):
         _logger.info("[mmcs.unlink] === FIN === eliminados (retorno=%s)", res)
         return res
 
-    _sql_constraints = [
-        (
-            'uniq_componente_subparte',
-            'unique(componente_id, subparte_id)',
-            'La subparte ya está listada para este componente.'
-        )
-    ]
+    
+    _uniq_componente_subparte = models.Constraint(
+        'UNIQUE(componente_id, subparte_id)',
+        'La subparte ya está listada para este componente.',
+    )
+
 
 
 

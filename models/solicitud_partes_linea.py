@@ -7,9 +7,12 @@ import logging
 _logger = logging.getLogger(__name__)
 
 
+
 class SolicitudPartesLinea(models.Model):
     _name = 'solicitud.partes.linea'
     _description = 'Línea de Solicitud de Partes'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+
 
     # -------------------------------------------------------------------------
     # Campos básicos

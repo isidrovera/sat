@@ -75,14 +75,22 @@ class PrintTrackerDailyReading(models.Model):
     ], string='Tipo Equipo', compute='_compute_equipo_info', store=True)
     
     # Constrains simplificados
-    _sql_constraints = [
-        ('unique_fecha_serie', 'UNIQUE(fecha, serie)', 
-         'Solo puede haber una lectura por fecha y serie'),
-        ('positive_counters', 'CHECK(contador_bn >= 0 AND contador_color >= 0 AND contador_scan >= 0)', 
-         'Los contadores deben ser positivos'),
-        ('valid_date', 'CHECK(fecha <= CURRENT_DATE)', 
-         'La fecha no puede ser futura')
-    ]
+    
+    _unique_fecha_serie = models.Constraint(
+        'UNIQUE(fecha, serie)',
+        'Solo puede haber una lectura por fecha y serie',
+    )
+
+    _positive_counters = models.Constraint(
+        'CHECK(contador_bn >= 0 AND contador_color >= 0 AND contador_scan >= 0)',
+        'Los contadores deben ser positivos',
+    )
+
+    _valid_date = models.Constraint(
+        'CHECK(fecha <= CURRENT_DATE)',
+        'La fecha no puede ser futura',
+    )
+
     # ========================================
     # MÉTODOS DE CREACIÓN SIMPLIFICADOS
     # ========================================

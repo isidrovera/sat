@@ -16,10 +16,13 @@ from .constants import (
 _logger = logging.getLogger(__name__)
 
 
+
 class SatAutomationCapturePattern(models.Model):
     _name = "sat.automation.capture.pattern"
     _description = "Patrón genérico de captura SAT"
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = "priority_score desc, sequence, id"
+
 
     name = fields.Char(required=True)
     active = fields.Boolean(default=True)

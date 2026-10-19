@@ -214,7 +214,7 @@
                             name="filter_sin_planificador"
                             domain="[('tipo_servicio_id', '=', 'mantenimiento_preventivo'), ('planificador_linea_id', '=', False)]"/>
 
-                    <group expand="0" string="Planificador">
+                    <group>
                         <filter string="Zona"
                                 name="group_zona_mantenimiento"
                                 context="{'group_by': 'zona_mantenimiento_id'}"/>

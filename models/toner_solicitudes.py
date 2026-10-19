@@ -4402,6 +4402,8 @@ class TonerBrand(models.Model):
     name = fields.Char(string="Marca", required=True, index=True)
     active = fields.Boolean(string="Activo", default=True)
 
-    _sql_constraints = [
-        ("name_unique", "unique(name)", "Esta marca de tóner ya existe."),
-    ]
+    
+    _name_unique = models.Constraint(
+        'UNIQUE(name)',
+        'Esta marca de tóner ya existe.',
+    )

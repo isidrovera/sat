@@ -293,13 +293,12 @@ class SatNotificacionLog(models.Model):
         string='Notas internas',
     )
 
-    _sql_constraints = [
-        (
-            'unique_sat_notification_unique_key',
-            'unique(unique_key)',
-            'Ya existe una notificación con esta clave única.'
-        )
-    ]
+    
+    _unique_sat_notification_unique_key = models.Constraint(
+        'UNIQUE(unique_key)',
+        'Ya existe una notificación con esta clave única.',
+    )
+
 
     # ==========================================================
     # COMPUTES

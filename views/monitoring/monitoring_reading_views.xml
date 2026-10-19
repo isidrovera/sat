@@ -34,7 +34,7 @@
                             string="Valores especiales"
                             domain="[('is_sentinel','=',True)]"/>
 
-                    <group expand="0" string="Agrupar por">
+                    <group>
 
                         <filter name="group_device"
                                 string="Equipo"
@@ -354,17 +354,7 @@
         </record>
 
 
-        <record id="action_monitoring_reading"
-                model="ir.actions.act_window">
-
-            <field name="name">Lecturas SNMP</field>
-            <field name="res_model">sat.monitoring.reading</field>
-            <field name="view_mode">list,form</field>
-
-            <field name="search_view_id"
-                   ref="view_monitoring_reading_search"/>
-
-        </record>
+      
 
     </data>
 </odoo>

@@ -269,13 +269,13 @@
     </record>
 
     <record id="estado_toner_sin_contenedor" model="componente.estado">
-      <field name="name">Sin contenedor de tóner</field>
+      <field name="name">Sin cartucho de tóner</field>
       <field name="code">toner_sin_contenedor</field>
       <field name="color">1</field>
       <field name="prioridad">1</field>
-      <field name="descripcion">Contenedor de tóner no instalado</field>
+      <field name="descripcion">Cartucho de tóner no instalado en el equipo</field>
       <field name="componente_tipo_ids" eval="[(4, ref('comp_tipo_toner_system'))]"/>
-    </record>
+  </record>
 
   </data>
 </odoo>

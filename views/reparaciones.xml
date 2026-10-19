@@ -108,7 +108,6 @@
                 </div>
               </div>
             </div>
-
             <!-- RESUMEN OPERATIVO -->
             <div class="sat_repair_summary">
               <div class="sat_repair_summary_item">
@@ -232,7 +231,6 @@
               </page>
               <!-- PESTAÑA: CHECK LIST NUEVO -->
               <page string="Check List" name="evaluaciones" class="sat_repair_page">
-
     <div class="sat_repair_section_intro sat_repair_section_intro_primary">
         <h4>
             <i class="fa fa-cogs"></i> Sistema de Evaluación por Componentes
@@ -242,35 +240,28 @@
             <b>Importante:</b> Debe completar el ESTADO de TODOS los componentes antes de finalizar
         </p>
     </div>
-
     <separator string="Componentes evaluados"/>
-
     <field name="evaluacion_ids" nolabel="1" mode="kanban">
         <kanban class="o_componente_eval_kanban sat_repair_component_kanban" records_draggable="0" create="true" delete="true">
             <field name="componente_tipo_id"/>
             <field name="color_id"/>
             <field name="estado_id"/>
             <field name="observaciones"/>
-
             <templates>
-                <t t-name="kanban-box">
+                <t t-name="card">
                     <div class="o_componente_card"
                          t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value &amp;&amp; record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
-
                         <div class="o_card_header">
                             <div>
                                 <div class="o_card_title">
                                     <field name="componente_tipo_id" readonly="1"/>
                                 </div>
-
                                 <div class="o_card_subtitle">
                                     <field name="color_id" readonly="1"/>
                                 </div>
                             </div>
-
                             <a type="delete" class="o_card_delete" title="Eliminar">✕</a>
                         </div>
-
                         <div class="o_card_field o_card_field_estado">
                             <span class="o_card_field_label">ESTADO *</span>
                             <field name="estado_id"
@@ -282,26 +273,21 @@
                                        'shorten_labels': true
                                    }"/>
                         </div>
-
                         <div class="o_card_field o_card_field_observaciones">
                             <span class="o_card_field_label">OBSERVACIONES</span>
                             <field name="observaciones" placeholder="Detalles técnicos..."/>
                         </div>
-
                     </div>
                 </t>
             </templates>
         </kanban>
     </field>
-
     <div class="alert alert-info sat_repair_alert sat_repair_alert_info" role="alert">
         <i class="fa fa-info-circle"></i>
         <b>Guía Visual:</b> Tarjetas rojas necesitan estado. Tarjetas verdes están completas.
     </div>
-
 </page>
 <page string="Accesorios" name="accesorios_eval" class="sat_repair_page">
-
     <div class="sat_repair_section_intro sat_repair_section_intro_success">
         <h4>
             <i class="fa fa-puzzle-piece"></i> Evaluación de Accesorios
@@ -310,29 +296,23 @@
             ✅ Evalúe los accesorios opcionales instalados
         </p>
     </div>
-
     <separator string="Accesorios evaluados"/>
-
     <field name="accesorio_eval_ids" nolabel="1" mode="kanban">
         <kanban class="o_accesorio_eval_kanban sat_repair_component_kanban" records_draggable="0" create="false" delete="true">
             <field name="tipo_id"/>
             <field name="estado_id"/>
             <field name="subparte_ids"/>
             <field name="observaciones"/>
-
             <templates>
-                <t t-name="kanban-box">
+                <t t-name="card">
                     <div class="o_componente_card"
                          t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : 'o_card_success'}">
-
                         <div class="o_card_header">
                             <div class="o_card_title">
                                 <field name="tipo_id" readonly="1"/>
                             </div>
-
                             <a type="delete" class="o_card_delete" title="Eliminar">✕</a>
                         </div>
-
                         <div class="o_card_field o_card_field_estado">
                             <span class="o_card_field_label">ESTADO *</span>
                             <field name="estado_id"
@@ -342,30 +322,25 @@
                                        'shorten_labels': false
                                    }"/>
                         </div>
-
                         <div class="o_card_field">
                             <span class="o_card_field_label">SUBPARTES</span>
                             <field name="subparte_ids"
                                    widget="many2many_tags"
                                    options="{'no_create': True}"/>
                         </div>
-
                         <div class="o_card_field o_card_field_observaciones">
                             <span class="o_card_field_label">NOTAS</span>
                             <field name="observaciones" placeholder="Detalles..."/>
                         </div>
-
                     </div>
                 </t>
             </templates>
         </kanban>
     </field>
-
     <div class="alert alert-success sat_repair_alert sat_repair_alert_success" role="alert">
         <i class="fa fa-lightbulb-o"></i>
         <b>Tip:</b> Si un accesorio no aplica al modelo, márquelo como "No Aplica"
     </div>
-
 </page>
               <!-- PESTAÑA: DETALLE DE FALLA PROVEEDOR -->
               <page string="Falla proveedor" name="falla_proveedor_page" class="sat_repair_page">
@@ -408,7 +383,6 @@
                       <field name="fecha_ultimo_avance" readonly="1"/>
                       <field name="fecha_proxima_alerta_avance" readonly="1"/>
                   </group>
-
                   <group string="Alertas al jefe de área" class="sat_repair_group sat_repair_group_info">
                       <field name="jefe_area_user_id"/>
                       <field name="ultima_alerta_avance_jefe" readonly="1"/>
@@ -422,9 +396,7 @@
                           invisible="estado_id != 'en_revision'"/>
                   </group>
               </group>
-
               <separator string="Historial de demoras reportadas"/>
-
               <field name="avance_ids" readonly="1">
                   <list string="Demoras reportadas" class="sat_repair_embedded_list">
                       <field name="create_date" string="Fecha"/>
@@ -456,7 +428,7 @@
           <field name="serie_id" />
           <field name="ubicacion_id" widget="badge" />
           <field name="responsable_id" widget="many2one_avatar" />
-          <field name="estado_id" widget="badge" 
+          <field name="estado_id" widget="badge"
             decoration-muted="estado_id == 'en_revision'"
             decoration-info="estado_id == 'en_revision'"
             decoration-success="estado_id == 'finalizado'"
@@ -482,91 +454,91 @@
           <field name="nombre_maquina" string="Modelo"/>
           <!-- FILTROS POR ESTADO -->
           <separator/>
-          <filter string="Sin Revisar" name="filter_sin_revisar" 
+          <filter string="Sin Revisar" name="filter_sin_revisar"
                   domain="[('estado_id', '=', 'sin_revisar')]"/>
-          <filter string="Para Revisión" name="filter_para_revision" 
+          <filter string="Para Revisión" name="filter_para_revision"
                   domain="[('estado_id', '=', 'para_revision')]"/>
-          <filter string="En Revisión" name="filter_en_revision" 
+          <filter string="En Revisión" name="filter_en_revision"
                   domain="[('estado_id', '=', 'en_revision')]"/>
-          <filter string="Finalizadas" name="filter_finalizado" 
+          <filter string="Finalizadas" name="filter_finalizado"
                   domain="[('estado_id', '=', 'finalizado')]"/>
-          <filter string="Con Problemas" name="filter_con_problemas" 
+          <filter string="Con Problemas" name="filter_con_problemas"
                   domain="[('estado_id', '=', 'con_problemas')]"/>
-          <filter string="De Partes" name="filter_de_partes" 
+          <filter string="De Partes" name="filter_de_partes"
                   domain="[('estado_id', '=', 'de_partes')]"/>
-          <filter string="Entregadas" name="filter_entregada" 
+          <filter string="Entregadas" name="filter_entregada"
                   domain="[('estado_id', '=', 'entregada')]"/>
           <separator/>
           <!-- FILTROS POR PRIORIDAD -->
-          <filter string="Prioridad Alta" name="filter_prioridad_alta" 
+          <filter string="Prioridad Alta" name="filter_prioridad_alta"
                   domain="[('prioridad', '=', 'alta')]"/>
-          <filter string="Prioridad Media" name="filter_prioridad_media" 
+          <filter string="Prioridad Media" name="filter_prioridad_media"
                   domain="[('prioridad', '=', 'media')]"/>
-          <filter string="Prioridad Baja" name="filter_prioridad_baja" 
+          <filter string="Prioridad Baja" name="filter_prioridad_baja"
                   domain="[('prioridad', '=', 'baja')]"/>
           <separator/>
           <!-- FILTROS POR UBICACIÓN -->
-          <filter string="Primer Piso" name="filter_primer_piso" 
+          <filter string="Primer Piso" name="filter_primer_piso"
                   domain="[('ubicacion_id', '=', 'primer_piso')]"/>
-          <filter string="Segundo Piso" name="filter_segundo_piso" 
+          <filter string="Segundo Piso" name="filter_segundo_piso"
                   domain="[('ubicacion_id', '=', 'segundo_piso')]"/>
-          <filter string="Tercer Piso" name="filter_tercer_piso" 
+          <filter string="Tercer Piso" name="filter_tercer_piso"
                   domain="[('ubicacion_id', '=', 'tercer_piso')]"/>
-          <filter string="Taller" name="filter_taller" 
+          <filter string="Taller" name="filter_taller"
                   domain="[('ubicacion_id', '=', 'taller')]"/>
-          <filter string="Bodega" name="filter_bodega" 
+          <filter string="Bodega" name="filter_bodega"
                   domain="[('ubicacion_id', '=', 'bodega')]"/>
-          <filter string="Cliente" name="filter_cliente_ubicacion" 
+          <filter string="Cliente" name="filter_cliente_ubicacion"
                   domain="[('ubicacion_id', '=', 'cliente')]"/>
           <separator/>
           <!-- FILTROS POR TIPO DE MÁQUINA -->
-          <filter string="Color" name="filter_color" 
+          <filter string="Color" name="filter_color"
                   domain="[('tipo_id', '=', 'color')]"/>
-          <filter string="Monocromática" name="filter_monocromatica" 
+          <filter string="Monocromática" name="filter_monocromatica"
                   domain="[('tipo_id', '=', 'monocromatica')]"/>
           <separator/>
           <!-- FILTROS TEMPORALES -->
-          <filter string="Creadas Hoy" name="filter_hoy" 
+          <filter string="Creadas Hoy" name="filter_hoy"
                   domain="[('create_date', '&gt;=', datetime.datetime.combine(context_today(), datetime.time(0,0,0))),
                            ('create_date', '&lt;=', datetime.datetime.combine(context_today(), datetime.time(23,59,59)))]"/>
-          <filter string="Esta Semana" name="filter_semana" 
+          <filter string="Esta Semana" name="filter_semana"
                   domain="[('create_date', '&gt;=', (context_today() - datetime.timedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
                            ('create_date', '&lt;=', (context_today() + datetime.timedelta(days=6-context_today().weekday())).strftime('%Y-%m-%d'))]"/>
-          <filter string="Este Mes" name="filter_mes" 
+          <filter string="Este Mes" name="filter_mes"
                   domain="[('create_date', '&gt;=', datetime.datetime.now().strftime('%Y-%m-01'))]"/>
           <separator/>
           <!-- AGRUPAR POR -->
-          <group expand="0" string="Agrupar Por">
-            <filter string="Estado" name="group_estado" 
+          <group>
+            <filter string="Estado" name="group_estado"
                     context="{'group_by': 'estado_id'}"/>
-            <filter string="Técnico Responsable" name="group_tecnico" 
+            <filter string="Técnico Responsable" name="group_tecnico"
                     context="{'group_by': 'responsable_id'}"/>
-            <filter string="Cliente" name="group_cliente" 
+            <filter string="Cliente" name="group_cliente"
                     context="{'group_by': 'cliente_id'}"/>
-            <filter string="Prioridad" name="group_prioridad" 
+            <filter string="Prioridad" name="group_prioridad"
                     context="{'group_by': 'prioridad'}"/>
-            <filter string="Tipo de Revisión" name="group_tipo_revision" 
+            <filter string="Tipo de Revisión" name="group_tipo_revision"
                     context="{'group_by': 'tipo_revision'}"/>
-            <filter string="Ubicación" name="group_ubicacion" 
+            <filter string="Ubicación" name="group_ubicacion"
                     context="{'group_by': 'ubicacion_id'}"/>
-            <filter string="Marca" name="group_marca" 
+            <filter string="Marca" name="group_marca"
                     context="{'group_by': 'marca'}"/>
-            <filter string="Modelo" name="group_modelo" 
+            <filter string="Modelo" name="group_modelo"
                     context="{'group_by': 'nombre_maquina'}"/>
-            <filter string="Importación" name="group_importacion" 
+            <filter string="Importación" name="group_importacion"
                     context="{'group_by': 'importacion'}"/>
-            <filter string="Tipo de Máquina" name="group_tipo" 
+            <filter string="Tipo de Máquina" name="group_tipo"
                     context="{'group_by': 'tipo_id'}"/>
-            <filter string="Proveedor" name="group_proveedor" 
+            <filter string="Proveedor" name="group_proveedor"
                     context="{'group_by': 'nombre_proveedor'}"/>
             <separator/>
-            <filter string="Fecha de Creación (Mes)" name="group_fecha_mes" 
+            <filter string="Fecha de Creación (Mes)" name="group_fecha_mes"
                     context="{'group_by': 'create_date:month'}"/>
-            <filter string="Fecha de Creación (Semana)" name="group_fecha_semana" 
+            <filter string="Fecha de Creación (Semana)" name="group_fecha_semana"
                     context="{'group_by': 'create_date:week'}"/>
-            <filter string="Fecha de Creación (Día)" name="group_fecha_dia" 
+            <filter string="Fecha de Creación (Día)" name="group_fecha_dia"
                     context="{'group_by': 'create_date:day'}"/>
-            <filter string="Fecha de Finalización" name="group_fecha_finalizacion" 
+            <filter string="Fecha de Finalización" name="group_fecha_finalizacion"
                     context="{'group_by': 'fecha_finalizacion:month'}"/>
           </group>
         </search>
@@ -691,10 +663,10 @@
                 </div>
                 <!-- Indicador lateral de estado -->
                 <div
-                  t-attf-class="position-absolute top-0 start-0 h-100 w-1 
-                            #{record.estado_id.raw_value == 'finalizado' ? 'bg-success' : 
+                  t-attf-class="position-absolute top-0 start-0 h-100 w-1
+                            #{record.estado_id.raw_value == 'finalizado' ? 'bg-success' :
                             record.estado_id.raw_value == 'con_problemas' ? 'bg-danger' :
-                            record.estado_id.raw_value == 'en_revision' ? 'bg-info' : 
+                            record.estado_id.raw_value == 'en_revision' ? 'bg-info' :
                             record.estado_id.raw_value == 'de_partes' ? 'bg-warning' : 'bg-secondary'}" />
               </div>
             </t>

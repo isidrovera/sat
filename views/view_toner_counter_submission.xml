@@ -972,7 +972,7 @@
                     <filter string="Hoy" name="today" domain="[('submission_date', '&gt;=', context_today())]"/>
                     <filter string="Últimos 7 días" name="last_7_days" domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
                     <filter string="Este mes" name="month" domain="[('submission_date', '&gt;=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"/>
-                    <group expand="0" string="Agrupar por">
+                    <group>
                         <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
                         <filter string="Resultado" name="group_analysis" context="{'group_by': 'analysis_result'}"/>
                         <filter string="Motivo anticipado" name="group_early_type" context="{'group_by': 'early_request_type'}"/>

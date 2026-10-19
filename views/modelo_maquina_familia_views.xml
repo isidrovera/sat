@@ -263,7 +263,7 @@
                         domain="[('active', '=', False)]"
                     />
 
-                    <group expand="1" string="Agrupar por">
+                    <group>
 
                         <filter
                             name="group_brand"

@@ -682,43 +682,46 @@ class SatMonitoringSnapshot(models.Model):
     # SQL
     # ========================================================
 
-    _sql_constraints = [
-        (
-            'sat_monitoring_snapshot_duration_positive',
-            'CHECK(duration_ms >= 0)',
-            'La duración no puede ser negativa.',
-        ),
-        (
-            'sat_monitoring_snapshot_response_positive',
-            'CHECK(snmp_response_ms >= 0)',
-            'El tiempo de respuesta no puede ser negativo.',
-        ),
-        (
-            'sat_monitoring_snapshot_expected_positive',
-            'CHECK(expected_metric_count >= 0)',
-            'Las métricas esperadas no pueden ser negativas.',
-        ),
-        (
-            'sat_monitoring_snapshot_attempted_positive',
-            'CHECK(attempted_metric_count >= 0)',
-            'Las métricas consultadas no pueden ser negativas.',
-        ),
-        (
-            'sat_monitoring_snapshot_success_positive',
-            'CHECK(successful_metric_count >= 0)',
-            'Las métricas exitosas no pueden ser negativas.',
-        ),
-        (
-            'sat_monitoring_snapshot_failed_positive',
-            'CHECK(failed_metric_count >= 0)',
-            'Las métricas fallidas no pueden ser negativas.',
-        ),
-        (
-            'sat_monitoring_snapshot_required_positive',
-            'CHECK(missing_required_metric_count >= 0)',
-            'Las métricas obligatorias faltantes no pueden ser negativas.',
-        ),
-    ]
+    
+    # ========================================================
+    # RESTRICCIONES SQL - ODOO 19
+    # ========================================================
+
+    _sat_monitoring_snapshot_duration_positive = models.Constraint(
+        'CHECK(duration_ms >= 0)',
+        'La duración no puede ser negativa.',
+    )
+
+    _sat_monitoring_snapshot_response_positive = models.Constraint(
+        'CHECK(snmp_response_ms >= 0)',
+        'El tiempo de respuesta no puede ser negativo.',
+    )
+
+    _sat_monitoring_snapshot_expected_positive = models.Constraint(
+        'CHECK(expected_metric_count >= 0)',
+        'Las métricas esperadas no pueden ser negativas.',
+    )
+
+    _sat_monitoring_snapshot_attempted_positive = models.Constraint(
+        'CHECK(attempted_metric_count >= 0)',
+        'Las métricas consultadas no pueden ser negativas.',
+    )
+
+    _sat_monitoring_snapshot_success_positive = models.Constraint(
+        'CHECK(successful_metric_count >= 0)',
+        'Las métricas exitosas no pueden ser negativas.',
+    )
+
+    _sat_monitoring_snapshot_failed_positive = models.Constraint(
+        'CHECK(failed_metric_count >= 0)',
+        'Las métricas fallidas no pueden ser negativas.',
+    )
+
+    _sat_monitoring_snapshot_required_positive = models.Constraint(
+        'CHECK(missing_required_metric_count >= 0)',
+        'Las métricas obligatorias faltantes no pueden ser negativas.',
+    )
+
 
     # ========================================================
     # DISPLAY NAME

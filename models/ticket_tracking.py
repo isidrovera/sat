@@ -46,10 +46,12 @@ class TecnicoDispositivoGPS(models.Model):
     )
     activo = fields.Boolean(string='Activo', default=True)
 
-    _sql_constraints = [
-        ('traccar_device_unique', 'unique(traccar_device_id)',
-         'Este dispositivo de Traccar ya está vinculado a otro técnico.'),
-    ]
+    
+    _traccar_device_unique = models.Constraint(
+        'UNIQUE(traccar_device_id)',
+        'Este dispositivo de Traccar ya está vinculado a otro técnico.',
+    )
+
 
 
 # ═══════════════════════════════════════════════════════════════════

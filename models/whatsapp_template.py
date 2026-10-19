@@ -133,13 +133,12 @@ class WhatsappTemplate(models.Model):
     # ==========================================================
     # SQL constraints
     # ==========================================================
-    _sql_constraints = [
-        (
-            "unique_whatsapp_template_name",
-            "unique(name)",
-            "Ya existe una plantilla WhatsApp con ese nombre técnico.",
-        )
-    ]
+    
+    _unique_whatsapp_template_name = models.Constraint(
+        'UNIQUE(name)',
+        'Ya existe una plantilla WhatsApp con ese nombre técnico.',
+    )
+
 
     # ==========================================================
     # Constraints
