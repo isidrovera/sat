@@ -265,13 +265,15 @@
                         <div class="o_card_field o_card_field_estado">
                             <span class="o_card_field_label">ESTADO *</span>
                             <field name="estado_id"
-                                   widget="chip_select"
-                                   required="1"
-                                   options="{
-                                       'filter_by_field': 'componente_tipo_id',
-                                       'filter_relation': 'componente_tipo_ids',
-                                       'shorten_labels': true
-                                   }"/>
+                                    widget="chip_select"
+                                    required="1"
+                                    options="{
+                                        'filter_by_field': 'componente_tipo_id',
+                                        'filter_relation': 'componente_tipo_ids',
+                                        'shorten_labels': true,
+                                        'auto_save': true,
+                                        'kanban_write': true
+                                    }"/>
                         </div>
                         <div class="o_card_field o_card_field_observaciones">
                             <span class="o_card_field_label">OBSERVACIONES</span>
@@ -316,11 +318,13 @@
                         <div class="o_card_field o_card_field_estado">
                             <span class="o_card_field_label">ESTADO *</span>
                             <field name="estado_id"
-                                   widget="chip_select"
-                                   required="1"
-                                   options="{
-                                       'shorten_labels': false
-                                   }"/>
+                                    widget="chip_select"
+                                    required="1"
+                                    options="{
+                                        'shorten_labels': false,
+                                        'auto_save': true,
+                                        'kanban_write': true
+                                    }"/>
                         </div>
                         <div class="o_card_field">
                             <span class="o_card_field_label">SUBPARTES</span>

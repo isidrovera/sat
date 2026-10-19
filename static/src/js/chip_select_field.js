@@ -8,6 +8,7 @@ import {
     extractM2OFieldProps,
     m2oSupportedOptions,
 } from "@web/views/fields/many2one/many2one_field";
+
 import { useState, onWillUpdateProps } from "@odoo/owl";
 import { useService } from "@web/core/utils/hooks";
 
@@ -26,26 +27,16 @@ const ODOO_COLOR_MAP = {
     11: { bg: "#a8587b", border: "#a8587b", text: "#ffffff" },
 };
 
-function toBool(value, defaultValue = false) {
+function toBool(value, fallback = false) {
     if (value === undefined || value === null || value === "") {
-        return defaultValue;
+        return fallback;
     }
 
-    if (
-        value === true ||
-        value === "true" ||
-        value === "1" ||
-        value === 1
-    ) {
+    if ([true, 1, "1", "true", "True"].includes(value)) {
         return true;
     }
 
-    if (
-        value === false ||
-        value === "false" ||
-        value === "0" ||
-        value === 0
-    ) {
+    if ([false, 0, "0", "false", "False"].includes(value)) {
         return false;
     }
 
@@ -57,14 +48,32 @@ function normalizeStringProp(value) {
         value === undefined ||
         value === null ||
         value === "" ||
-        value === false ||
-        value === "false" ||
-        value === "False"
+        value === false
     ) {
         return undefined;
     }
 
     return String(value);
+}
+
+function getRelationId(value) {
+    if (!value) {
+        return null;
+    }
+
+    if (Array.isArray(value)) {
+        return getRelationId(value[0]);
+    }
+
+    if (typeof value === "object") {
+        return getRelationId(value.id || value.resId);
+    }
+
+    const number = Number(value);
+
+    return Number.isInteger(number) && number > 0
+        ? number
+        : null;
 }
 
 export class ChipSelectField extends Many2OneField {
@@ -92,6 +101,11 @@ export class ChipSelectField extends Many2OneField {
             type: Boolean,
             optional: true,
         },
+
+        kanbanWrite: {
+            type: Boolean,
+            optional: true,
+        },
     };
 
     setup() {
@@ -100,18 +114,9 @@ export class ChipSelectField extends Many2OneField {
         this.orm = useService("orm");
         this.notification = useService("notification");
 
-        this.onToggleOptions = (ev) => {
-            return this.toggleOptions(ev);
-        };
-
-        this.onSelectOption = (option, ev) => {
-            return this.selectOption(option, ev);
-        };
-
         this.uiState = useState({
             options: [],
             loading: true,
-            loaded: false,
             expanded: false,
             saving: false,
             saved: false,
@@ -120,28 +125,30 @@ export class ChipSelectField extends Many2OneField {
             localSelectedId: null,
         });
 
-        this._lastTypeId = this.filterTypeId;
+        this.onToggleOptions = (ev) => this.toggleOptions(ev);
+        this.onSelectOption = (option, ev) =>
+            this.selectOption(option, ev);
 
-        console.log("[ChipSelect][setup]", {
-            fieldName: this.props.name,
-            relation: this.relation,
-            readonly: this.props.readonly,
-            filterByField: this.props.filterByField,
-            filterRelation: this.props.filterRelation,
-            shortenLabels: this.props.shortenLabels,
-            autoSave: this.props.autoSave,
-            recordModel: this.recordModel,
-            recordResId: this.recordResId,
-            currentId: this.currentId,
-        });
+        this._lastTypeId = this.filterTypeId;
+        this._lastRecordId = this.recordResId;
+        this._optionsRequest = 0;
 
         this.loadOptions();
 
         onWillUpdateProps((nextProps) => {
-            const newTypeId = this._extractTypeId(nextProps);
+            const typeId = this._extractTypeId(nextProps);
+            const nextRecordId = this._extractRecordId(
+                nextProps.record
+            );
 
-            if (newTypeId !== this._lastTypeId) {
-                this._lastTypeId = newTypeId;
+            if (nextRecordId !== this._lastRecordId) {
+                this._lastRecordId = nextRecordId;
+                this.uiState.localSelectedId = null;
+                this.uiState.expanded = false;
+            }
+
+            if (typeId !== this._lastTypeId) {
+                this._lastTypeId = typeId;
                 this.uiState.expanded = false;
                 this.uiState.localSelectedId = null;
                 this.loadOptions(nextProps);
@@ -149,112 +156,48 @@ export class ChipSelectField extends Many2OneField {
         });
     }
 
-    _extractTypeId(props) {
-        const filterField = props.filterByField;
-
-        if (
-            !filterField ||
-            !props.record ||
-            !props.record.data
-        ) {
-            return null;
-        }
-
-        const val = props.record.data[filterField];
-
-        if (!val) {
-            return null;
-        }
-
-        if (Array.isArray(val)) {
-            return val[0] || null;
-        }
-
-        if (typeof val === "object") {
-            return val.id || val.resId || null;
-        }
-
-        return val;
-    }
-
     get relation() {
         return this.props.record.fields[this.props.name].relation;
     }
 
     get recordModel() {
+        const record = this.props.record;
+
         return (
-            this.props.record.resModel ||
-            this.props.record.modelName ||
-            this.props.record.config?.resModel ||
-            this.props.record._config?.resModel ||
-            this.props.record.model?.config?.resModel ||
+            record.resModel ||
+            record.modelName ||
+            record.config?.resModel ||
+            record.model?.config?.resModel ||
             null
         );
     }
 
+    _extractRecordId(record) {
+        return getRelationId(
+            record?.resId ||
+            record?.res_id ||
+            record?.data?.id
+        );
+    }
+
     get recordResId() {
-        const dataId = this.props.record.data?.id;
-
-        const resId =
-            this.props.record.resId ||
-            this.props.record.res_id ||
-            dataId ||
-            null;
-
-        if (!resId) {
-            return null;
-        }
-
-        if (typeof resId === "number") {
-            return resId;
-        }
-
-        if (
-            typeof resId === "string" &&
-            /^\d+$/.test(resId)
-        ) {
-            return parseInt(resId, 10);
-        }
-
-        return null;
+        return this._extractRecordId(this.props.record);
     }
 
     get currentId() {
-        if (this.uiState.localSelectedId) {
+        if (this.uiState.localSelectedId !== null) {
             return this.uiState.localSelectedId;
         }
 
-        const val = this.props.record.data[this.props.name];
-
-        if (!val) {
-            return null;
-        }
-
-        if (Array.isArray(val)) {
-            return val[0] || null;
-        }
-
-        if (typeof val === "object") {
-            return val.id || val.resId || null;
-        }
-
-        return val;
+        return getRelationId(
+            this.props.record.data[this.props.name]
+        );
     }
 
     get selectedOption() {
-        const currentId = this.currentId;
-
-        if (
-            !currentId ||
-            !this.uiState.options ||
-            !this.uiState.options.length
-        ) {
-            return null;
-        }
-
         return (
             this.uiState.options.find(
-                (option) => option.id === currentId
+                (option) => option.id === this.currentId
             ) || null
         );
     }
@@ -263,25 +206,48 @@ export class ChipSelectField extends Many2OneField {
         return this._extractTypeId(this.props);
     }
 
+    _extractTypeId(props) {
+        const field = props.filterByField;
+
+        if (!field || !props.record?.data) {
+            return null;
+        }
+
+        return getRelationId(
+            props.record.data[field]
+        );
+    }
+
+    get canSelect() {
+        if (this.uiState.saving) {
+            return false;
+        }
+
+        if (!this.props.readonly) {
+            return true;
+        }
+
+        // Solo las vistas que lo autoricen explícitamente.
+        return Boolean(
+            this.props.kanbanWrite &&
+            this.props.autoSave &&
+            this.recordModel &&
+            this.recordResId
+        );
+    }
+
     async loadOptions(props = this.props) {
+        const requestId = ++this._optionsRequest;
+
         this.uiState.loading = true;
 
         try {
-            const domain = this.buildDomain(props);
-
             const relation =
                 props.record.fields[props.name].relation;
 
-            console.log(
-                "[ChipSelect][loadOptions] Cargando opciones",
-                {
-                    fieldName: props.name,
-                    relation,
-                    domain,
-                }
-            );
+            const domain = this.buildDomain(props);
 
-            let records = [];
+            let records;
 
             try {
                 records = await this.orm.searchRead(
@@ -290,12 +256,7 @@ export class ChipSelectField extends Many2OneField {
                     ["id", "name", "color"],
                     { limit: 100 }
                 );
-            } catch (colorErr) {
-                console.warn(
-                    "[ChipSelect][loadOptions] Reintentando sin color",
-                    colorErr
-                );
-
+            } catch (error) {
                 records = await this.orm.searchRead(
                     relation,
                     domain,
@@ -309,64 +270,76 @@ export class ChipSelectField extends Many2OneField {
                 }));
             }
 
-            this.uiState.options = records;
-            this.uiState.loaded = true;
+            if (requestId !== this._optionsRequest) {
+                return;
+            }
 
-            console.log(
-                "[ChipSelect][loadOptions] Opciones cargadas",
-                records
-            );
-        } catch (err) {
+            this.uiState.options = records;
+
+            console.log("[ChipSelect] Opciones cargadas", {
+                relation,
+                total: records.length,
+            });
+        } catch (error) {
+            if (requestId !== this._optionsRequest) {
+                return;
+            }
+
             console.error(
-                "[ChipSelect][loadOptions] Error",
-                err
+                "[ChipSelect] Error cargando opciones",
+                error
             );
 
             this.uiState.options = [];
+
+            this.notification.add(
+                "No se pudieron cargar los estados.",
+                { type: "danger" }
+            );
         } finally {
-            this.uiState.loading = false;
+            if (requestId === this._optionsRequest) {
+                this.uiState.loading = false;
+            }
         }
     }
 
     buildDomain(props = this.props) {
         const typeId = this._extractTypeId(props);
-        const filterRel = props.filterRelation;
+        const relation = props.filterRelation;
 
-        if (!typeId || !filterRel) {
+        if (!typeId || !relation) {
             return [];
         }
 
         return [
             "|",
-            [filterRel, "=", false],
-            [filterRel, "in", [typeId]],
+            [relation, "=", false],
+            [relation, "in", [typeId]],
         ];
     }
 
-    getChipStyle(option, isSelected) {
-        const colorIdx = option.color || 0;
-
+    getChipStyle(option, selected = false) {
         const palette =
-            ODOO_COLOR_MAP[colorIdx] ||
+            ODOO_COLOR_MAP[option?.color || 0] ||
             ODOO_COLOR_MAP[0];
 
-        if (isSelected) {
+        if (selected) {
             return (
-                `background-color: ${palette.bg}; ` +
-                `border-color: ${palette.border}; ` +
+                `background-color: ${palette.bg};` +
+                `border-color: ${palette.border};` +
                 `color: ${palette.text};`
             );
         }
 
         return (
-            `background-color: white; ` +
-            `border-color: ${palette.border}; ` +
+            "background-color: white;" +
+            `border-color: ${palette.border};` +
             `color: ${palette.bg};`
         );
     }
 
     getShortLabel(option) {
-        if (!option || !option.name) {
+        if (!option?.name) {
             return "";
         }
 
@@ -386,14 +359,12 @@ export class ChipSelectField extends Many2OneField {
     }
 
     isSelected(option) {
-        if (!option) {
-            return false;
-        }
-
-        return option.id === this.currentId;
+        return Boolean(
+            option && option.id === this.currentId
+        );
     }
 
-    _stopEvent(ev = null) {
+    _stopEvent(ev) {
         if (!ev) {
             return;
         }
@@ -406,195 +377,138 @@ export class ChipSelectField extends Many2OneField {
         }
     }
 
-    toggleOptions(ev = null) {
+    toggleOptions(ev) {
         this._stopEvent(ev);
 
-        if (this.props.readonly || this.uiState.saving) {
+        if (!this.canSelect) {
             return;
         }
 
         this.uiState.expanded = !this.uiState.expanded;
-
-        console.log("[ChipSelect][toggleOptions]", {
-            expanded: this.uiState.expanded,
-            readonly: this.props.readonly,
-            currentId: this.currentId,
-        });
     }
 
-    _resetSaveStatus() {
+    _resetStatus() {
         this.uiState.saving = false;
         this.uiState.saved = false;
         this.uiState.saveError = false;
         this.uiState.saveMessage = "";
     }
 
-    _markSaving() {
-        this.uiState.saving = true;
-        this.uiState.saved = false;
-        this.uiState.saveError = false;
-        this.uiState.saveMessage = "Guardando...";
-    }
-
-    _markSaved() {
-        this.uiState.saving = false;
-        this.uiState.saved = true;
-        this.uiState.saveError = false;
-        this.uiState.saveMessage = "Guardado";
-
-        window.setTimeout(() => {
-            this.uiState.saved = false;
-            this.uiState.saveMessage = "";
-        }, 1800);
-    }
-
-    _markSaveError(message = "No guardado") {
-        this.uiState.saving = false;
-        this.uiState.saved = false;
-        this.uiState.saveError = true;
-        this.uiState.saveMessage = message;
-    }
-
-    async selectOption(option, ev = null) {
+    async selectOption(option, ev) {
         this._stopEvent(ev);
 
-        console.log("[ChipSelect][selectOption] INICIO", {
-            option,
-            fieldName: this.props.name,
-            relation: this.relation,
-            readonly: this.props.readonly,
-            autoSave: this.props.autoSave,
-            recordModel: this.recordModel,
-            recordResId: this.recordResId,
-        });
+        if (!option?.id || this.uiState.saving) {
+            return;
+        }
 
-        if (!option || !option.id) {
-            console.warn(
-                "[ChipSelect][selectOption] Opción inválida",
-                option
+        if (!this.canSelect) {
+            this.notification.add(
+                "Este estado no está habilitado para edición.",
+                { type: "warning" }
             );
             return;
         }
 
-        if (this.props.readonly || this.uiState.saving) {
-            console.warn(
-                "[ChipSelect][selectOption] Campo bloqueado"
-            );
+        const oldId = this.currentId;
+
+        if (oldId === option.id) {
+            this.uiState.expanded = false;
             return;
         }
 
-        this._resetSaveStatus();
-
-        const previousId = this.currentId;
-
-        this.uiState.localSelectedId = option.id;
-        this.uiState.expanded = false;
+        this._resetStatus();
+        this.uiState.saving = true;
+        this.uiState.saveMessage = "Guardando...";
 
         try {
-            await this.props.record.update({
-                [this.props.name]: [
-                    option.id,
-                    option.name,
-                ],
+            if (this.props.readonly) {
+                // Escritura directa: únicamente para Kanban
+                // habilitado explícitamente en la vista.
+                await this._writeKanbanOption(option);
+            } else {
+                // Formulario editable: actualizar el modelo
+                // de Odoo mediante el mecanismo normal.
+                await this.props.record.update({
+                    [this.props.name]: [
+                        option.id,
+                        option.name,
+                    ],
+                });
+
+                if (this.props.autoSave) {
+                    const model = this.recordModel;
+                    const resId = this.recordResId;
+
+                    if (model && resId) {
+                        await this.orm.write(
+                            model,
+                            [resId],
+                            {
+                                [this.props.name]: option.id,
+                            }
+                        );
+                    }
+                }
+            }
+
+            this.uiState.localSelectedId = option.id;
+            this.uiState.expanded = false;
+            this.uiState.saved = true;
+            this.uiState.saveMessage = "Guardado";
+
+            console.log("[ChipSelect] Estado actualizado", {
+                model: this.recordModel,
+                id: this.recordResId,
+                field: this.props.name,
+                estado: option.id,
             });
 
-            console.log(
-                "[ChipSelect][selectOption] record.update OK",
-                {
-                    selectedId: option.id,
-                    selectedName: option.name,
-                }
+            this.notification.add(
+                `Estado actualizado: ${option.name}`,
+                { type: "success" }
             );
-        } catch (updateErr) {
-            this.uiState.localSelectedId = previousId;
-
-            this._markSaveError("No guardado");
+        } catch (error) {
+            this.uiState.localSelectedId = oldId;
+            this.uiState.saveError = true;
+            this.uiState.saveMessage = "No guardado";
 
             console.error(
-                "[ChipSelect][selectOption] record.update FALLÓ",
-                updateErr
+                "[ChipSelect] Error guardando estado",
+                error
             );
 
             this.notification.add(
-                "No se pudo actualizar la selección.",
+                "No se pudo guardar el estado. " +
+                "Verifica los permisos o las reglas de reparación.",
                 { type: "danger" }
             );
-
-            return;
+        } finally {
+            this.uiState.saving = false;
         }
-
-        if (this.props.autoSave) {
-            try {
-                await this._autoSaveOption(option);
-            } catch (saveErr) {
-                console.error(
-                    "[ChipSelect][selectOption] autosave FALLÓ",
-                    saveErr
-                );
-
-                this._markSaveError("No guardado");
-
-                this.notification.add(
-                    "No se pudo guardar automáticamente. " +
-                    "Usa Guardar cambios antes de salir.",
-                    { type: "warning" }
-                );
-            }
-        }
-
-        console.log("[ChipSelect][selectOption] FIN", {
-            localSelectedId: this.uiState.localSelectedId,
-            currentId: this.currentId,
-            selectedOption: this.selectedOption,
-        });
     }
 
-    async _autoSaveOption(option) {
+    async _writeKanbanOption(option) {
         const model = this.recordModel;
         const resId = this.recordResId;
 
-        if (!model || !resId) {
-            console.warn(
-                "[ChipSelect][_autoSaveOption] Sin modelo o ID real",
-                {
-                    model,
-                    resId,
-                    record: this.props.record,
-                }
+        if (
+            !this.props.kanbanWrite ||
+            !this.props.autoSave ||
+            !model ||
+            !resId
+        ) {
+            throw new Error(
+                "No se permite guardar esta tarjeta Kanban."
             );
-
-            this._markSaveError(
-                "Pendiente de guardar"
-            );
-
-            this.notification.add(
-                "Cambio pendiente. " +
-                "Usa Guardar cambios antes de salir.",
-                { type: "warning" }
-            );
-
-            return;
         }
 
-        this._markSaving();
-
+        // orm.write utiliza los permisos y las reglas
+        // del servidor Odoo. No se utiliza sudo.
         await this.orm.write(
             model,
             [resId],
             {
                 [this.props.name]: option.id,
-            }
-        );
-
-        this._markSaved();
-
-        console.log(
-            "[ChipSelect][_autoSaveOption] Guardado en BD",
-            {
-                model,
-                resId,
-                fieldName: this.props.name,
-                selectedId: option.id,
             }
         );
     }
@@ -610,30 +524,19 @@ export const chipSelectField = {
             ...arguments
         );
 
-        const rawAutoSave =
-            attrs?.auto_save ??
-            attrs?.autoSave ??
-            options?.auto_save ??
-            options?.autoSave ??
-            true;
-
-        const rawFilterByField =
+        const filterByField = normalizeStringProp(
             attrs?.filter_by_field ??
             attrs?.filterByField ??
             options?.filter_by_field ??
-            options?.filterByField;
+            options?.filterByField
+        );
 
-        const rawFilterRelation =
+        const filterRelation = normalizeStringProp(
             attrs?.filter_relation ??
             attrs?.filterRelation ??
             options?.filter_relation ??
-            options?.filterRelation;
-
-        const filterByField =
-            normalizeStringProp(rawFilterByField);
-
-        const filterRelation =
-            normalizeStringProp(rawFilterRelation);
+            options?.filterRelation
+        );
 
         const finalProps = {
             ...props,
@@ -647,8 +550,19 @@ export const chipSelectField = {
             ),
 
             autoSave: toBool(
-                rawAutoSave,
+                attrs?.auto_save ??
+                attrs?.autoSave ??
+                options?.auto_save ??
+                options?.autoSave,
                 true
+            ),
+
+            kanbanWrite: toBool(
+                attrs?.kanban_write ??
+                attrs?.kanbanWrite ??
+                options?.kanban_write ??
+                options?.kanbanWrite,
+                false
             ),
         };
 
@@ -660,17 +574,11 @@ export const chipSelectField = {
             finalProps.filterRelation = filterRelation;
         }
 
-        console.log(
-            "[ChipSelect][extractProps]",
-            finalProps
-        );
-
         return finalProps;
     },
 
     supportedOptions: [
         ...(m2oSupportedOptions || []),
-
         {
             label: "Filter by field",
             name: "filter_by_field",
@@ -689,6 +597,11 @@ export const chipSelectField = {
         {
             label: "Auto save",
             name: "auto_save",
+            type: "boolean",
+        },
+        {
+            label: "Kanban write",
+            name: "kanban_write",
             type: "boolean",
         },
     ],
