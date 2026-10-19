@@ -658,16 +658,16 @@ class AppAuthController(http.Controller):
         #
         # Odoo Session.authenticate():
         #
-        # - guarda pre_uid cuando usuario/password son correctos
+        # - guarda session['pre_uid'] cuando usuario/password son correctos
         # - si no hay MFA llama finalize()
         # - si hay MFA deja request.session.uid = None
         #
         if (
-            request.session.pre_uid
+            request.session.get("pre_uid")
             and not request.session.uid
         ):
             pre_uid = (
-                request.session.pre_uid
+                request.session.get("pre_uid")
             )
             user = (
                 request.env[
@@ -826,7 +826,7 @@ class AppAuthController(http.Controller):
         # Pre-sesión
         # --------------------------------------------------------
         pre_uid = (
-            request.session.pre_uid
+            request.session.get("pre_uid")
         )
         if not pre_uid:
             return self._json_response(
@@ -935,8 +935,9 @@ class AppAuthController(http.Controller):
             with user._assert_can_auth(
                 user=user.id,
             ):
-                user._totp_check(
-                    int(code),
+                user._check_credentials(
+                    {"type": "totp", "token": int(code)},
+                    {"interactive": True},
                 )
         except AccessDenied:
             _logger.warning(
