@@ -195,8 +195,21 @@ class TonerCounterSubmission(models.Model):
         string="Teléfono del solicitante",
         tracking=True,
         default=lambda self: (
-            self.env.user.partner_id.mobile
-            or self.env.user.partner_id.phone
+            (
+                self.env.user.partner_id.mobile
+                if "mobile" in self.env.user.partner_id._fields
+                else False
+            )
+            or (
+                self.env.user.partner_id.phone
+                if "phone" in self.env.user.partner_id._fields
+                else False
+            )
+            or (
+                self.env.user.mobile
+                if "mobile" in self.env.user._fields
+                else False
+            )
             or ""
         ),
     )
