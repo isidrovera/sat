@@ -20,7 +20,7 @@
                     <field name="observaciones"/>
 
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="o_kanban_record o_componente_card"
                                  t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : (record.estado_id.raw_value and record.estado_id.value and record.estado_id.value.includes('cambio') ? 'o_card_warning' : 'o_card_success')}">
 
@@ -76,7 +76,7 @@
                     <field name="observaciones"/>
 
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="o_kanban_record o_componente_card"
                                  t-attf-class="#{!record.estado_id.raw_value ? 'o_card_danger' : 'o_card_success'}">
 

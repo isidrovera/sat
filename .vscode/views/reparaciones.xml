@@ -261,7 +261,7 @@
                     <progressbar field="estado_id"
                         colors='{"finalizado": "success", "con_problemas": "warning", "de_partes": "danger","en_revision": "info"}' />
                     <templates>
-                        <t t-name="kanban-box">
+                        <t t-name="card">
                             <div class="oe_kanban_global_click">
                                 <div class="o_kanban_details">
                                     <h3 class="o_kanban_record_title">

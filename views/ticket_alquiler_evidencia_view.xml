@@ -193,7 +193,7 @@
                             <field name="tiene_coordenadas"/>
 
                             <templates>
-                                <t t-name="kanban-box">
+                                <t t-name="card">
                                     <div style="padding:10px; border:1px solid #d8dee4; border-radius:10px; background:#ffffff; box-shadow:0 2px 8px rgba(15,23,42,0.06);">
 
                                         <button name="action_ver_foto"
@@ -288,7 +288,7 @@
                             <field name="tiene_coordenadas"/>
 
                             <templates>
-                                <t t-name="kanban-box">
+                                <t t-name="card">
                                     <div style="padding:10px; border:1px solid #d8dee4; border-radius:10px; background:#ffffff; box-shadow:0 2px 8px rgba(15,23,42,0.06);">
 
                                         <button name="action_ver_foto"
