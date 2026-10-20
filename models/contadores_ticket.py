@@ -144,8 +144,8 @@ class ContadoresTicket(models.Model):
             # Buscar procesamiento exacto de la fecha de agenda
             contador_exacto = self.env['contador.automatico'].search([
                 ('serie_detectada', '=', serie),
-                ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_agenda, datetime.min.time())),
-                ('fecha_procesamiento', '<', fields.Datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
+                ('fecha_procesamiento', '>=', datetime.combine(fecha_agenda, datetime.min.time())),
+                ('fecha_procesamiento', '<', datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
                 ('estado', '=', 'procesado')
             ], limit=1)
             
@@ -157,8 +157,8 @@ class ContadoresTicket(models.Model):
             fecha_limite = fecha_agenda - timedelta(days=7)
             contador_reciente = self.env['contador.automatico'].search([
                 ('serie_detectada', '=', serie),
-                ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_limite, datetime.min.time())),
-                ('fecha_procesamiento', '<=', fields.Datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
+                ('fecha_procesamiento', '>=', datetime.combine(fecha_limite, datetime.min.time())),
+                ('fecha_procesamiento', '<', datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
                 ('estado', '=', 'procesado')
             ], order='fecha_procesamiento desc', limit=1)
             
@@ -422,8 +422,8 @@ class ContadoresTicket(models.Model):
             # Buscar el más reciente dentro del rango permitido
             contador_reciente = self.env['contador.automatico'].search([
                 ('serie_detectada', '=', serie),
-                ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_limite_minima, datetime.min.time())),
-                ('fecha_procesamiento', '<=', fields.Datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
+                ('fecha_procesamiento', '>=', datetime.combine(fecha_limite_minima, datetime.min.time())),
+                ('fecha_procesamiento', '<', datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
                 ('estado', '=', 'procesado')
             ], order='fecha_procesamiento desc', limit=1)
             
@@ -546,8 +546,8 @@ class ContadoresTicket(models.Model):
             if fecha_agenda:
                 contador_exacto = self.env['contador.automatico'].search([
                     ('serie_detectada', '=', serie),
-                    ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_agenda, datetime.min.time())),
-                    ('fecha_procesamiento', '<', fields.Datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
+                    ('fecha_procesamiento', '>=', datetime.combine(fecha_agenda, datetime.min.time())),
+                    ('fecha_procesamiento', '<', datetime.combine(fecha_agenda + timedelta(days=1), datetime.min.time())),
                     ('estado', '=', 'procesado')
                 ], limit=1)
                 
@@ -563,8 +563,8 @@ class ContadoresTicket(models.Model):
             
             contador_reciente = self.env['contador.automatico'].search([
                 ('serie_detectada', '=', serie),
-                ('fecha_procesamiento', '>=', fields.Datetime.combine(fecha_limite, datetime.min.time())),
-                ('fecha_procesamiento', '<', fields.Datetime.combine(fecha_max, datetime.min.time())),
+                ('fecha_procesamiento', '>=', datetime.combine(fecha_limite, datetime.min.time())),
+                ('fecha_procesamiento', '<', datetime.combine(fecha_max, datetime.min.time())),
                 ('estado', '=', 'procesado')
             ], order='fecha_procesamiento desc', limit=1)
             
