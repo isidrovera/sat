@@ -12,13 +12,11 @@ class AlquilerQRController(http.Controller):
 
     @http.route('/api/escanear_qr', auth='public', type='http', methods=['GET'], website=True)
     def escanear_qr(self, id_registro=None):
-
         if not id_registro or not str(id_registro).isdigit():
             return request.redirect('/pagina_error')
 
         registro = request.env['alquiler'].sudo().search(
-            [('id', '=', int(id_registro))],
-            limit=1
+            [('id', '=', int(id_registro))], limit=1
         )
         if not registro:
             return request.redirect('/pagina_error')
@@ -30,35 +28,39 @@ class AlquilerQRController(http.Controller):
             'ubicacion_instlacion': registro.ubicacion_instalacion,
             'cliente': registro.cliente_id.name,
         }
-
-        return request.render(
-            'sat.pagina_con_opciones',
-            {'datos_registro': datos_registro}
-        )
+        return request.render('sat.pagina_con_opciones', {'datos_registro': datos_registro})
 
 
 class PublicTicketController(http.Controller):
+    """Formulario público de incidencias: misma ruta para GET y POST."""
 
-    @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['GET'], website=True)
+    @http.route(
+        '/ticket/reportar_incidencia',
+        type='http', auth='public', methods=['GET', 'POST'], website=True,
+    )
+    def reportar_incidencia(self, **kwargs):
+        if request.httprequest.method == 'POST':
+            return self.submit_reportar_incidencia(**kwargs)
+        return self.display_reportar_incidencia(**kwargs)
+
     def display_reportar_incidencia(self, **kw):
-
         id_registro = kw.get('id_registro')
         user_name = kw.get('user_name')
         phone_number = kw.get('phone_number')
 
         if not id_registro or not str(id_registro).isdigit():
+            _logger.warning('[TICKET-PORTAL] GET sin id_registro valido; parametros=%s', list(kw))
             return request.redirect('/pagina_error')
 
         registro = request.env['alquiler'].sudo().search(
-            [('id', '=', int(id_registro))],
-            limit=1
+            [('id', '=', int(id_registro))], limit=1
         )
         if not registro:
+            _logger.warning('[TICKET-PORTAL] GET alquiler inexistente id=%s', id_registro)
             return request.redirect('/pagina_error')
 
-        # Detectar contexto
         is_whatsapp = bool(user_name or phone_number)
-        is_logged_user = request.env.user and not request.env.user._is_public()
+        is_logged_user = bool(request.env.user and not request.env.user._is_public())
         is_qr_scan = not is_whatsapp and not is_logged_user
 
         values = {
@@ -69,39 +71,35 @@ class PublicTicketController(http.Controller):
             'is_qr_scan': is_qr_scan,
         }
 
-        # 1️⃣ WhatsApp
         if is_whatsapp:
             values.update({
                 'contacto_id': user_name or '',
                 'celular': phone_number.replace('@c.us', '') if phone_number else '',
             })
-
-        # 2️⃣ Usuario logueado: res.partner usa phone en esta instalación Odoo 19.
         elif is_logged_user:
             partner = request.env.user.partner_id
             values.update({
                 'contacto_id': partner.name or '',
                 'celular': partner.phone or '',
             })
-
-        # 3️⃣ QR público
         else:
-            values.update({
-                'contacto_id': '',
-                'celular': '',
-            })
+            values.update({'contacto_id': '', 'celular': ''})
 
+        _logger.info('[TICKET-PORTAL] GET formulario alquiler=%s', registro.id)
         return request.render('sat.reportar_incidencia_form', values)
 
-    @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
+    @http.route('/pagina_confirmacion', type='http', auth='public', website=True)
     def pagina_confirmacion(self, **kw):
         response = http.Response(template='sat.pagina_confirmacion')
         return response.render()
 
-    @http.route('/ticket/reportar_incidencia', type='http', auth="public", methods=['POST'], website=True)
     def submit_reportar_incidencia(self, **post):
+        """Mantiene los campos del ticket; el WhatsApp no debe ocultar un ticket creado."""
+        _logger.info(
+            '[TICKET-PORTAL] POST recibido product_id=%s partner_id=%s',
+            post.get('product_id'), post.get('partner_id'),
+        )
         try:
-            # Procesar la foto del problema, si existe
             file_base64 = None
             if 'problem_photo' in request.httprequest.files:
                 file = request.httprequest.files['problem_photo']
@@ -117,33 +115,33 @@ class PublicTicketController(http.Controller):
                 'description': post.get('description'),
                 'problem_photo': file_base64,
             }
-
             ticket = request.env['ticket.alquiler'].sudo().create(ticket_vals)
+            _logger.info('[TICKET-PORTAL] Ticket creado id=%s alquiler=%s', ticket.id, post.get('product_id'))
+        except Exception as exc:
+            _logger.exception('[TICKET-PORTAL] Error al crear ticket alquiler=%s', post.get('product_id'))
+            return request.render('sat.error_page', {'error': str(exc)})
 
-            # Enviar WhatsApp al reportante
+        try:
             ticket.enviar_mensaje_whatsapp_reporter()
+        except Exception:
+            _logger.exception(
+                '[TICKET-PORTAL] Ticket id=%s creado, pero fallo WhatsApp al reportante', ticket.id
+            )
 
-            return request.redirect('/pagina_confirmacion')
-
-        except Exception as e:
-            _logger.exception("Failed to create ticket: %s", e)
-            return request.render('sat.error_page', {'error': str(e)})
+        return request.redirect('/pagina_confirmacion')
 
 
 class RepuestosAlquilerController(http.Controller):
 
     @http.route('/alquiler/repuestos/<int:id_alquiler>', type='http', auth='user', website=True)
     def listar_repuestos(self, id_alquiler, search='', **kw):
-
         domain = [('modelo_id', '=', id_alquiler)]
         if search:
             domain.append(('name', 'ilike', search))
 
         repuestos = request.env['repuestos.alquiler'].sudo().search(
-            domain,
-            order='create_date DESC'
+            domain, order='create_date DESC'
         )
-
         if request.httprequest.headers.get('X-Requested-With') == 'XMLHttpRequest':
             repuestos_data = [{
                 'fecha': repuesto.create_date.strftime('%Y-%m-%d') if repuesto.create_date else '',
@@ -156,10 +154,9 @@ class RepuestosAlquilerController(http.Controller):
                 'solicitante': repuesto.solicitante_id,
                 'serie': repuesto.serie_id,
             } for repuesto in repuestos]
-
             return request.make_response(
                 json.dumps(repuestos_data),
-                headers={'Content-Type': 'application/json'}
+                headers={'Content-Type': 'application/json'},
             )
 
         return request.render('sat.repuestos_alquiler_list', {
@@ -172,23 +169,19 @@ class RepuestosAlquilerController(http.Controller):
         try:
             linea = request.env['solicitud.partes.linea'].sudo().search([
                 ('access_token_linea', '=', token),
-                ('estado', '=', 'retirado')
+                ('estado', '=', 'retirado'),
             ], limit=1)
-
             if not linea:
                 return request.render('sat.partes_error_template_alquiler', {
-                    'error_message': 'Parte no encontrada o ya fue repuesta'
+                    'error_message': 'Parte no encontrada o ya fue repuesta',
                 })
-
             return request.render('sat.partes_reposicion_publica_template', {
-                'linea': linea,
-                'token': token
+                'linea': linea, 'token': token,
             })
-
-        except Exception as e:
-            _logger.error(f"Error en reponer_parte_publico: {str(e)}")
+        except Exception as exc:
+            _logger.error('Error en reponer_parte_publico: %s', exc)
             return request.render('sat.partes_error_template_alquiler', {
-                'error_message': 'Error al cargar el formulario'
+                'error_message': 'Error al cargar el formulario',
             })
 
     @http.route('/partes/reponer/submit', type='http', auth='public', website=True, methods=['POST'], csrf=False)
@@ -196,38 +189,27 @@ class RepuestosAlquilerController(http.Controller):
         try:
             linea = request.env['solicitud.partes.linea'].sudo().search([
                 ('access_token_linea', '=', token),
-                ('estado', '=', 'retirado')
+                ('estado', '=', 'retirado'),
             ], limit=1)
-
             if not linea:
                 return request.render('sat.partes_error_template_alquiler', {
-                    'error_message': 'Parte no encontrada'
+                    'error_message': 'Parte no encontrada',
                 })
-
             if not foto or not hasattr(foto, 'read'):
                 return request.render('sat.partes_error_template_alquiler', {
-                    'error_message': 'Debe adjuntar una foto'
+                    'error_message': 'Debe adjuntar una foto',
                 })
-
             foto_data = base64.b64encode(foto.read())
             foto_filename = foto.filename if hasattr(foto, 'filename') else 'reposicion.jpg'
-
-            linea._confirmar_reposicion(
-                condicion,
-                foto_data,
-                foto_filename,
-                observaciones
-            )
-
+            linea._confirmar_reposicion(condicion, foto_data, foto_filename, observaciones)
             return request.render('sat.partes_reposicion_exitosa_template', {
                 'linea': linea,
-                'message': f'Reposición de "{linea.parte}" confirmada exitosamente'
+                'message': f'Reposición de "{linea.parte}" confirmada exitosamente',
             })
-
-        except Exception as e:
-            _logger.error(f"Error en reponer_parte_submit: {str(e)}")
+        except Exception as exc:
+            _logger.error('Error en reponer_parte_submit: %s', exc)
             return request.render('sat.partes_error_template_alquiler', {
-                'error_message': f'Error al procesar: {str(e)}'
+                'error_message': f'Error al procesar: {exc}',
             })
 
 
