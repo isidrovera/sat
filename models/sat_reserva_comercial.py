@@ -28,7 +28,7 @@ class SatReservaSecurityMixin(models.AbstractModel):
             'sat.group_reserva_comercial_autorizado',
             raise_if_not_found=False,
         )
-        return bool(group and user in group.users)
+        return bool(group and user.has_group('sat.group_reserva_comercial_autorizado'))
 
     def _reserva_exigir_gerencia(self):
         if not self._reserva_usuario_es_gerencia():
@@ -554,7 +554,7 @@ class SatReservaSolicitud(models.Model):
         )
         if not group:
             return []
-        users = group.users.filtered(lambda user: user.active and user.email)
+        users = group.user_ids.filtered(lambda user: user.active and user.email)
         emails = []
         seen = set()
         for user in users:
@@ -1361,7 +1361,7 @@ class SatReservaHistorial(models.Model):
                 'sat.group_reserva_comercial_autorizado',
                 raise_if_not_found=False,
             )
-            if not (self.env.is_superuser() or user.has_group('base.group_system') or (group and user in group.users)):
+            if not (self.env.is_superuser() or user.has_group('base.group_system') or (group and user.has_group('sat.group_reserva_comercial_autorizado'))):
                 raise AccessError(_('El historial comercial solo puede generarse desde el flujo de reservas.'))
         return super().create(vals_list)
 
@@ -1389,7 +1389,7 @@ class SatSatReservaComercial(models.Model):
             'sat.group_reserva_comercial_autorizado',
             raise_if_not_found=False,
         )
-        return bool(group and user in group.users)
+        return bool(group and user.has_group('sat.group_reserva_comercial_autorizado'))
 
     def _reserva_exigir_gerencia(self):
         if not self._reserva_usuario_es_gerencia():
@@ -2537,7 +2537,7 @@ class SatSatReservaComercial(models.Model):
             'sat.group_reserva_comercial_autorizado',
             raise_if_not_found=False,
         )
-        managers = group.users.filtered(lambda user: user.active) if group else self.env['res.users']
+        managers = group.user_ids.filtered(lambda user: user.active) if group else self.env['res.users']
         activity_type = self.env.ref(
             'mail.mail_activity_data_todo',
             raise_if_not_found=False,

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from odoo import http
 from odoo.http import request
 import json
@@ -75,12 +76,12 @@ class PublicTicketController(http.Controller):
                 'celular': phone_number.replace('@c.us', '') if phone_number else '',
             })
 
-        # 2️⃣ Usuario logueado (ESTO FALTABA)
+        # 2️⃣ Usuario logueado: res.partner usa phone en esta instalación Odoo 19.
         elif is_logged_user:
             partner = request.env.user.partner_id
             values.update({
                 'contacto_id': partner.name or '',
-                'celular': partner.mobile or partner.phone or '',
+                'celular': partner.phone or '',
             })
 
         # 3️⃣ QR público
@@ -91,7 +92,6 @@ class PublicTicketController(http.Controller):
             })
 
         return request.render('sat.reportar_incidencia_form', values)
-
 
     @http.route('/pagina_confirmacion', type='http', auth="public", website=True)
     def pagina_confirmacion(self, **kw):
@@ -221,7 +221,7 @@ class RepuestosAlquilerController(http.Controller):
 
             return request.render('sat.partes_reposicion_exitosa_template', {
                 'linea': linea,
-                'message': f'Reposición de \"{linea.parte}\" confirmada exitosamente'
+                'message': f'Reposición de "{linea.parte}" confirmada exitosamente'
             })
 
         except Exception as e:
