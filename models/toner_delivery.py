@@ -349,36 +349,92 @@ class TonerDeliverySchedule(models.Model):
     # MÉTODOS CREATE Y OVERRIDE
     # ==========================================
 
-    @api.model
-    def create(self, vals):
-        """Sobrescribe create para asignar secuencia y configurar prioridad"""
-        if vals.get('secuencia', 'New') == 'New':
-            vals['secuencia'] = self.env['ir.sequence'].next_by_code('toner.delivery.schedule') or 'TDS/001'
-        
-        # Configurar prioridad automáticamente
-        if 'priority' not in vals:
-            if vals.get('urgente'):
-                vals['priority'] = 'urgente'
-            elif vals.get('calculation_basis') == 'solicitud_urgente':
-                vals['priority'] = 'alta'
-            elif vals.get('calculation_basis') == 'stock_minimo':
-                vals['priority'] = 'alta'
-        
-        result = super(TonerDeliverySchedule, self).create(vals)
-        
-        # Crear nota en el chatter
-        try:
-            result._create_chatter_note()
-        except Exception as e:
-            _logger.error("Error creando nota en chatter: %s", str(e))
-        
-        # Crear actividad para el responsable
-        try:
-            result._create_delivery_activity()
-        except Exception as e:
-            _logger.error("Error creando actividad de entrega: %s", str(e))
-        
-        return result
+    
+    @api.model_create_multi
+    def create(self, vals_list):
+        """
+        Crea una o varias programaciones de entrega de tóner.
+
+        Compatible con Odoo 19.
+
+        Mantiene:
+        - Generación automática de secuencia.
+        - Asignación automática de prioridad.
+        - Nota informativa en el chatter.
+        - Actividad para el responsable.
+        """
+
+        # Compatibilidad defensiva si se recibe un diccionario.
+        if isinstance(vals_list, dict):
+            vals_list = [vals_list]
+
+        prepared_vals_list = []
+
+        for vals in vals_list:
+            vals = dict(vals)
+
+            # Generar secuencia cuando no fue proporcionada.
+            if vals.get("secuencia", "New") == "New":
+                vals["secuencia"] = (
+                    self.env["ir.sequence"].next_by_code(
+                        "toner.delivery.schedule"
+                    )
+                    or "TDS/001"
+                )
+
+            # Configurar prioridad automáticamente.
+            if "priority" not in vals:
+                if vals.get("urgente"):
+                    vals["priority"] = "urgente"
+
+                elif vals.get("calculation_basis") == "solicitud_urgente":
+                    vals["priority"] = "alta"
+
+                elif vals.get("calculation_basis") == "stock_minimo":
+                    vals["priority"] = "alta"
+
+            prepared_vals_list.append(vals)
+
+        # Crear todos los registros mediante el ORM de Odoo 19.
+        records = super(
+            TonerDeliverySchedule, self
+        ).create(prepared_vals_list)
+
+        # Ejecutar las acciones posteriores por cada entrega.
+        for record in records:
+
+            # Crear nota informativa en el chatter.
+            try:
+                record._create_chatter_note()
+
+            except Exception:
+                _logger.exception(
+                    "[TONER][DELIVERY][CREATE] "
+                    "Error creando nota en chatter. "
+                    "Entrega ID=%s",
+                    record.id,
+                )
+
+            # Crear actividad para el responsable.
+            try:
+                record._create_delivery_activity()
+
+            except Exception:
+                _logger.exception(
+                    "[TONER][DELIVERY][CREATE] "
+                    "Error creando actividad de entrega. "
+                    "Entrega ID=%s",
+                    record.id,
+                )
+
+        _logger.info(
+            "[TONER][DELIVERY][CREATE] "
+            "Programaciones creadas correctamente: %s",
+            records.ids,
+        )
+
+        return records
+
 
     def _create_chatter_note(self):
         """Crea nota informativa en el chatter"""

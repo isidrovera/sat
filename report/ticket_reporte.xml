@@ -981,11 +981,12 @@
                                                         </td>
                                                     </tr>
                                                 </t>
-                                                <t t-if="o.cliente_id and (o.cliente_id.phone or o.cliente_id.mobile)">
+                                                <t t-set="cliente_telefono" t-value="(o.cliente_id.phone or (o.cliente_id.mobile if 'mobile' in o.cliente_id._fields else False)) if o.cliente_id else False"/>
+                                                <t t-if="cliente_telefono">
                                                     <tr>
                                                         <td class="sat-meta-k">Teléfono</td>
                                                         <td class="sat-meta-v">
-                                                            <t t-esc="o.cliente_id.phone or o.cliente_id.mobile"/>
+                                                            <t t-esc="cliente_telefono"/>
                                                         </td>
                                                     </tr>
                                                 </t>
