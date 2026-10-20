@@ -1489,21 +1489,30 @@ class Reparaciones(models.Model):
 
 
     def _validar_autenticacion(self):
-        """Verifica si el usuario necesita autenticación"""
+        """Verifica si el técnico debe confirmar serie y modelo."""
+        self.ensure_one()
+
         if self.autenticacion_correcta:
+            _logger.info(
+                "[REPARACION][AUTH] Reparación %s ya autenticada",
+                self.id,
+            )
             return True
-        
-        try:
-            grupo_validacion = self.env.ref('sat.sat_tecnica_group_user')
-            necesita_autenticacion = grupo_validacion in self.env.user.groups_id
-            
-            if necesita_autenticacion:
-                _logger.info(f"Usuario {self.env.user.name} requiere autenticación")
-            
-            return not necesita_autenticacion
-        except Exception as e:
-            _logger.error(f"Error verificando grupo de autenticación: {e}")
-            return True
+
+        necesita_autenticacion = self.env.user.has_group(
+            'sat.sat_tecnica_group_user'
+        )
+
+        _logger.info(
+            "[REPARACION][AUTH] Reparación=%s Usuario=%s "
+            "Grupo técnico=%s Autenticada=%s",
+            self.id,
+            self.env.user.id,
+            necesita_autenticacion,
+            self.autenticacion_correcta,
+        )
+
+        return not necesita_autenticacion
 
 
     def _abrir_wizard_autenticacion(self):
