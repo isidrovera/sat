@@ -475,17 +475,33 @@ class TicketAlquilerMantenimientoPlanificador(models.Model):
     # CREATE / WRITE
     # ============================================================
 
-    @api.model
-    def create(self, vals):
-        if vals.get('tipo_servicio_id') == 'mantenimiento_preventivo':
-            vals.setdefault('duracion_programada_horas', 1.0)
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Crea uno o varios tickets, conservando las reglas del planificador.
 
-        ticket = super().create(vals)
+        Odoo 19 puede entregar múltiples diccionarios en una sola llamada.
+        """
+        prepared_vals_list = []
+        for vals in vals_list:
+            prepared_vals = vals.copy()
+            if prepared_vals.get('tipo_servicio_id') == 'mantenimiento_preventivo':
+                prepared_vals.setdefault('duracion_programada_horas', 1.0)
+            prepared_vals_list.append(prepared_vals)
 
-        if ticket.planificador_linea_id:
-            ticket._sync_linea_planificador_desde_ticket()
+        _logger.info(
+            '[PLANIFICADOR][CREATE] Inicio cantidad=%s mantenimientos=%s',
+            len(prepared_vals_list),
+            sum(v.get('tipo_servicio_id') == 'mantenimiento_preventivo' for v in prepared_vals_list),
+        )
 
-        return ticket
+        tickets = super().create(prepared_vals_list)
+
+        for ticket in tickets:
+            if ticket.planificador_linea_id:
+                ticket._sync_linea_planificador_desde_ticket()
+
+        _logger.info('[PLANIFICADOR][CREATE] Finalizado cantidad=%s', len(tickets))
+        return tickets
 
     def write(self, vals):
         if vals.get('tipo_servicio_id') == 'mantenimiento_preventivo':
