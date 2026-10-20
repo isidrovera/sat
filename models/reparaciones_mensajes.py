@@ -71,7 +71,11 @@ class ReparacionesWhatsapp(models.Model):
             phone = responsable.mobile_phone
 
         if not phone and responsable.partner_id:
-            phone = responsable.partner_id.mobile or responsable.partner_id.phone
+            partner = responsable.partner_id
+            if 'mobile' in partner._fields:
+                phone = partner.mobile or ''
+            if not phone and 'phone' in partner._fields:
+                phone = partner.phone or ''
 
         return phone or ''
 

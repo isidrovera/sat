@@ -820,7 +820,13 @@ class ReparacionesAvanceAlertas(models.Model):
                     user = False
 
         if user and user.partner_id:
-            phone = user.partner_id.mobile or user.partner_id.phone or ''
+            partner = user.partner_id
+            # En Odoo 19 'mobile' puede no estar disponible en res.partner.
+            # Conservar prioridad móvil -> teléfono, evitando AttributeError.
+            if 'mobile' in partner._fields:
+                phone = partner.mobile or ''
+            if not phone and 'phone' in partner._fields:
+                phone = partner.phone or ''
 
         if not phone:
             ICP = self.env['ir.config_parameter'].sudo()
