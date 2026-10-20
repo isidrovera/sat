@@ -184,8 +184,8 @@ class AppServiceApprovalController(AppBaseController):
                 else False
             ),
             "mobile": (
-                contact.mobile
-                if "mobile" in contact._fields
+                contact.phone
+                if "phone" in contact._fields
                 else False
             ),
             "email": (
@@ -559,7 +559,7 @@ class AppServiceApprovalController(AppBaseController):
         update_values = {
             "name": values["name"],
             "vat": values["dni"],
-            "mobile": values["mobile"],
+            "phone": values["mobile"],
             "email": values["email"],
         }
 
@@ -1165,8 +1165,7 @@ class AppServiceApprovalController(AppBaseController):
                                     or ""
                                 ),
                                 "mobile": (
-                                    existing_contact.mobile
-                                    or existing_contact.phone
+                                    existing_contact.phone
                                     or ""
                                 ),
                                 "email": (
@@ -1213,8 +1212,7 @@ class AppServiceApprovalController(AppBaseController):
                                     or reniec_name
                                 ),
                                 "mobile": (
-                                    legacy_contact.mobile
-                                    or legacy_contact.phone
+                                    legacy_contact.phone
                                     or ""
                                 ),
                                 "email": (
@@ -1458,7 +1456,7 @@ class AppServiceApprovalController(AppBaseController):
                 }
 
                 if values["mobile"]:
-                    link_values["mobile"] = values["mobile"]
+                    link_values["phone"] = values["mobile"]
 
                 if values["email"]:
                     link_values["email"] = values["email"]
@@ -1547,7 +1545,7 @@ class AppServiceApprovalController(AppBaseController):
                 "vat": values[
                     "dni"
                 ],
-                "mobile": values[
+                "phone": values[
                     "mobile"
                 ],
                 "email": values[
@@ -2000,7 +1998,7 @@ class AppServiceApprovalController(AppBaseController):
                 contact.write(
                     {
                         "name": values["name"],
-                        "mobile": values["mobile"] or False,
+                        "phone": values["mobile"] or False,
                         "email": values["email"] or False,
                     }
                 )
