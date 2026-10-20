@@ -644,55 +644,79 @@ class TicketAlquiler(models.Model):
     # CRUD
     # ============================================================
 
-    @api.model
-    def create(self, vals):
-        # ============================================================
-        # VALIDAR DISPONIBILIDAD DEL TÉCNICO
-        # ============================================================
-        responsable_id = vals.get('responsable')
-        agenda = vals.get('agenda')
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Crea uno o varios tickets preservando las validaciones y evaluaciones SAT."""
+        prepared_vals_list = []
 
-        if responsable_id and agenda:
-            tecnico = self.env['res.users'].browse(responsable_id)
-            if tecnico.exists():
-                self._validar_disponibilidad_tecnico(
-                    tecnico=tecnico,
-                    agenda=agenda,
-                    tipo_servicio=vals.get('tipo_servicio_id', 'revision'),
-                    duracion_horas=vals.get('duracion_programada_horas', False),
+        for vals_originales in vals_list:
+            vals = vals_originales.copy()
+
+            # ============================================================
+            # VALIDAR DISPONIBILIDAD DEL TÉCNICO (POR TICKET)
+            # ============================================================
+            responsable_id = vals.get('responsable')
+            agenda = vals.get('agenda')
+
+            if responsable_id and agenda:
+                tecnico = self.env['res.users'].browse(responsable_id)
+                if tecnico.exists():
+                    self._validar_disponibilidad_tecnico(
+                        tecnico=tecnico,
+                        agenda=agenda,
+                        tipo_servicio=vals.get('tipo_servicio_id', 'revision'),
+                        duracion_horas=vals.get('duracion_programada_horas', False),
+                    )
+
+            # Validar instalación de cada ticket, igual que antes.
+            if vals.get('tipo_servicio_id') == 'instalacion' and vals.get('product_alquiler'):
+                equipo = self.env['alquiler'].browse(vals['product_alquiler'])
+                if equipo.exists() and equipo.estado_alquiler_id != 'por_instalar':
+                    raise UserError(_(
+                        "No se puede crear un ticket de instalación.\n"
+                        "El equipo '%s' no está en estado 'Por instalar'.\n"
+                        "Estado actual: %s\n\n"
+                        "Primero debe completarse y aprobarse la inspección del sitio."
+                    ) % (
+                        equipo.serie,
+                        dict(equipo._fields['estado_alquiler_id'].selection).get(
+                            equipo.estado_alquiler_id, equipo.estado_alquiler_id
+                        )
+                    ))
+
+            # Mantiene la generación de secuencia por ticket.
+            vals['name'] = self.env['ir.sequence'].next_by_code('ticket.alquiler') or 'New'
+            if vals['name'] == 'New':
+                raise UserError(_("Error: No se pudo generar un número de ticket."))
+
+            prepared_vals_list.append(vals)
+
+        _logger.info(
+            "[ticket.alquiler][CREATE] Iniciando creación de %s ticket(s)",
+            len(prepared_vals_list),
+        )
+
+        records = super(TicketAlquiler, self).create(prepared_vals_list)
+
+        # Mantener el cálculo de URL y la auto-carga por cada ticket creado.
+        records._compute_url()
+        for record in records:
+            try:
+                record._seed_evaluaciones_ticket()
+                _logger.info(
+                    "[ticket.alquiler][CREATE] Evaluaciones auto-cargadas ticket_id=%s",
+                    record.id,
+                )
+            except Exception:
+                _logger.exception(
+                    "[ticket.alquiler][CREATE] No se pudieron cargar evaluaciones ticket_id=%s",
+                    record.id,
                 )
 
-        # Validar instalación
-        if vals.get('tipo_servicio_id') == 'instalacion' and vals.get('product_alquiler'):
-            equipo = self.env['alquiler'].browse(vals['product_alquiler'])
-            if equipo.exists() and equipo.estado_alquiler_id != 'por_instalar':
-                raise UserError(_(
-                    "No se puede crear un ticket de instalación.\n"
-                    "El equipo '%s' no está en estado 'Por instalar'.\n"
-                    "Estado actual: %s\n\n"
-                    "Primero debe completarse y aprobarse la inspección del sitio."
-                ) % (
-                    equipo.serie,
-                    dict(equipo._fields['estado_alquiler_id'].selection).get(
-                        equipo.estado_alquiler_id, equipo.estado_alquiler_id
-                    )
-                ))
-
-        vals['name'] = self.env['ir.sequence'].next_by_code('ticket.alquiler') or 'New'
-        if vals.get('name', 'New') == 'New':
-            raise UserError(_("Error: No se pudo generar un número de ticket."))
-
-        record = super(TicketAlquiler, self).create(vals)
-        record._compute_url()
-
-        # Auto-cargar evaluaciones dinámicas
-        try:
-            record._seed_evaluaciones_ticket()
-            _logger.info("[ticket.alquiler] Evaluaciones auto-cargadas para ticket ID: %s", record.id)
-        except Exception as e:
-            _logger.warning("[ticket.alquiler] No se pudieron cargar evaluaciones para ticket ID %s: %s", record.id, str(e))
-
-        return record
+        _logger.info(
+            "[ticket.alquiler][CREATE] Finalizado: ticket_ids=%s", records.ids
+        )
+        return records
 
     def write(self, vals):
         """
