@@ -2223,16 +2223,46 @@ class TonerCounterSubmission(models.Model):
     # Create, restricciones y chatter
     # -------------------------------------------------------------------------
 
+    
     @api.model_create_multi
     def create(self, vals_list):
         with self.env.cr.savepoint():
             current_user = self.env.user
             current_partner = current_user.partner_id
 
+            # Odoo 19: comprobar la existencia de los campos
+            # antes de acceder a ellos.
+            partner_mobile = (
+                current_partner.mobile
+                if current_partner and "mobile" in current_partner._fields
+                else False
+            )
+
+            partner_phone = (
+                current_partner.phone
+                if current_partner and "phone" in current_partner._fields
+                else False
+            )
+
+            client_phone = (
+                partner_mobile
+                or partner_phone
+                or ""
+            )
+
             for vals in vals_list:
-                vals.setdefault("created_by_user_id", current_user.id)
-                vals.setdefault("source", "manual")
-                vals.setdefault("client_name", current_user.name or "")
+                vals.setdefault(
+                    "created_by_user_id",
+                    current_user.id,
+                )
+                vals.setdefault(
+                    "source",
+                    "manual",
+                )
+                vals.setdefault(
+                    "client_name",
+                    current_user.name or "",
+                )
                 vals.setdefault(
                     "client_email",
                     current_user.email
@@ -2241,26 +2271,56 @@ class TonerCounterSubmission(models.Model):
                 )
                 vals.setdefault(
                     "client_phone",
-                    current_partner.mobile
-                    or current_partner.phone
-                    or "",
+                    client_phone,
                 )
 
-                if "counter_bn" not in vals or int(vals.get("counter_bn") or 0) <= 0:
-                    raise ValidationError(_("Debe enviar el contador B/N actual de esta solicitud."))
-                equipment = self.env["alquiler"].browse(vals.get("equipment_id")).exists()
+                # Validación obligatoria del contador B/N.
+                if (
+                    "counter_bn" not in vals
+                    or int(vals.get("counter_bn") or 0) <= 0
+                ):
+                    raise ValidationError(
+                        _(
+                            "Debe enviar el contador B/N actual "
+                            "de esta solicitud."
+                        )
+                    )
+
+                equipment = (
+                    self.env["alquiler"]
+                    .browse(vals.get("equipment_id"))
+                    .exists()
+                )
+
+                # En equipos a color, validar también
+                # el contador de impresiones a color.
                 if equipment and equipment.tipo_maquina_id == "color":
                     if "counter_color" not in vals:
-                        raise ValidationError(_("Debe enviar el contador color actual de esta solicitud."))
+                        raise ValidationError(
+                            _(
+                                "Debe enviar el contador color "
+                                "actual de esta solicitud."
+                            )
+                        )
+
                     if int(vals.get("counter_color") or 0) <= 0:
-                        raise ValidationError(_("El contador color debe ser mayor que cero."))
-                # Respetar contadores anteriores ingresados manualmente.
-                # Si hay historial entregado, el análisis posterior los
-                # reemplazará por el contador actual de la última entrega.
+                        raise ValidationError(
+                            _(
+                                "El contador color debe ser "
+                                "mayor que cero."
+                            )
+                        )
+
+                # Mantener los valores anteriores ingresados
+                # manualmente. El historial válido será
+                # determinado después por el análisis.
                 vals.setdefault("previous_counter_bn", 0)
                 vals.setdefault("previous_counter_color", 0)
+
+                # Reiniciar snapshot para recalcularlo.
                 vals["history_snapshot_json"] = False
 
+                # Generar secuencia.
                 if vals.get("secuencia", "New") == "New":
                     vals["secuencia"] = (
                         self.env["ir.sequence"].next_by_code(
@@ -2268,21 +2328,39 @@ class TonerCounterSubmission(models.Model):
                         )
                         or "TCS/001"
                     )
+
+            # Crear registros respetando model_create_multi.
             records = super().create(vals_list)
+
+            # Capturar historial y ejecutar validaciones.
             for record in records:
-                record.with_context(toner_analysis_write=True).write({
-                    "history_snapshot_json": record._capture_toner_history()})
-                record._apply_validation_result(record._validate_record_for_workflow())
+                record.with_context(
+                    toner_analysis_write=True
+                ).write({
+                    "history_snapshot_json":
+                        record._capture_toner_history(),
+                })
+
+                record._apply_validation_result(
+                    record._validate_record_for_workflow()
+                )
+
+            # Mantener las notificaciones existentes.
             for record in records:
                 try:
                     record._create_chatter_note()
+
                     record.send_whatsapp_received()
+
                     record._notify_new_request_to_commercial()
+
                 except Exception:
                     _logger.exception(
-                        "[TONER] Error en notificación inicial solicitud=%s",
+                        "[TONER] Error en notificación "
+                        "inicial solicitud=%s",
                         record.id,
                     )
+
             return records
 
     def write(self, vals):
