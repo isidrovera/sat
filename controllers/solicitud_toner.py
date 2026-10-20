@@ -149,8 +149,7 @@ class TonerRequestController(http.Controller):
                 if user and user.partner_id:
                     preloaded_name = user.partner_id.name or preloaded_name
                     preloaded_phone = self.clean_phone_number(
-                        user.partner_id.mobile
-                        or user.partner_id.phone
+                        user.partner_id.phone
                         or preloaded_phone
                     )
 
