@@ -738,23 +738,35 @@ class Incidencia(models.Model):
     # CREATE / WRITE
     # ============================================================
 
-    @api.model
-    def create(self, vals):
-        if vals.get('name', _('New')) == _('New'):
-            vals['name'] = self.env['ir.sequence'].next_by_code('taller.incidencia') or '/'
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Crea incidencias individual o masivamente (compatible con Odoo 19).
 
-        record = super(Incidencia, self).create(vals)
+        Conserva la carga de datos del equipo, la actualización del plazo,
+        el mensaje de creación y la notificación por cada incidencia.
+        """
+        preparados = []
+        for valores in vals_list:
+            vals = dict(valores)
+            if not vals.get('name') or vals.get('name') in (_('New'), 'New', '/'):
+                vals['name'] = (
+                    self.env['ir.sequence'].next_by_code('taller.incidencia') or '/'
+                )
+            preparados.append(vals)
 
-        if record.equipo_id and not self.env.context.get('skip_incidencia_auto_load'):
-            record._cargar_datos_desde_equipo(write_record=True)
+        records = super().create(preparados)
+        _logger.info(
+            '[INCIDENCIA][CREATE] creadas=%s ids=%s', len(records), records.ids
+        )
+        for record in records:
+            if record.equipo_id and not self.env.context.get('skip_incidencia_auto_load'):
+                record._cargar_datos_desde_equipo(write_record=True)
+            if record.tipo == 'reclamo' and not self.env.context.get('skip_incidencia_auto_state'):
+                record._actualizar_estado_por_plazo(write_record=True)
+            record._post_event_message('creada')
+            record._send_event_email('creada')
 
-        if record.tipo == 'reclamo' and not self.env.context.get('skip_incidencia_auto_state'):
-            record._actualizar_estado_por_plazo(write_record=True)
-
-        record._post_event_message('creada')
-        record._send_event_email('creada')
-
-        return record
+        return records
 
     def write(self, vals):
         old_states = {rec.id: rec.estado for rec in self}
