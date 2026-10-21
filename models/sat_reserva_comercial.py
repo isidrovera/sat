@@ -1633,18 +1633,38 @@ class SatSatReservaComercial(models.Model):
         )
 
     def _reserva_obtener_fecha_base(self):
+        """Primera reserva desde ingreso; posteriores desde nueva asignación.
+
+        La mera disponibilidad física NO reinicia los seis días iniciales.
+        Una liberación comercial trazable sí inaugura un nuevo ciclo.
+        """
         self.ensure_one()
+        today = fields.Date.context_today(self)
+
+        # Conservamos la base congelada mientras la reserva está activa.
+        if self.reserva_estado in ('separada', 'especial', 'confirmada'):
+            if self.reserva_fecha_base:
+                return self.reserva_fecha_base
+
+        # Al volver a estar libre, el anterior ciclo nunca debe reutilizar
+        # una fecha base residual. Exigir evidencia de separación y liberación.
+        if self.reserva_estado == 'libre' and self._reserva_tiene_separacion_liberada_anterior():
+            return today
 
         if self.reserva_fecha_base:
             return self.reserva_fecha_base
 
-        today = fields.Date.context_today(self)
+        if self.reserva_ciclo > 0:
+            # Sólo es ciclo posterior válido si existe historial comprobable;
+            # de lo contrario conservamos el origen del primer ciclo.
+            _logger.warning(
+                '[RESERVA][CICLO_INCONSISTENTE] maquina=%s ciclo=%s '
+                'sin separacion y liberacion anteriores verificables',
+                self.id, self.reserva_ciclo,
+            )
 
-        if self.reserva_ciclo == 0:
-            source = self.ingreso_fecha or self.create_date
-            return fields.Date.to_date(source) if source else today
-
-        return today
+        source = self.ingreso_fecha or self.create_date
+        return fields.Date.to_date(source) if source else today
 
     # -------------------------------------------------------------------------
     # Calendario comercial compartido
@@ -1713,53 +1733,84 @@ class SatSatReservaComercial(models.Model):
         return cursor
 
     def _reserva_tiene_separacion_liberada_anterior(self):
+        """Comprueba un ciclo cerrado, incluso en datos antiguos con ciclo=0.
+
+        No basta tener eventos sueltos: la separación debe ser anterior a
+        la liberación, y el último evento de ciclo debe ser una liberación.
+        """
         self.ensure_one()
-        Historial = self.env['sat.reserva.historial']
-        base = [('maquina_id', '=', self.id)]
-        separacion = Historial.search(
-            base + [('tipo_evento', 'in', ('asignacion_asesora', 'separacion'))],
-            limit=1,
+        Historial = self.env['sat.reserva.historial'].sudo()
+        events = Historial.search([
+            ('maquina_id', '=', self.id),
+            ('tipo_evento', 'in', (
+                'asignacion_asesora', 'separacion',
+                'liberacion_manual', 'liberacion_automatica',
+            )),
+        ], order='fecha_evento desc, id desc')
+        if not events:
+            return False
+
+        release_types = ('liberacion_manual', 'liberacion_automatica')
+        separation_types = ('asignacion_asesora', 'separacion')
+        latest = events[0]
+        if latest.tipo_evento not in release_types:
+            return False
+
+        # Fechas + ID permiten ordenar eventos importados o del mismo segundo.
+        release_key = (latest.fecha_evento, latest.id)
+        return any(
+            event.tipo_evento in separation_types
+            and (event.fecha_evento, event.id) < release_key
+            for event in events[1:]
         )
-        liberacion = Historial.search(
-            base + [('tipo_evento', 'in', ('liberacion_manual', 'liberacion_automatica'))],
-            limit=1,
-        )
-        return bool(separacion and liberacion)
 
     def _reserva_calcular_plazo(self, cliente=False):
         self.ensure_one()
-
+        today = fields.Date.context_today(self)
+        es_libre = self.reserva_estado == 'libre'
+        hay_ciclo_cerrado = (
+            self._reserva_tiene_separacion_liberada_anterior()
+            if es_libre else False
+        )
         base = self._reserva_obtener_fecha_base()
         rule = self._reserva_buscar_regla(cliente=cliente, fecha=base)
         days = rule.dias_separacion if rule else 6
 
-        # Primera separacion: plazo general de 6 dias desde el ingreso.
-        # Despues de una separacion y liberacion: 3 dias comerciales desde
-        # la nueva asignacion, sin depender del estado de reparacion.
-        # Las reglas especificas de cliente/importacion mantienen su plazo.
-        if (
-            (not rule or rule.tipo_aplicacion == 'general')
-            and self.reserva_ciclo > 0
-            and self._reserva_tiene_separacion_liberada_anterior()
-        ):
-            days = 3
+        # Primer ciclo: seis días comerciales desde ingreso (salvo reglas
+        # específicas). Sólo una liberación completa y trazable permite los
+        # tres días desde la NUEVA asignación.
+        if not rule or rule.tipo_aplicacion == 'general':
+            if es_libre and hay_ciclo_cerrado:
+                base = today
+                days = 3
+            elif (
+                not es_libre
+                and self.reserva_ciclo > 0
+                and self.reserva_dias == 3
+                and self.reserva_origen == 'general'
+            ):
+                # Mantener tres días al asignar el cliente dentro de la
+                # misma separación; nunca reiniciar el vencimiento.
+                days = 3
 
+        deadline = self._reserva_sumar_dias_comerciales(base, days)
         _logger.info(
-            '[RESERVA][PLAZO] maquina=%s ciclo=%s base=%s dias=%s limite=%s '
+            '[RESERVA][PLAZO] maquina=%s estado=%s ciclo=%s '
+            'historial_liberado=%s base=%s dias=%s limite=%s '
             'regla=%s origen=%s cliente=%s',
-            self.id, self.reserva_ciclo, base, days,
-            self._reserva_sumar_dias_comerciales(base, days),
+            self.id, self.reserva_estado, self.reserva_ciclo,
+            hay_ciclo_cerrado, base, days, deadline,
             rule.id if rule else False,
             rule.tipo_aplicacion if rule else 'general',
             cliente.id if cliente else False,
         )
-
         return {
             'fecha_base': base,
-            'fecha_limite': self._reserva_sumar_dias_comerciales(base, days),
+            'fecha_limite': deadline,
             'dias': days,
             'regla': rule,
             'origen': rule.tipo_aplicacion if rule else 'general',
+            'ciclo_cerrado': hay_ciclo_cerrado,
         }
 
     def _reserva_validar_plan_antes_de_asignar(self, plan):
@@ -1781,8 +1832,11 @@ class SatSatReservaComercial(models.Model):
             raise ValidationError(_(
                 'No se puede separar la maquina %(maquina)s: el plazo '
                 'comercial calculado desde %(base)s vencio el %(limite)s. '
-                'Solicite una autorizacion a gerencia; esta operacion no '
-                'modificara la asignacion ni liberara la maquina.'
+                'La disponibilidad de la maquina no reinicia el primer plazo. '
+                'Si tuvo una separacion anterior, verifique que su liberacion '
+                'este registrada en el historial comercial. En caso contrario '
+                'solicite autorizacion a gerencia. La operacion no modificara '
+                'la asignacion ni liberara la maquina.'
             ) % {
                 'maquina': self.serie_id or self.display_name,
                 'base': plan.get('fecha_base') or '-',
@@ -1878,6 +1932,15 @@ class SatSatReservaComercial(models.Model):
                 )
             return True
 
+        if self.reserva_solicitud_pendiente_id:
+            raise ValidationError(_(
+                'La máquina %(serie)s tiene una solicitud comercial pendiente '
+                '(%(solicitud)s). Debe resolverse antes de una nueva separación.'
+            ) % {
+                'serie': self.serie_id or self.display_name,
+                'solicitud': self.reserva_solicitud_pendiente_id.display_name,
+            })
+
         # Calcular y validar ANTES de efectuar cualquier escritura.
         # De lo contrario el flujo creaba una reserva vencida y luego
         # borraba el cliente al liberarla en el mismo guardado.
@@ -1892,6 +1955,12 @@ class SatSatReservaComercial(models.Model):
             'reserva_cliente_id': cliente.id if cliente else False,
             'reserva_inicio': fields.Datetime.now(),
             'reserva_fecha_base': base,
+            # Regularizar el contador de registros históricos que sí fueron
+            # liberados, pero quedaron con ciclo=0 en versiones anteriores.
+            'reserva_ciclo': (
+                max(self.reserva_ciclo, 1)
+                if plan['ciclo_cerrado'] else self.reserva_ciclo
+            ),
             'reserva_estado': 'separada',
             'reserva_ultimo_aviso_fecha': False,
             'reserva_ultimo_aviso_dias': 0,
@@ -2189,6 +2258,14 @@ class SatSatReservaComercial(models.Model):
             self._reserva_exigir_gerencia()
 
         if self.estado_ventas_id == 'entregada':
+            return False
+
+        if self.reserva_estado not in ('separada', 'especial', 'confirmada'):
+            _logger.warning(
+                '[RESERVA][LIBERAR_OMITIDA] maquina=%s estado=%s '
+                'no hay reserva activa que cerrar',
+                self.id, self.reserva_estado,
+            )
             return False
 
         _logger.info(
