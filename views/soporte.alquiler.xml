@@ -22,7 +22,15 @@
                         <button name="action_crear_evaluacion" string="Generar Evaluación" type="object" icon="fa-check-circle" groups="base.group_system"/>
                         <button string="Proceso" name="action_proceso" type="object" class="oe_highlight" groups="base.group_system"/>
                         <button string="Nuevo" name="action_nuevo" type="object" class="oe_highlight" groups="base.group_system" options="{'no_required_fields_validation': true}"/>
-                        <button name="action_enviar_informe_administracion" type="object" string="📤 Enviar Informe a Administración" class="btn-primary" confirm="¿Enviar el informe técnico al área de administración para decisión?"/>
+                        <button
+                                    name="action_completar_evaluaciones_manualmente"
+                                    type="object"
+                                    string="Completar componentes y accesorios"
+                                    icon="fa-refresh"
+                                    class="btn-secondary"
+                                    confirm="¿Desea crear los componentes y accesorios faltantes? No se modificarán las evaluaciones existentes."
+                                />
+                                                        <button name="action_enviar_informe_administracion" type="object" string="📤 Enviar Informe a Administración" class="btn-primary" confirm="¿Enviar el informe técnico al área de administración para decisión?"/>
                         <button name="action_verificar_configuracion_sms"
         string="Revisar SMS"
         type="object"

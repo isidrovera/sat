@@ -861,7 +861,7 @@ class TicketAlquiler(models.Model):
             pedido.name, total_lineas
         )
     
-    def _seed_evaluaciones_ticket(self):
+    def _seed_evaluaciones_ticket(self, strict=False):
         """Carga automáticamente componentes y accesorios desde el catálogo del modelo.
         
         Para accesorios: si existe un ticket anterior del mismo equipo, copia los valores
@@ -914,7 +914,14 @@ class TicketAlquiler(models.Model):
                 })
                 componentes_creados += 1
             except Exception as e:
-                _logger.error("[_seed_evaluaciones_ticket] Error creando evaluación %s: %s", comp_line.tipo_id.name, e)
+                _logger.exception(
+                    "[_seed_evaluaciones_ticket] Error creando evaluación %s para ticket %s",
+                    comp_line.tipo_id.name, self.id,
+                )
+                if strict:
+                    raise UserError(_(
+                        "No se pudo crear el componente '%s'.\nDetalle: %s"
+                    ) % (comp_line.tipo_id.name, str(e))) from e
 
         _logger.info("[_seed_evaluaciones_ticket] %s componentes creados para ticket %s", componentes_creados, self.id)
 
@@ -986,10 +993,72 @@ class TicketAlquiler(models.Model):
                     acc_line.tipo_id.name, origen, estado_id
                 )
             except Exception as e:
-                _logger.error("[_seed_evaluaciones_ticket] Error creando accesorio %s: %s", acc_line.tipo_id.name, e)
+                _logger.exception(
+                    "[_seed_evaluaciones_ticket] Error creando accesorio %s para ticket %s",
+                    acc_line.tipo_id.name, self.id,
+                )
+                if strict:
+                    raise UserError(_(
+                        "No se pudo crear el accesorio '%s'.\nDetalle: %s"
+                    ) % (acc_line.tipo_id.name, str(e))) from e
 
         _logger.info("[_seed_evaluaciones_ticket] %s accesorios creados para ticket %s", accesorios_creados, self.id)
         _logger.info("[_seed_evaluaciones_ticket] Total: %s evaluaciones para ticket %s", componentes_creados + accesorios_creados, self.id)
+        return {
+            'componentes': componentes_creados,
+            'accesorios': accesorios_creados,
+        }
+
+    def action_completar_evaluaciones_manualmente(self):
+        """Recupera evaluaciones faltantes sin modificar las existentes.
+
+        Pensado para tickets creados antes de corregir errores en el alta
+        de componentes y accesorios. Puede ejecutarse repetidamente.
+        """
+        self.ensure_one()
+        if not self.product_alquiler or not self.product_alquiler.name:
+            raise UserError(_(
+                "Asigne un equipo con modelo al ticket antes de cargar componentes y accesorios."
+            ))
+
+        _logger.info(
+            "[EVALUACIONES][MANUAL][INICIO] ticket=%s id=%s usuario=%s",
+            self.name, self.id, self.env.user.id,
+        )
+        # En la ejecución manual se muestran los errores. La transacción
+        # revierte las altas de este intento si algo falla, sin dejar carga parcial.
+        resultados = self._seed_evaluaciones_ticket(strict=True) or {}
+        componentes = resultados.get('componentes', 0)
+        accesorios = resultados.get('accesorios', 0)
+
+        _logger.info(
+            "[EVALUACIONES][MANUAL][FIN] ticket=%s componentes=%s accesorios=%s",
+            self.name, componentes, accesorios,
+        )
+        if componentes or accesorios:
+            self.message_post(body=_(
+                "Se completaron manualmente las evaluaciones faltantes: "
+                "%s componente(s) y %s accesorio(s)."
+            ) % (componentes, accesorios))
+
+        mensaje = (_(
+            "Se crearon %s componente(s) y %s accesorio(s). "
+            "Los registros existentes se conservaron."
+        ) % (componentes, accesorios)) if (componentes or accesorios) else _(
+            "No se encontraron componentes ni accesorios pendientes según el catálogo "
+            "del modelo. No se modificaron las evaluaciones existentes."
+        )
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Carga manual de evaluaciones'),
+                'message': mensaje,
+                'type': 'success' if componentes or accesorios else 'warning',
+                'sticky': False,
+                'next': {'type': 'ir.actions.client', 'tag': 'soft_reload'},
+            },
+        }
     # ============================================================
     # DETECCIÓN DE PENDIENTES PARA WIZARD
     # ============================================================
