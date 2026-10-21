@@ -1,6 +1,9 @@
+
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+
 import logging
+
+from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -15,7 +18,7 @@ class TicketComponenteEvaluacion(models.Model):
         string='Ticket',
         required=True,
         ondelete='cascade',
-        index=True
+        index=True,
     )
 
     componente_tipo_id = fields.Many2one(
@@ -23,13 +26,13 @@ class TicketComponenteEvaluacion(models.Model):
         string='Tipo de Componente',
         required=True,
         ondelete='restrict',
-        index=True
+        index=True,
     )
 
     color_id = fields.Many2one(
         'color.tipo',
         string='Color',
-        ondelete='restrict'
+        ondelete='restrict',
     )
 
     estado_id = fields.Many2one(
@@ -37,40 +40,77 @@ class TicketComponenteEvaluacion(models.Model):
         string='Estado',
         required=False,
         ondelete='restrict',
-        help="Estado del componente evaluado por el técnico en sitio."
+        help='Estado del componente evaluado por el técnico en sitio.',
     )
 
     observaciones = fields.Text(
-        string='Observaciones'
+        string='Observaciones',
     )
 
-    
     _ticket_componente_color_unique = models.Constraint(
         'UNIQUE(ticket_id, componente_tipo_id, color_id)',
         'Ya existe una evaluación de este componente y color para este ticket.',
     )
 
+    # ============================================================
+    # CREATE - COMPATIBLE CON ODOO 19
+    # ============================================================
 
-    @api.model
-    def create(self, vals):
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Crear una o varias evaluaciones de componentes."""
+
         _logger.info(
-            "[ticket.componente.evaluacion] create() ticket_id=%s tipo=%s color=%s",
-            vals.get('ticket_id'),
-            vals.get('componente_tipo_id'),
-            vals.get('color_id'),
+            '[COMPONENTE EVAL][CREATE][INICIO] cantidad=%s',
+            len(vals_list),
         )
-        record = super().create(vals)
+
+        for vals in vals_list:
+            _logger.info(
+                '[COMPONENTE EVAL][CREATE] '
+                'ticket_id=%s tipo_id=%s color_id=%s estado_id=%s',
+                vals.get('ticket_id'),
+                vals.get('componente_tipo_id'),
+                vals.get('color_id'),
+                vals.get('estado_id'),
+            )
+
+        records = super().create(vals_list)
+
+        for record in records:
+            _logger.info(
+                '[COMPONENTE EVAL][CREATE][OK] '
+                'id=%s ticket=%s componente=%s color=%s',
+                record.id,
+                record.ticket_id.id,
+                record.componente_tipo_id.name,
+                record.color_id.name if record.color_id else 'SIN COLOR',
+            )
+
         _logger.info(
-            "[ticket.componente.evaluacion] creado id=%s ticket_id=%s",
-            record.id,
-            record.ticket_id.id if record.ticket_id else 'VACIO'
+            '[COMPONENTE EVAL][CREATE][FIN] creados=%s',
+            len(records),
         )
-        return record
+
+        return records
+
+    # ============================================================
+    # WRITE
+    # ============================================================
 
     def write(self, vals):
         _logger.info(
-            "[ticket.componente.evaluacion] write() id=%s vals=%s",
+            '[COMPONENTE EVAL][WRITE][INICIO] '
+            'ids=%s campos=%s',
             self.ids,
-            vals
+            list(vals.keys()),
         )
-        return super().write(vals)
+
+        result = super().write(vals)
+
+        _logger.info(
+            '[COMPONENTE EVAL][WRITE][OK] ids=%s',
+            self.ids,
+        )
+
+        return result
