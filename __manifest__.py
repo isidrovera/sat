@@ -56,7 +56,8 @@
 
         'website',
 
-        'bus'
+        'bus',
+        'odoo_onedrive_integration'
 
     ],
 
