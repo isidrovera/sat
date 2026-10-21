@@ -870,36 +870,43 @@ class MantenimientoTecnicoAusencia(models.Model):
     # CREATE / WRITE
     # ============================================================
 
-    @api.model
-    def create(self, vals):
-        _logger.info("[Ausencias] === CREANDO AUSENCIA ===")
-        _logger.info("[Ausencias] Valores recibidos: %s", vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Crea una o varias ausencias con normalización individual (Odoo 19)."""
+        _logger.info("[Ausencias] === CREANDO %s AUSENCIA(S) ===", len(vals_list))
+        prepared_vals = []
+        for index, vals in enumerate(vals_list, start=1):
+            # Nunca modificar directamente los diccionarios recibidos por el ORM.
+            normalized = self._normalize_vals(
+                dict(vals),
+                current=None,
+                for_create=True,
+            )
+            if not normalized.get('name') or normalized['name'] == 'Nuevo':
+                normalized['name'] = (
+                    self.env['ir.sequence'].next_by_code('mantenimiento.tecnico.ausencia')
+                    or 'AUS/NUEVO'
+                )
+            prepared_vals.append(normalized)
+            _logger.info(
+                "[Ausencias] Preparada %s/%s | referencia=%s | tecnico_id=%s | tipo=%s",
+                index, len(vals_list), normalized.get('name'),
+                normalized.get('tecnico_id'), normalized.get('tipo', 'permiso'),
+            )
 
-        vals = self._normalize_vals(
-            vals,
-            current=None,
-            for_create=True,
-        )
+        records = super().create(prepared_vals)
+        for rec in records:
+            rec._normalize_record_dates()
+            _logger.info(
+                "[Ausencias] Creada ID=%s | referencia=%s | tecnico=%s | "
+                "tipo=%s | fechas=%s - %s | estado=%s",
+                rec.id, rec.name, rec.tecnico_id.name, rec.tipo,
+                rec.fecha_inicio, rec.fecha_fin, rec.estado,
+            )
 
-        if vals.get('name', 'Nuevo') == 'Nuevo':
-            vals['name'] = self.env['ir.sequence'].next_by_code(
-                'mantenimiento.tecnico.ausencia'
-            ) or 'AUS/NUEVO'
-
-        rec = super().create(vals)
-
-        rec._normalize_record_dates()
-
-        _logger.info("[Ausencias] Ausencia creada: %s ID=%s", rec.name, rec.id)
-        _logger.info("[Ausencias] Técnico/Solicitante: %s", rec.tecnico_id.name)
-        _logger.info("[Ausencias] Tipo: %s", rec.tipo)
-        _logger.info("[Ausencias] Fechas: %s - %s", rec.fecha_inicio, rec.fecha_fin)
-        _logger.info("[Ausencias] Estado inicial: %s", rec.estado)
-
-        # IMPORTANTE:
-        # No se aprueba automáticamente al crear.
-        # El controlador o el botón debe llamar action_enviar_aprobacion().
-        return rec
+        # No se aprueba automáticamente: el botón/controlador debe llamar
+        # action_enviar_aprobacion().
+        return records
 
     def write(self, vals):
         _logger.info("[Ausencias] === ACTUALIZANDO AUSENCIA ===")
