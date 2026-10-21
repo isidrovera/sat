@@ -1733,18 +1733,26 @@ class SatSatReservaComercial(models.Model):
         rule = self._reserva_buscar_regla(cliente=cliente, fecha=base)
         days = rule.dias_separacion if rule else 6
 
-        # Solo se reduce el plazo general de separaciones posteriores.
-        # Una regla especial de cliente/importación o gerencia mantiene su plazo.
+        # Primera separacion: plazo general de 6 dias desde el ingreso.
+        # Despues de una separacion y liberacion: 3 dias comerciales desde
+        # la nueva asignacion, sin depender del estado de reparacion.
+        # Las reglas especificas de cliente/importacion mantienen su plazo.
         if (
             (not rule or rule.tipo_aplicacion == 'general')
-            and days == 6
-            and (
-                self.reserva_reparacion_finalizada_antes
-                or self.estado_ventas_id == 'finalizado'
-            )
+            and self.reserva_ciclo > 0
             and self._reserva_tiene_separacion_liberada_anterior()
         ):
             days = 3
+
+        _logger.info(
+            '[RESERVA][PLAZO] maquina=%s ciclo=%s base=%s dias=%s limite=%s '
+            'regla=%s origen=%s cliente=%s',
+            self.id, self.reserva_ciclo, base, days,
+            self._reserva_sumar_dias_comerciales(base, days),
+            rule.id if rule else False,
+            rule.tipo_aplicacion if rule else 'general',
+            cliente.id if cliente else False,
+        )
 
         return {
             'fecha_base': base,
@@ -1753,6 +1761,34 @@ class SatSatReservaComercial(models.Model):
             'regla': rule,
             'origen': rule.tipo_aplicacion if rule else 'general',
         }
+
+    def _reserva_validar_plan_antes_de_asignar(self, plan):
+        """Evita escribir una separacion que terminaria liberada inmediatamente.
+
+        Una autorizacion especial de gerencia utiliza su propio flujo, por lo
+        que esta validacion solo se aplica a asignaciones ordinarias.
+        """
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        deadline = plan.get('fecha_limite')
+        if not deadline or deadline < today:
+            _logger.warning(
+                '[RESERVA][RECHAZADA] maquina=%s ciclo=%s base=%s '
+                'limite=%s hoy=%s dias=%s',
+                self.id, self.reserva_ciclo, plan.get('fecha_base'),
+                deadline, today, plan.get('dias'),
+            )
+            raise ValidationError(_(
+                'No se puede separar la maquina %(maquina)s: el plazo '
+                'comercial calculado desde %(base)s vencio el %(limite)s. '
+                'Solicite una autorizacion a gerencia; esta operacion no '
+                'modificara la asignacion ni liberara la maquina.'
+            ) % {
+                'maquina': self.serie_id or self.display_name,
+                'base': plan.get('fecha_base') or '-',
+                'limite': deadline or '-',
+            })
+        return True
 
     def _reserva_esta_vigente(self):
         self.ensure_one()
@@ -1842,7 +1878,12 @@ class SatSatReservaComercial(models.Model):
                 )
             return True
 
-        base = self._reserva_obtener_fecha_base()
+        # Calcular y validar ANTES de efectuar cualquier escritura.
+        # De lo contrario el flujo creaba una reserva vencida y luego
+        # borraba el cliente al liberarla en el mismo guardado.
+        plan = self._reserva_calcular_plazo(cliente=cliente)
+        self._reserva_validar_plan_antes_de_asignar(plan)
+        base = plan['fecha_base']
 
         self.with_context(
             sat_reserva_internal_write=True,
@@ -1855,8 +1896,6 @@ class SatSatReservaComercial(models.Model):
             'reserva_ultimo_aviso_fecha': False,
             'reserva_ultimo_aviso_dias': 0,
         })
-
-        plan = self._reserva_calcular_plazo(cliente=cliente)
 
         self.with_context(
             sat_reserva_internal_write=True,
@@ -1878,14 +1917,12 @@ class SatSatReservaComercial(models.Model):
             motivo='Asignación comercial',
         )
 
-        today = fields.Date.context_today(self)
-
-        if plan['fecha_limite'] < today:
-            self._reserva_liberar(
-                tipo='automatica',
-                motivo='El plazo desde la fecha base ya había vencido.',
-            )
-
+        _logger.info(
+            '[RESERVA][ASIGNADA] maquina=%s asesora=%s cliente=%s '
+            'ciclo=%s base=%s limite=%s dias=%s',
+            self.id, asesora.id, cliente.id if cliente else False,
+            self.reserva_ciclo, base, plan['fecha_limite'], plan['dias'],
+        )
         return True
 
     # -------------------------------------------------------------------------
@@ -1913,9 +1950,17 @@ class SatSatReservaComercial(models.Model):
 
         previous_deadline = self.reserva_fecha_limite
 
-        plan = self._reserva_calcular_plazo(
-            cliente=cliente,
-        )
+        # Una reserva especial o confirmada conserva el vencimiento
+        # autorizado; asignar el cliente no debe reemplazarlo.
+        if self.reserva_estado in ('especial', 'confirmada') and self.reserva_origen == 'gerencia':
+            self.with_context(sat_reserva_internal_write=True).write({
+                'reserva_cliente_id': cliente.id,
+                'reserva_asesora_id': advisor.id,
+            })
+            return True
+
+        plan = self._reserva_calcular_plazo(cliente=cliente)
+        self._reserva_validar_plan_antes_de_asignar(plan)
 
         self.with_context(
             sat_reserva_internal_write=True,
@@ -1940,14 +1985,12 @@ class SatSatReservaComercial(models.Model):
             motivo='Cliente asignado dentro del mismo ciclo comercial',
         )
 
-        today = fields.Date.context_today(self)
-
-        if plan['fecha_limite'] < today:
-            self._reserva_liberar(
-                tipo='automatica',
-                motivo='La regla aplicable al cliente ya se encontraba vencida.',
-            )
-
+        _logger.info(
+            '[RESERVA][CLIENTE] maquina=%s cliente=%s asesora=%s '
+            'ciclo=%s base=%s limite=%s dias=%s',
+            self.id, cliente.id, advisor.id, self.reserva_ciclo,
+            plan['fecha_base'], plan['fecha_limite'], plan['dias'],
+        )
         return True
 
     # -------------------------------------------------------------------------
@@ -2148,6 +2191,12 @@ class SatSatReservaComercial(models.Model):
         if self.estado_ventas_id == 'entregada':
             return False
 
+        _logger.info(
+            '[RESERVA][LIBERAR] maquina=%s tipo=%s ciclo=%s '
+            'estado=%s vencimiento=%s motivo=%s',
+            self.id, tipo, self.reserva_ciclo, self.reserva_estado,
+            self.reserva_fecha_limite, motivo or '',
+        )
         previous_client = self.reserva_cliente_id or self.cliente_id
         previous_advisor = self.reserva_asesora_id
         previous_deadline = self.reserva_fecha_limite
