@@ -425,38 +425,35 @@ class SolicitudPartes(models.Model):
     # CRUD
     # -------------------------------------------------------------------------
 
-    @api.model
-    def create(self, vals):
-        if vals.get('name', 'Nuevo') == 'Nuevo':
-            vals['name'] = (
-                self.env['ir.sequence'].next_by_code('solicitud.partes') or 'Nuevo'
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Crear en lote, preservando secuencias, tokens y notificaciones."""
+        preparados = []
+        for original in vals_list:
+            vals = dict(original)
+            if not vals.get('name') or vals.get('name') == 'Nuevo':
+                vals['name'] = (
+                    self.env['ir.sequence'].next_by_code('solicitud.partes') or 'Nuevo'
+                )
+            # Los enlaces de aprobación requieren tokens únicos por solicitud.
+            vals['access_token'] = uuid.uuid4().hex
+            vals['token_gerencia'] = uuid.uuid4().hex
+            preparados.append(vals)
+
+        records = super().create(preparados)
+        for record in records:
+            base_url = record._get_base_url()
+            token = record.token_gerencia
+            url_aprobar = f"{base_url}/partes/gerencia/{token}/aprobar"
+            url_rechazar = f"{base_url}/partes/gerencia/{token}/rechazar"
+            record._enviar_whatsapp_gerencia(url_aprobar, url_rechazar)
+            record._enviar_email(
+                'sat.email_template_solicitud_gerencia',
+                ctx={'url_aprobar': url_aprobar, 'url_rechazar': url_rechazar},
             )
-        # Generar ambos tokens al crear
-        vals['access_token']   = uuid.uuid4().hex
-        vals['token_gerencia'] = uuid.uuid4().hex
-        record = super().create(vals)
-
-        base_url = record._get_base_url()
-        token    = record.token_gerencia
-
-        # Construir URLs ANTES de cualquier escritura que pueda invalidar el token
-        url_aprobar  = f"{base_url}/partes/gerencia/{token}/aprobar"
-        url_rechazar = f"{base_url}/partes/gerencia/{token}/rechazar"
-
-        # 1) WhatsApp a Gerencia — un clic aprueba directo
-        record._enviar_whatsapp_gerencia(url_aprobar, url_rechazar)
-
-        # 2) Email a Gerencia — botones de un clic en el cuerpo del correo
-        record._enviar_email(
-            'sat.email_template_solicitud_gerencia',
-            ctx={
-                'url_aprobar':  url_aprobar,
-                'url_rechazar': url_rechazar,
-            }
-        )
-
-        record.write({'state': 'submitted'})
-        return record
+            record.write({'state': 'submitted'})
+            _logger.info('[SOLICITUD PARTES] Creada y notificada id=%s numero=%s', record.id, record.name)
+        return records
 
     # -------------------------------------------------------------------------
     # Acciones desde Odoo (botones)
@@ -638,7 +635,8 @@ class SolicitudPartes(models.Model):
             'retirado_por': self.tecnico_asignado_id.id,
             'fecha_retiro': fields.Datetime.now(),
         })
-        self.maquina_origen_id.write({'estado_alquiler_id': 'con_problemas'})
+        # El estado se aplica al primer retiro en _confirmar_retiro().
+        # No sobreescribir 'partes' con 'con_problemas' al completar la solicitud.
 
         if self.responsable_reposicion_id:
             base_url    = self._get_base_url()

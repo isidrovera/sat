@@ -192,16 +192,25 @@ class SolicitudParteTecnico(models.Model):
             rec.partes_pendientes    = len(rec.linea_ids.filtered(lambda l: l.state == 'buscando'))
 
     # ── Crear ─────────────────────────────────────────────────────────────
-    @api.model
-    def create(self, vals):
-        if vals.get('name', 'Nuevo') == 'Nuevo':
-            vals['name'] = self.env['ir.sequence'].next_by_code(
-                'solicitud.parte.tecnico') or 'Nuevo'
-        if not vals.get('access_token'):
-            vals['access_token'] = str(uuid.uuid4())
-        if not vals.get('access_token_logistica'):
-            vals['access_token_logistica'] = str(uuid.uuid4())
-        return super().create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Crear una o varias solicitudes; compatible con Odoo 19."""
+        preparados = []
+        for original in vals_list:
+            vals = dict(original)
+            if not vals.get('name') or vals.get('name') == 'Nuevo':
+                vals['name'] = (
+                    self.env['ir.sequence'].next_by_code('solicitud.parte.tecnico')
+                    or 'Nuevo'
+                )
+            if not vals.get('access_token'):
+                vals['access_token'] = str(uuid.uuid4())
+            if not vals.get('access_token_logistica'):
+                vals['access_token_logistica'] = str(uuid.uuid4())
+            preparados.append(vals)
+        records = super().create(preparados)
+        _logger.info('[SOLICITUD PARTE TECNICO] Creadas %s solicitudes: ids=%s', len(records), records.ids)
+        return records
 
     # ── URLs token ────────────────────────────────────────────────────────
     def _get_base_url(self):

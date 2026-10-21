@@ -272,6 +272,9 @@ class SolicitudPartesLinea(models.Model):
         ):
             return
 
+        if not self.fecha_retiro_real:
+            _logger.warning('Línea %s sin fecha de retiro; no se envía recordatorio.', self.id)
+            return
         dias = (fields.Datetime.now() - self.fecha_retiro_real).days
         base_url = solicitud._get_base_url()
         url_reponer = f"{base_url}/partes/reponer/{solicitud.access_token}"
