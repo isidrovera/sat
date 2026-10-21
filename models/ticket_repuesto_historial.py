@@ -317,40 +317,42 @@ class TicketRepuestoHistorial(models.Model):
     # CRUD
     # ============================================================
 
-    @api.model
-    def create(self, vals):
-        _logger.info(
-            "[ticket.repuesto.historial] create() — "
-            "equipo_id=%s | subparte_id=%s | color_id=%s | "
-            "contometro=%s | tipo=%s | fecha=%s",
-            vals.get('equipo_id'),
-            vals.get('subparte_id'),
-            vals.get('color_id'),
-            vals.get('contometro_cambio'),
-            vals.get('tipo_contometro'),
-            vals.get('fecha_cambio'),
-        )
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Registra uno o varios cambios, compatible con ORM de Odoo 19."""
+        for vals in vals_list:
+            _logger.info(
+                "[ticket.repuesto.historial] create() — "
+                "equipo_id=%s | subparte_id=%s | color_id=%s | "
+                "contometro=%s | tipo=%s | fecha=%s",
+                vals.get('equipo_id'),
+                vals.get('subparte_id'),
+                vals.get('color_id'),
+                vals.get('contometro_cambio'),
+                vals.get('tipo_contometro'),
+                vals.get('fecha_cambio'),
+            )
 
-        record = super().create(vals)
+        records = super().create(vals_list)
 
-        # Con store=False los campos de durabilidad se calculan en tiempo real,
-        # pero logueamos los valores para verificar que el compute funciona
-        # correctamente justo después del create.
-        _logger.info(
-            "[ticket.repuesto.historial] creado — "
-            "id=%s | equipo=%s | subparte=%s | color=%s | tipo=%s | "
-            "contometro=%s | anterior_id=%s | cont_anterior=%s | "
-            "copias=%s | meses=%s",
-            record.id,
-            record.equipo_id.serie if record.equipo_id else 'NA',
-            record.subparte_id.name if record.subparte_id else 'NA',
-            record.color_id.name if record.color_id else 'B/N',
-            record.tipo_contometro,
-            record.contometro_cambio,
-            record.cambio_anterior_id.id if record.cambio_anterior_id else 'ninguno',
-            record.contometro_cambio_anterior or 'ninguno',
-            record.copias_duracion,
-            record.meses_duracion,
-        )
+        # Los campos store=False se calculan en tiempo real. Registrar
+        # cada historial creado sin asumir que el resultado es un singleton.
+        for record in records:
+            _logger.info(
+                "[ticket.repuesto.historial] creado — "
+                "id=%s | equipo=%s | subparte=%s | color=%s | tipo=%s | "
+                "contometro=%s | anterior_id=%s | cont_anterior=%s | "
+                "copias=%s | meses=%s",
+                record.id,
+                record.equipo_id.serie if record.equipo_id else 'NA',
+                record.subparte_id.name if record.subparte_id else 'NA',
+                record.color_id.name if record.color_id else 'B/N',
+                record.tipo_contometro,
+                record.contometro_cambio,
+                record.cambio_anterior_id.id if record.cambio_anterior_id else 'ninguno',
+                record.contometro_cambio_anterior or 'ninguno',
+                record.copias_duracion,
+                record.meses_duracion,
+            )
 
-        return record
+        return records

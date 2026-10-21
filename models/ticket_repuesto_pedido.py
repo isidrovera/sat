@@ -190,21 +190,23 @@ class TicketRepuestoPedido(models.Model):
 
 
 
-    @api.model
+    @api.model_create_multi
 
-    def create(self, vals):
+    def create(self, vals_list):
 
-        if vals.get('name', _('New')) == _('New'):
+        for vals in vals_list:
 
-            vals['name'] = self.env['ir.sequence'].sudo().next_by_code('ticket.repuesto.pedido') or '/'
+            if vals.get('name', _('New')) == _('New'):
 
-        if not vals.get('token'):
+                vals['name'] = self.env['ir.sequence'].sudo().next_by_code('ticket.repuesto.pedido') or '/'
 
-            vals['token'] = str(uuid.uuid4()).replace('-', '')
+            if not vals.get('token'):
 
-        _logger.info("[ticket.repuesto.pedido] create() — ticket_id=%s | name=%s", vals.get('ticket_id'), vals.get('name'))
+                vals['token'] = str(uuid.uuid4()).replace('-', '')
 
-        return super().create(vals)
+            _logger.info("[ticket.repuesto.pedido] create() — ticket_id=%s | name=%s", vals.get('ticket_id'), vals.get('name'))
+
+        return super().create(vals_list)
 
 
 
@@ -2347,10 +2349,12 @@ class TicketRepuestoPedidoLinea(models.Model):
 
                 )
 
-    @api.model
+    @api.model_create_multi
 
-    def create(self, vals):
+    def create(self, vals_list):
 
-        _logger.info("[ticket.repuesto.pedido.linea] create() — pedido_id=%s | subparte_id=%s | color_id=%s | cantidad=%s", vals.get('pedido_id'), vals.get('subparte_id'), vals.get('color_id'), vals.get('cantidad'))
+        for vals in vals_list:
 
-        return super().create(vals)
+            _logger.info("[ticket.repuesto.pedido.linea] create() — pedido_id=%s | subparte_id=%s | color_id=%s | cantidad=%s", vals.get('pedido_id'), vals.get('subparte_id'), vals.get('color_id'), vals.get('cantidad'))
+
+        return super().create(vals_list)
