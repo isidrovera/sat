@@ -64,7 +64,9 @@ class SatRepuestoFotoUploadWizard(models.TransientModel):
 
         service = RepuestoMicrosoftService(self.location_id, user=self.env.user)
         # Validar antes de cualquier solicitud remota.
-        _, _, mime_type = service.validate_file(data, self.imagen_filename)
+        validated_data, safe_filename, mime_type = service.validate_file(
+            data, self.imagen_filename
+        )
         if self.principal and not mime_type.startswith('image/'):
             raise UserError(_('Solo una imagen puede marcarse como fotografía principal.'))
 
@@ -72,7 +74,7 @@ class SatRepuestoFotoUploadWizard(models.TransientModel):
             '[BIBLIOTECA][ARCHIVO][INICIO] ficha=%s usuario=%s archivo=%s bytes=%s',
             ficha.id, self.env.user.id, self.imagen_filename, len(data),
         )
-        info = service.upload(ficha, data, self.imagen_filename)
+        info = service.upload(ficha, validated_data, safe_filename)
         try:
             photo = self.env['sat.repuesto.foto'].create({
                 'compatibilidad_id': ficha.id,
