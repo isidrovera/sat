@@ -377,3 +377,5 @@ access_sat_repuesto_compatibilidad_user,sat.repuesto.compatibilidad.user,model_s
 access_sat_repuesto_compatibilidad_admin,sat.repuesto.compatibilidad.admin,model_sat_repuesto_compatibilidad,base.group_system,1,1,1,1
 access_sat_repuesto_foto_user,sat.repuesto.foto.user,model_sat_repuesto_foto,base.group_user,1,1,1,0
 access_sat_repuesto_foto_admin,sat.repuesto.foto.admin,model_sat_repuesto_foto,base.group_system,1,1,1,1
+access_sat_repuesto_foto_upload_wizard_user,sat.repuesto.foto.upload.wizard.user,model_sat_repuesto_foto_upload_wizard,base.group_user,1,1,1,0
+access_sat_repuesto_foto_upload_wizard_admin,sat.repuesto.foto.upload.wizard.admin,model_sat_repuesto_foto_upload_wizard,base.group_system,1,1,1,1
