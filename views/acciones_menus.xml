@@ -120,12 +120,19 @@
       <field name="view_mode">list,form,graph,kanban</field>
       <field name="search_view_id" ref="reparaciones_search_view"/>
     </record>
-    <!-- ── Máquinas / Equipos (Andes) ────────────────────────────────── -->
+    
+    <!-- ── Máquinas / Equipos (Andes) ─────────────────────────── -->
     <record id="sat.action_alquiler_window" model="ir.actions.act_window">
-      <field name="name">Máquinas</field>
-      <field name="res_model">alquiler</field>
-      <field name="view_mode">list,form,calendar,graph,kanban</field>
+        <field name="name">Máquinas</field>
+        <field name="res_model">alquiler</field>
+        <field name="view_mode">list,form,calendar,graph,kanban</field>
+
+        <!-- Activar automáticamente el filtro Stock de Andes -->
+        <field name="context">
+            {'search_default_stock_andes': 1}
+        </field>
     </record>
+
     <!-- Acción para Tickets -->
     <record id="action_ticket_alquiler_soporte" model="ir.actions.act_window">
       <field name="name">Tickets</field>
