@@ -1,11 +1,7 @@
-
 # -*- coding: utf-8 -*-
-"""Visualización de archivos SharePoint en la biblioteca SAT.
-
-Amplía los modelos existentes sin crear tablas nuevas.
-Los archivos originales permanecen en SharePoint.
-"""
-
+"""Presentación de compatibilidades y medios, sin modificar los maestros SAT."""
+from collections import defaultdict
+from markupsafe import Markup, escape
 from odoo import api, fields, models
 
 
@@ -13,94 +9,90 @@ class SatRepuestoCompatibilidadMedia(models.Model):
     _inherit = 'sat.repuesto.compatibilidad'
 
     foto_principal_url = fields.Char(
-        string='Vista previa principal',
-        compute='_compute_foto_principal_url',
+        string='Vista previa principal', compute='_compute_foto_principal_url',
         compute_sudo=False,
     )
-
-    @api.depends(
-        'foto_ids',
-        'foto_ids.principal',
-        'foto_ids.mime_type',
-        'foto_ids.sharepoint_item_id',
+    modelos_por_marca_html = fields.Html(
+        string='Equipos compatibles por marca',
+        compute='_compute_modelos_por_marca_html',
+        sanitize=False, compute_sudo=False,
     )
+
+    @api.depends('foto_ids', 'foto_ids.principal', 'foto_ids.mime_type',
+                 'foto_ids.sharepoint_item_id')
     def _compute_foto_principal_url(self):
         for record in self:
             imagenes = record.foto_ids.filtered(
-                lambda foto: (
-                    bool(foto.sharepoint_item_id)
-                    and (foto.mime_type or '')
-                    .lower()
-                    .startswith('image/')
-                    and (foto.mime_type or '').lower()
-                    != 'image/svg+xml'
-                )
+                lambda f: (f.mime_type or '').lower().startswith('image/')
+                and (f.mime_type or '').lower() != 'image/svg+xml'
+                and bool(f.sharepoint_item_id)
             )
-
-            principal = (
-                imagenes.filtered('principal')[:1]
-                or imagenes[:1]
-            )
-
+            principal = imagenes.filtered('principal')[:1] or imagenes[:1]
             record.foto_principal_url = (
-                '/sat/repuestos/media/%s?size=medium'
-                % principal.id
-                if principal
-                else False
+                '/sat/repuestos/media/%d?size=medium' % principal.id
+                if principal else False
             )
+
+    @api.depends('modelo_maquina_ids', 'modelo_maquina_ids.name',
+                 'modelo_maquina_ids.marca_id', 'modelo_maquina_ids.marca_id.name')
+    def _compute_modelos_por_marca_html(self):
+        """Presenta TODOS los modelos, ordenados por marca, con HTML escapado.
+
+        No limita el número ni construye compatibilidades nuevas.
+        """
+        for record in self:
+            grupos = defaultdict(list)
+            for modelo in record.modelo_maquina_ids:
+                marca = modelo.marca_id.name or 'Marca no indicada'
+                grupos[marca].append(modelo.name or 'Sin nombre')
+
+            if not grupos:
+                record.modelos_por_marca_html = Markup(
+                    '<div class="text-muted small">Sin modelos compatibles registrados</div>'
+                )
+                continue
+
+            parts = []
+            for marca in sorted(grupos, key=str.casefold):
+                parts.append(
+                    '<div class="mb-2">'
+                    '<div class="d-flex align-items-center gap-2 mb-2">'
+                    '<i class="fa fa-print text-primary" aria-hidden="true"></i>'
+                    '<strong class="small">%s</strong>'
+                    '<span class="text-muted small">(%s)</span>'
+                    '</div><div class="d-flex flex-wrap gap-1">'
+                    % (escape(marca), len(grupos[marca]))
+                )
+                for modelo in sorted(grupos[marca], key=str.casefold):
+                    parts.append(
+                        '<span class="badge rounded-pill border '
+                        'bg-primary-subtle text-primary-emphasis ' 
+                        'fw-medium py-2 px-2">%s</span>' % escape(modelo)
+                    )
+                parts.append('</div></div>')
+            record.modelos_por_marca_html = Markup(''.join(str(x) for x in parts))
 
 
 class SatRepuestoFotoMedia(models.Model):
     _inherit = 'sat.repuesto.foto'
 
     media_url = fields.Char(
-        string='URL de visualización',
-        compute='_compute_media_info',
-        compute_sudo=False,
+        string='Vista previa', compute='_compute_media_url', compute_sudo=False,
     )
-
     media_tipo = fields.Selection(
-        [
-            ('imagen', 'Imagen'),
-            ('video', 'Video'),
-            ('pdf', 'PDF'),
-            ('otro', 'Otro documento'),
-        ],
-        string='Tipo de archivo',
-        compute='_compute_media_info',
-        compute_sudo=False,
+        [('imagen', 'Imagen'), ('video', 'Video'), ('otro', 'Documento')],
+        string='Tipo de archivo', compute='_compute_media_url', compute_sudo=False,
     )
 
-    @api.depends(
-        'mime_type',
-        'sharepoint_item_id',
-    )
-    def _compute_media_info(self):
+    @api.depends('mime_type', 'sharepoint_item_id')
+    def _compute_media_url(self):
         for record in self:
-            mime = (
-                (record.mime_type or '')
-                .split(';', 1)[0]
-                .strip()
-                .lower()
+            mime = (record.mime_type or '').lower()
+            record.media_tipo = (
+                'imagen' if mime.startswith('image/')
+                else 'video' if mime.startswith('video/') else 'otro'
             )
-
-            if (
-                mime.startswith('image/')
-                and mime != 'image/svg+xml'
-            ):
-                record.media_tipo = 'imagen'
-
-            elif mime.startswith('video/'):
-                record.media_tipo = 'video'
-
-            elif mime == 'application/pdf':
-                record.media_tipo = 'pdf'
-
-            else:
-                record.media_tipo = 'otro'
-
             record.media_url = (
-                '/sat/repuestos/media/%s' % record.id
-                if record.id and record.sharepoint_item_id
-                else False
+                '/sat/repuestos/media/%d' % record.id
+                if record.id and record.sharepoint_item_id else False
             )
