@@ -1,11 +1,11 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
   <data>
-
-    <!-- ====================================================== -->
-    <!-- BIBLIOTECA DE REPUESTOS - ODOO 19                      -->
-    <!-- VISTA DE BUSQUEDA                                      -->
-    <!-- ====================================================== -->
+    <!-- ============================================================= -->
+    <!-- BIBLIOTECA DE COMPATIBILIDADES - ODOO 19 / SAT EXISTENTE       -->
+    <!-- Usa exclusivamente campos de sat.repuesto.compatibilidad     -->
+    <!-- y sat.repuesto.foto. No modifica vistas/modelos anteriores.   -->
+    <!-- ============================================================= -->
 
     <record id="view_sat_repuesto_compatibilidad_search" model="ir.ui.view">
       <field name="name">sat.repuesto.compatibilidad.search</field>
@@ -19,16 +19,13 @@
           <field name="marca_id"/>
           <field name="toner_id"/>
           <field name="modelo_maquina_ids" string="Modelo compatible"/>
-
           <separator/>
-
           <filter name="filter_verificados" string="Verificados" domain="[('estado','=','verificado')]"/>
           <filter name="filter_pendientes" string="Pendientes" domain="[('estado','in',['borrador','pendiente'])]"/>
           <filter name="filter_repuestos" string="Repuestos" domain="[('tipo_registro','=','repuesto')]"/>
           <filter name="filter_toner" string="Tóner" domain="[('tipo_registro','=','toner')]"/>
           <filter name="filter_con_fotos" string="Con fotografías" domain="[('foto_ids','!=',False)]"/>
           <filter name="filter_archivados" string="Archivados" domain="[('active','=',False)]"/>
-
           <group>
             <filter name="group_componente" string="Componente" context="{'group_by':'componente_id'}"/>
             <filter name="group_subparte" string="Subparte" context="{'group_by':'subparte_id'}"/>
@@ -39,10 +36,6 @@
         </search>
       </field>
     </record>
-
-    <!-- ====================================================== -->
-    <!-- VISTA LISTA                                            -->
-    <!-- ====================================================== -->
 
     <record id="view_sat_repuesto_compatibilidad_list" model="ir.ui.view">
       <field name="name">sat.repuesto.compatibilidad.list</field>
@@ -58,370 +51,155 @@
           <field name="codigo_parte" optional="show"/>
           <field name="marca_id" optional="show"/>
           <field name="color" optional="hide"/>
-          <field name="modelo_count" string="Modelos"/>
-          <field name="foto_count" string="Archivos"/>
+          <field name="modelo_count" string="Modelos" optional="show"/>
+          <field name="foto_count" string="Fotos" optional="show"/>
           <field name="estado" widget="badge" decoration-success="estado == 'verificado'" decoration-warning="estado == 'pendiente'" decoration-danger="estado == 'descartado'"/>
           <field name="write_date" optional="hide"/>
         </list>
       </field>
     </record>
 
-    <!-- ====================================================== -->
-    <!-- VISTA KANBAN MODERNA                                   -->
-    <!-- ====================================================== -->
-
     <record id="view_sat_repuesto_compatibilidad_kanban" model="ir.ui.view">
       <field name="name">sat.repuesto.compatibilidad.kanban</field>
       <field name="model">sat.repuesto.compatibilidad</field>
       <field name="arch" type="xml">
         <kanban string="Catálogo visual" class="o_kanban_mobile" sample="0">
-          <field name="foto_principal_url"/>
-          <field name="name"/>
+          <field name="foto_principal_url"/><field name="name"/>
           <field name="tipo_registro"/>
           <field name="componente_id"/>
           <field name="subparte_id"/>
           <field name="toner_id"/>
           <field name="codigo_parte"/>
           <field name="marca_id"/>
+          <field name="color"/>
           <field name="modelo_count"/>
           <field name="foto_count"/>
           <field name="estado"/>
-
           <templates>
             <t t-name="card">
-
               <div class="d-flex flex-column gap-2 p-1">
-
-                <!-- Imagen principal -->
-                <div class="position-relative bg-light rounded overflow-hidden" style="height:180px;">
-
-                  <img t-if="record.foto_principal_url.raw_value"
-                       t-att-src="record.foto_principal_url.raw_value"
-                       class="w-100 h-100"
-                       style="object-fit:contain;"
-                       alt="Fotografía del repuesto"
-                       loading="lazy"/>
-
-                  <div t-else="" class="h-100 d-flex align-items-center justify-content-center text-muted">
-                    <i class="fa fa-image fa-3x"/>
-                  </div>
-
-                </div>
-
-                <!-- Título y estado -->
-                <div class="d-flex justify-content-between align-items-start gap-2">
-                  <div class="fw-bold fs-5 text-break">
-                    <field name="name"/>
-                  </div>
-
+                <div class="position-relative bg-light rounded overflow-hidden" style="height:175px;">
+  <img t-if="record.foto_principal_url.raw_value" t-att-src="record.foto_principal_url.raw_value" class="w-100 h-100" style="object-fit:contain;" alt="Fotografía del repuesto" loading="lazy"/>
+  <div t-else="" class="h-100 d-flex align-items-center justify-content-center text-muted"><i class="fa fa-image fa-3x"/></div>
+</div><div class="d-flex justify-content-between align-items-start gap-2">
+                  <div class="fw-bold fs-5 text-break"><field name="name"/></div>
                   <span t-if="record.estado.raw_value == 'verificado'" class="badge rounded-pill text-bg-success">Verificado</span>
                   <span t-elif="record.estado.raw_value == 'pendiente'" class="badge rounded-pill text-bg-warning">Pendiente</span>
                   <span t-elif="record.estado.raw_value == 'descartado'" class="badge rounded-pill text-bg-danger">Descartado</span>
                   <span t-else="" class="badge rounded-pill text-bg-secondary">Preparación</span>
                 </div>
-
-                <!-- Tipo -->
-                <div class="small text-muted">
+                <div class="text-muted small">
                   <span t-if="record.tipo_registro.raw_value == 'toner'">Tóner / consumible</span>
                   <span t-else="">Repuesto / subparte</span>
                 </div>
-
-                <!-- Componente y subparte -->
-                <div t-if="record.tipo_registro.raw_value == 'toner'">
-                  <field name="toner_id"/>
+                <div t-if="record.tipo_registro.raw_value == 'toner'" class="text-break"><field name="toner_id"/></div>
+                <div t-else="" class="text-break">
+                  <div><field name="componente_id"/></div>
+                  <div class="text-muted small"><field name="subparte_id"/></div>
                 </div>
-
-                <div t-else="">
-                  <div>
-                    <field name="componente_id"/>
-                  </div>
-                  <div class="small text-muted">
-                    <field name="subparte_id"/>
-                  </div>
-                </div>
-
-                <!-- Código -->
                 <div t-if="record.codigo_parte.raw_value" class="small">
-                  <span class="text-muted">Código: </span>
-                  <strong>
-                    <field name="codigo_parte"/>
-                  </strong>
+                  <span class="text-muted">Código: </span><strong><field name="codigo_parte"/></strong>
                 </div>
-
-                <div t-if="record.marca_id.raw_value" class="small text-muted">
-                  <field name="marca_id"/>
+                <div class="small text-muted" t-if="record.marca_id.raw_value"><field name="marca_id"/></div>
+                <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
+                  <span class="small"><i class="fa fa-print me-1"/> <field name="modelo_count"/> modelos</span>
+                  <span class="small"><i class="fa fa-camera me-1"/> <field name="foto_count"/> fotos</span>
                 </div>
-
-                <!-- Contadores -->
-                <div class="d-flex justify-content-between border-top pt-2 mt-2">
-                  <span class="small">
-                    <i class="fa fa-print me-1"/>
-                    <field name="modelo_count"/> modelos
-                  </span>
-                  <span class="small">
-                    <i class="fa fa-camera me-1"/>
-                    <field name="foto_count"/> archivos
-                  </span>
-                </div>
-
-                <!-- Acciones -->
-                <div class="d-flex gap-2">
+                <div class="d-flex gap-2 mt-1">
                   <a type="open" class="btn btn-outline-primary btn-sm flex-grow-1">Ver ficha</a>
-                  <button type="object"
-                          name="action_subir_foto"
-                          class="btn btn-outline-secondary btn-sm"
-                          title="Agregar archivo">
-                    <i class="fa fa-cloud-upload"/>
-                  </button>
+                  <button type="object" name="action_subir_foto" class="btn btn-outline-secondary btn-sm" title="Agregar fotografía"><i class="fa fa-camera"/></button>
                 </div>
-
               </div>
-
             </t>
           </templates>
         </kanban>
       </field>
     </record>
 
-    <!-- ====================================================== -->
-    <!-- FORMULARIO MODERNO                                     -->
-    <!-- ====================================================== -->
-
     <record id="view_sat_repuesto_compatibilidad_form" model="ir.ui.view">
       <field name="name">sat.repuesto.compatibilidad.form</field>
       <field name="model">sat.repuesto.compatibilidad</field>
       <field name="arch" type="xml">
-
         <form string="Referencia de repuesto / consumible">
-
           <header>
-            <button name="action_verificar"
-                    type="object"
-                    string="Verificar compatibilidad"
-                    class="btn-primary"
-                    icon="fa-check"
-                    invisible="estado == 'verificado'"/>
-
-            <button name="action_desvalidar"
-                    type="object"
-                    string="Enviar a revisión"
-                    icon="fa-undo"
-                    invisible="estado != 'verificado'"/>
-
-            <button name="action_marcar_pendiente"
-                    type="object"
-                    string="Marcar pendiente"
-                    invisible="estado in ['pendiente','verificado']"/>
-
-            <field name="estado"
-                   widget="statusbar"
-                   statusbar_visible="borrador,pendiente,verificado"/>
+            <button name="action_verificar" type="object" string="Verificar compatibilidad" class="btn-primary" icon="fa-check" invisible="estado == 'verificado'"/>
+            <button name="action_desvalidar" type="object" string="Enviar a revisión" icon="fa-undo" invisible="estado != 'verificado'"/>
+            <button name="action_marcar_pendiente" type="object" string="Marcar pendiente" invisible="estado in ['pendiente','verificado']"/>
+            <field name="estado" widget="statusbar" statusbar_visible="borrador,pendiente,verificado"/>
           </header>
-
           <sheet>
-
             <div class="oe_button_box" name="button_box">
-              <button name="action_subir_foto"
-                      type="object"
-                      class="oe_stat_button"
-                      icon="fa-cloud-upload">
-                <div class="o_stat_info">
-                  <span class="o_stat_text">Subir archivo</span>
-                  <span class="o_stat_text">SharePoint</span>
-                </div>
+              <button name="action_subir_foto" type="object" class="oe_stat_button" icon="fa-cloud-upload">
+                <div class="o_stat_info"><span class="o_stat_text">Subir foto a</span><span class="o_stat_text">SharePoint</span></div>
               </button>
             </div>
-
             <div class="oe_title">
               <label for="name"/>
-              <h1>
-                <field name="name" placeholder="Ej.: Cilindro OPC bizhub 224e"/>
-              </h1>
+              <h1><field name="name" readonly="1" force_save="1" placeholder="Se completa automáticamente con la subparte o el tóner"/></h1>
             </div>
-
             <group>
               <group string="Identificación">
-                <field name="tipo_registro" widget="radio" options="{'horizontal': True}"/>
-
-                <field name="componente_id"
-                       invisible="tipo_registro != 'repuesto'"
-                       required="tipo_registro == 'repuesto'"
-                       options="{'no_create': True, 'no_create_edit': True}"/>
-
+                <field name="tipo_registro" widget="radio" options="{'horizontal': true}"/>
+                <field name="componente_id" invisible="tipo_registro != 'repuesto'" required="tipo_registro == 'repuesto'" options="{'no_create': True, 'no_create_edit': True}"/>
                 <field name="subparte_permitida_ids" invisible="1"/>
-
-                <field name="subparte_id"
-                       invisible="tipo_registro != 'repuesto'"
-                       required="tipo_registro == 'repuesto'"
-                       domain="[('id','in',subparte_permitida_ids)]"
-                       options="{'no_create': True, 'no_create_edit': True}"/>
-
-                <field name="toner_id"
-                       invisible="tipo_registro != 'toner'"
-                       required="tipo_registro == 'toner'"
-                       options="{'no_create': True, 'no_create_edit': True}"/>
-
+                <field name="subparte_id" invisible="tipo_registro != 'repuesto'" required="tipo_registro == 'repuesto'" domain="[('id','in',subparte_permitida_ids)]" options="{'no_create': True, 'no_create_edit': True}"/>
+                <field name="toner_id" invisible="tipo_registro != 'toner'" required="tipo_registro == 'toner'" options="{'no_create': True, 'no_create_edit': True}"/>
                 <field name="marca_id" options="{'no_create': True}"/>
                 <field name="color"/>
               </group>
-
               <group string="Referencia técnica">
-                <field name="codigo_parte" placeholder="Código OEM o código de la pieza"/>
-                <field name="codigos_alternativos" placeholder="Códigos alternativos o equivalencias"/>
+                <field name="codigo_parte" placeholder="Código OEM / código de la pieza"/>
+                <field name="codigos_alternativos" placeholder="Códigos equivalentes, alias de búsqueda..."/>
                 <field name="active" widget="boolean_toggle"/>
                 <field name="modelo_count" readonly="1"/>
                 <field name="foto_count" readonly="1"/>
               </group>
             </group>
-
             <notebook>
-
-              <!-- Modelos compatibles -->
               <page string="Modelos compatibles" name="modelos">
-                <div class="alert alert-info" role="alert">
-                  Seleccione los modelos donde esta referencia es compatible.
-                  No se modifica el inventario ni la configuración de SAT.
-                </div>
-
-                <field name="modelo_maquina_ids"
-                       widget="many2many_tags"
-                       options="{'no_create': True, 'no_create_edit': True}"
-                       placeholder="Agregar modelos compatibles..."/>
-
-                <separator string="Condiciones de compatibilidad"/>
-
-                <field name="condiciones"
-                       nolabel="1"
-                       placeholder="Restricciones por versión, serie, color o instalación..."/>
+                <div class="alert alert-info" role="alert">Seleccione todos los modelos donde la referencia es compatible. Esta biblioteca no modifica la configuración ni el inventario de SAT.</div>
+                <field name="modelo_maquina_ids" widget="many2many_tags" options="{'no_create': True, 'no_create_edit': True}" placeholder="Agregar modelos compatibles..."/>
+                <separator string="Condiciones"/>
+                <field name="condiciones" placeholder="Anote restricciones por serie, versión, color, región o adaptación." nolabel="1"/>
               </page>
-
-              <!-- Galería de SharePoint -->
-              <page string="Archivos SharePoint" name="fotografias">
-
-                <button name="action_subir_foto"
-                        type="object"
-                        string="Agregar fotografía o archivo"
-                        class="btn-primary"
-                        icon="fa-cloud-upload"/>
-
-                <div class="text-muted mt-2 mb-3">
-                  Los archivos originales permanecen en SharePoint.
-                  Odoo conserva los identificadores y enlaces de consulta.
-                </div>
-
+              <page string="Fotografías SharePoint" name="fotografias">
+                <button name="action_subir_foto" type="object" string="Agregar fotografía" class="btn-primary" icon="fa-cloud-upload"/>
+                <div class="text-muted mt-2 mb-3">Las fotos se almacenan en SharePoint. Odoo conserva los enlaces e identificadores, no los archivos originales.</div>
                 <field name="foto_ids" nolabel="1" readonly="1">
-
-                  <kanban class="o_kanban_mobile"
-                          create="false"
-                          edit="false"
-                          delete="false">
-
-                    <field name="name"/>
-                    <field name="principal"/>
-                    <field name="mime_type"/>
-                    <field name="media_url"/>
-                    <field name="media_tipo"/>
-                    <field name="sharepoint_web_url"/>
-                    <field name="notas"/>
-
-                    <templates>
-                      <t t-name="card">
-
-                        <div class="d-flex flex-column gap-2 p-2">
-
-                          <!-- Imagen / video / documento -->
-                          <div class="bg-light rounded overflow-hidden d-flex align-items-center justify-content-center" style="height:180px;">
-
-                            <img t-if="record.media_tipo.raw_value == 'imagen' and record.media_url.raw_value"
-                                 t-att-src="record.media_url.raw_value"
-                                 class="w-100 h-100"
-                                 style="object-fit:contain;"
-                                 alt="Fotografía almacenada en SharePoint"
-                                 loading="lazy"/>
-
-                            <video t-elif="record.media_tipo.raw_value == 'video' and record.media_url.raw_value"
-                                   t-att-src="record.media_url.raw_value"
-                                   controls="controls"
-                                   preload="none"
-                                   class="w-100"
-                                   style="max-height:180px;"/>
-
-                            <div t-elif="record.media_tipo.raw_value == 'pdf'" class="text-center text-muted">
-                              <i class="fa fa-file-pdf-o fa-3x"/>
-                              <div class="mt-2 small">Documento PDF</div>
-                            </div>
-
-                            <div t-else="" class="text-center text-muted">
-                              <i class="fa fa-file-o fa-3x"/>
-                              <div class="mt-2 small">Archivo</div>
-                            </div>
-
-                          </div>
-
-                          <!-- Nombre y principal -->
-                          <div class="d-flex justify-content-between align-items-start gap-2">
-                            <div class="fw-semibold text-break">
-                              <field name="name"/>
-                            </div>
-
-                            <span t-if="record.principal.raw_value"
-                                  class="badge text-bg-primary">
-                              Principal
-                            </span>
-                          </div>
-
-                          <div t-if="record.notas.raw_value" class="small text-muted text-break">
-                            <field name="notas"/>
-                          </div>
-
-                          <!-- Abrir -->
-                          <a t-if="record.sharepoint_web_url.raw_value"
-                             t-att-href="record.sharepoint_web_url.raw_value"
-                             target="_blank"
-                             rel="noopener noreferrer"
-                             class="btn btn-sm btn-outline-primary">
-                            <i class="fa fa-external-link me-1"/>
-                            Abrir en SharePoint
-                          </a>
-
-                        </div>
-
-                      </t>
-                    </templates>
-                  </kanban>
-
-                  <list string="Archivos registrados"
-                        create="false"
-                        edit="false"
-                        delete="false">
-
+                  <kanban class="o_kanban_mobile" create="false" edit="false" delete="false">
+  <field name="name"/><field name="principal"/><field name="mime_type"/><field name="media_url"/><field name="media_tipo"/><field name="sharepoint_web_url"/><field name="notas"/>
+  <templates><t t-name="card">
+    <div class="d-flex flex-column gap-2 p-2">
+      <div class="bg-light rounded overflow-hidden d-flex align-items-center justify-content-center" style="height:175px;">
+        <img t-if="record.media_tipo.raw_value == 'imagen' and record.media_url.raw_value" t-att-src="record.media_url.raw_value" class="w-100 h-100" style="object-fit:contain;" alt="Foto SharePoint" loading="lazy"/>
+        <video t-elif="record.media_tipo.raw_value == 'video' and record.media_url.raw_value" t-att-src="record.media_url.raw_value" controls="controls" preload="none" class="w-100" style="max-height:175px;"/>
+        <i t-else="" class="fa fa-file fa-3x text-muted"/>
+      </div>
+      <div class="d-flex justify-content-between align-items-start gap-2">
+        <div class="fw-semibold text-break"><field name="name"/></div>
+        <span t-if="record.principal.raw_value" class="badge text-bg-primary">Principal</span>
+      </div>
+      <div class="small text-muted text-break" t-if="record.notas.raw_value"><field name="notas"/></div>
+      <a t-if="record.sharepoint_web_url.raw_value" t-att-href="record.sharepoint_web_url.raw_value" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Abrir en SharePoint</a>
+    </div>
+  </t></templates>
+</kanban><list string="Fotografías" create="false" edit="false" delete="false">
                     <field name="sequence" widget="handle"/>
                     <field name="name"/>
                     <field name="principal" widget="boolean"/>
-                    <field name="mime_type" optional="show"/>
                     <field name="notas" optional="show"/>
-                    <field name="sharepoint_web_url" widget="url" string="SharePoint" optional="show"/>
-
-                    <button name="action_abrir_sharepoint"
-                            type="object"
-                            icon="fa-external-link"
-                            title="Abrir en SharePoint"/>
+                    <field name="sharepoint_web_url" widget="url" string="Abrir en SharePoint" optional="show"/>
+                    <button name="action_abrir_sharepoint" type="object" icon="fa-external-link" title="Ver fotografía en SharePoint"/>
                   </list>
-
                 </field>
-
               </page>
-
-              <!-- Información técnica -->
               <page string="Información técnica" name="informacion">
                 <group>
-                  <field name="observaciones" placeholder="Descripción, equivalencias o recomendaciones"/>
+                  <field name="observaciones" placeholder="Descripción, equivalencias y recomendaciones."/>
                   <field name="fuente"/>
                   <field name="referencia_documental" widget="url"/>
                 </group>
               </page>
-
-              <!-- Verificación -->
               <page string="Verificación" name="verificacion">
                 <group>
                   <field name="verificado_por_id" readonly="1"/>
@@ -429,66 +207,40 @@
                   <field name="estado" readonly="1"/>
                 </group>
               </page>
-
             </notebook>
-
           </sheet>
-
           <chatter/>
-
         </form>
       </field>
     </record>
-
-    <!-- ====================================================== -->
-    <!-- LISTA INDEPENDIENTE DE ARCHIVOS                         -->
-    <!-- ====================================================== -->
 
     <record id="view_sat_repuesto_foto_list" model="ir.ui.view">
       <field name="name">sat.repuesto.foto.list</field>
       <field name="model">sat.repuesto.foto</field>
       <field name="arch" type="xml">
-        <list string="Archivos de repuestos" create="false">
+        <list string="Fotografías de repuestos" create="false">
           <field name="compatibilidad_id"/>
           <field name="name"/>
           <field name="principal"/>
-          <field name="mime_type"/>
           <field name="notas" optional="show"/>
           <field name="sharepoint_web_url" widget="url" optional="show"/>
-          <button name="action_abrir_sharepoint"
-                  type="object"
-                  icon="fa-external-link"
-                  title="Abrir en SharePoint"/>
+          <button name="action_abrir_sharepoint" type="object" icon="fa-external-link" title="Abrir en SharePoint"/>
         </list>
       </field>
     </record>
 
-    <!-- ====================================================== -->
-    <!-- ACCIÓN Y MENÚ                                          -->
-    <!-- ====================================================== -->
-
+    <!-- Acción independiente: añadir en el archivo de acciones que ya existe
+         si allí centralizas todas las acciones de SAT. No duplicar IDs. -->
     <record id="action_sat_repuesto_compatibilidad" model="ir.actions.act_window">
       <field name="name">Biblioteca de Repuestos</field>
       <field name="res_model">sat.repuesto.compatibilidad</field>
       <field name="view_mode">kanban,list,form</field>
       <field name="search_view_id" ref="view_sat_repuesto_compatibilidad_search"/>
       <field name="help" type="html">
-        <p class="o_view_nocontent_smiling_face">
-          Registra la primera referencia técnica
-        </p>
-        <p>
-          Relaciona componentes, subpartes y tóner con sus modelos
-          compatibles y archivos almacenados en SharePoint.
-        </p>
+        <p class="o_view_nocontent_smiling_face">Registra la primera referencia técnica</p>
+        <p>Relaciona componentes, subpartes o tóner con sus modelos compatibles y fotografías en SharePoint.</p>
       </field>
     </record>
-
-    <menuitem id="menu_sat_repuesto_biblioteca"
-              name="Biblioteca de Repuestos"
-              parent="sat_menu_root"
-              action="action_sat_repuesto_compatibilidad"
-              sequence="85"
-              groups="base.group_user"/>
-
+    <menuitem id="menu_sat_repuesto_biblioteca" name="Biblioteca de Repuestos" parent="sat_menu_root" action="action_sat_repuesto_compatibilidad" sequence="85" groups="base.group_user"/>
   </data>
 </odoo>
