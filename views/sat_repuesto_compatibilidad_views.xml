@@ -72,6 +72,7 @@
           <field name="marca_id"/>
           <field name="color"/>
           <field name="modelo_count"/>
+          <field name="modelos_resumen"/>
           <field name="foto_count"/>
           <field name="estado"/>
           <templates>
@@ -104,6 +105,10 @@
                   <span class="text-muted">Código: </span><strong><field name="codigo_parte"/></strong>
                 </div>
                 <div class="small text-muted" t-if="record.marca_id.raw_value"><field name="marca_id"/></div>
+                <div class="mt-2 pt-2 border-top">
+                  <div class="small fw-semibold mb-1"><i class="fa fa-print me-1"/> Modelos compatibles</div>
+                  <div class="small text-break"><field name="modelos_resumen"/></div>
+                </div>
                 <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top">
                   <span class="small"><i class="fa fa-print me-1"/> <field name="modelo_count"/> modelos</span>
                   <span class="small"><i class="fa fa-camera me-1"/> <field name="foto_count"/> fotos</span>
@@ -128,6 +133,7 @@
             <button name="action_verificar" type="object" string="Verificar compatibilidad" class="btn-primary" icon="fa-check" invisible="estado == 'verificado'"/>
             <button name="action_desvalidar" type="object" string="Enviar a revisión" icon="fa-undo" invisible="estado != 'verificado'"/>
             <button name="action_marcar_pendiente" type="object" string="Marcar pendiente" invisible="estado in ['pendiente','verificado']"/>
+            <button name="action_asignar_referencia" type="object" string="Generar N.º REP" icon="fa-hashtag" invisible="name and name not in ['Nuevo', '/']"/>
             <field name="estado" widget="statusbar" statusbar_visible="borrador,pendiente,verificado"/>
           </header>
           <sheet>
@@ -156,6 +162,7 @@
                 <field name="codigos_alternativos" placeholder="Códigos equivalentes, alias de búsqueda..."/>
                 <field name="active" widget="boolean_toggle"/>
                 <field name="modelo_count" readonly="1"/>
+                <field name="modelos_resumen" readonly="1"/>
                 <field name="foto_count" readonly="1"/>
               </group>
             </group>
@@ -169,7 +176,7 @@
               <page string="Fotografías SharePoint" name="fotografias">
                 <button name="action_subir_foto" type="object" string="Agregar fotografía" class="btn-primary" icon="fa-cloud-upload"/>
                 <div class="text-muted mt-2 mb-3">Las fotos se almacenan en SharePoint. Odoo conserva los enlaces e identificadores, no los archivos originales.</div>
-                <field name="foto_ids" nolabel="1" readonly="1">
+                <field name="foto_ids" nolabel="1" readonly="1" mode="kanban">
                   <kanban class="o_kanban_mobile" create="false" edit="false" delete="false">
   <field name="name"/><field name="principal"/><field name="mime_type"/><field name="media_url"/><field name="media_tipo"/><field name="sharepoint_web_url"/><field name="notas"/>
   <templates><t t-name="card">
@@ -187,14 +194,7 @@
       <a t-if="record.sharepoint_web_url.raw_value" t-att-href="record.sharepoint_web_url.raw_value" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">Abrir en SharePoint</a>
     </div>
   </t></templates>
-</kanban><list string="Fotografías" create="false" edit="false" delete="false">
-                    <field name="sequence" widget="handle"/>
-                    <field name="name"/>
-                    <field name="principal" widget="boolean"/>
-                    <field name="notas" optional="show"/>
-                    <field name="sharepoint_web_url" widget="url" string="Abrir en SharePoint" optional="show"/>
-                    <button name="action_abrir_sharepoint" type="object" icon="fa-external-link" title="Ver fotografía en SharePoint"/>
-                  </list>
+</kanban>
                 </field>
               </page>
               <page string="Información técnica" name="informacion">

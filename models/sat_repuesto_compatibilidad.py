@@ -18,9 +18,16 @@ class SatRepuestoCompatibilidad(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'write_date desc, id desc'
 
-    name = fields.Char(string='Referencia / nombre comercial',
-                       tracking=True, index=True,
-                       help='Nombre para identificar esta pieza física o referencia; no necesariamente el nombre genérico de subparte.')
+    name = fields.Char(
+        string='Referencia interna',
+        required=False,
+        default='Nuevo',
+        readonly=True,
+        copy=False,
+        tracking=True,
+        index=True,
+        help='Numeración automática REP-000001. El nombre técnico se consulta desde la subparte o el tóner.',
+    )
     active = fields.Boolean(default=True)
     tipo_registro = fields.Selection([
         ('repuesto', 'Repuesto / subparte'),
@@ -54,6 +61,7 @@ class SatRepuestoCompatibilidad(models.Model):
         'compatibilidad_id', 'modelo_id', string='Modelos compatibles',
         tracking=True, help='Relación de compatibilidad mantenida por el personal técnico; no altera la configuración SAT.')
     modelo_count = fields.Integer(compute='_compute_counts', string='Modelos compatibles')
+    modelos_resumen = fields.Char(string='Modelos compatibles (resumen)', compute='_compute_modelos_resumen')
     foto_ids = fields.One2many('sat.repuesto.foto', 'compatibilidad_id', string='Fotografías SharePoint')
     foto_count = fields.Integer(compute='_compute_counts', string='Fotografías')
 
@@ -73,6 +81,25 @@ class SatRepuestoCompatibilidad(models.Model):
     verificado_por_id = fields.Many2one('res.users', readonly=True, copy=False)
     fecha_verificacion = fields.Datetime(readonly=True, copy=False)
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        preparados = []
+        for original in vals_list:
+            vals = dict(original)
+            # Nunca se permite al cliente elegir o duplicar el identificador.
+            referencia = self.env['ir.sequence'].next_by_code(
+                'sat.repuesto.compatibilidad'
+            )
+            if not referencia:
+                raise UserError(_(
+                    'No se encontró la secuencia sat.repuesto.compatibilidad. '
+                    'Compruebe que data/sat_repuesto_sequence.xml esté en el manifiesto '
+                    'y actualice el módulo SAT.'
+                ))
+            vals['name'] = referencia
+            preparados.append(vals)
+        return super().create(preparados)
+
     @api.depends('componente_id')
     def _compute_subparte_permitida_ids(self):
         Line = self.env['modelo.maquina.componente.subparte']
@@ -82,6 +109,28 @@ class SatRepuestoCompatibilidad(models.Model):
                 continue
             lineas = Line.search([('componente_id.tipo_id', '=', rec.componente_id.id)])
             rec.subparte_permitida_ids = lineas.mapped('subparte_id')
+
+    @api.depends('modelo_maquina_ids', 'modelo_maquina_ids.name')
+    def _compute_modelos_resumen(self):
+        for rec in self:
+            nombres = sorted(rec.modelo_maquina_ids.mapped('name'), key=str.casefold)
+            primeros = nombres[:6]
+            texto = ', '.join(primeros)
+            if len(nombres) > 6:
+                texto += ' (+%s más)' % (len(nombres) - 6)
+            rec.modelos_resumen = texto or 'Sin modelos asociados'
+
+    def action_asignar_referencia(self):
+        """Asignar REP únicamente a registros previos que quedaron sin referencia."""
+        for rec in self:
+            if rec.name and rec.name.strip() not in ('Nuevo', '/'):
+                continue
+            nuevo = self.env['ir.sequence'].next_by_code('sat.repuesto.compatibilidad')
+            if not nuevo:
+                raise UserError(_('La secuencia REP no está configurada. Actualice SAT.'))
+            super(SatRepuestoCompatibilidad, rec).write({'name': nuevo})
+            _logger.info('[BIBLIOTECA][SECUENCIA] ficha=%s referencia=%s', rec.id, nuevo)
+        return True
 
     @api.depends('modelo_maquina_ids', 'foto_ids')
     def _compute_counts(self):
@@ -160,15 +209,20 @@ class SatRepuestoCompatibilidad(models.Model):
         return True
 
     def write(self, vals):
-        # Si cambia una compatibilidad aprobada, deja de estar aprobada hasta
-        # una nueva verificación. No se invalida por una simple nota o imagen.
-        campos_criticos = {'tipo_registro', 'componente_id', 'subparte_id', 'toner_id',
-                           'codigo_parte', 'marca_id', 'color', 'modelo_maquina_ids', 'condiciones'}
+        vals = dict(vals)
+        # El consecutivo es inmutable, incluso desde importaciones o RPC.
+        vals.pop('name', None)
+        campos_criticos = {
+            'tipo_registro', 'componente_id', 'subparte_id', 'toner_id',
+            'codigo_parte', 'marca_id', 'color', 'modelo_maquina_ids', 'condiciones',
+        }
         if campos_criticos.intersection(vals) and 'estado' not in vals:
             for rec in self.filtered(lambda r: r.estado == 'verificado'):
                 super(SatRepuestoCompatibilidad, rec).write({
-                    'estado': 'pendiente', 'verificado_por_id': False,
-                    'fecha_verificacion': False})
+                    'estado': 'pendiente',
+                    'verificado_por_id': False,
+                    'fecha_verificacion': False,
+                })
         return super().write(vals)
 
 
