@@ -501,15 +501,13 @@
                                     <group class="o_toner_inner_group">
                                         <field name="early_request_type"
                                                string="Motivo del consumo anticipado"
-                                               readonly="state not in ['evaluacion', 'devuelta']"
-                                               required="requires_evidence"
-                                               options="{'horizontal': false}"/>
+                                               />
                                     </group>
                                     <group class="o_toner_inner_group">
                                         <field name="early_request_reason"
                                                string="Detalle / justificación"
                                                placeholder="Agregue una explicación adicional si corresponde..."
-                                               readonly="state not in ['evaluacion', 'devuelta']"/>
+                                               />
                                     </group>
                                 </group>
 

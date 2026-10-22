@@ -1,509 +1,151 @@
-
 # -*- coding: utf-8 -*-
-"""Servicio SharePoint para Biblioteca de Compatibilidades SAT.
+"""Almacenamiento de archivos de la Biblioteca SAT en SharePoint.
 
-Reutiliza DriveService de odoo_onedrive_integration.
-
-No modifica evidencias ni firmas existentes.
-No crea archivos en ir.attachment.
-No establece un límite fijo de peso para fotografías.
-
-Los límites efectivos de transferencia dependen de Odoo,
-del proxy HTTP, del servidor y de Microsoft Graph.
+Reutiliza DriveService; no crea ir.attachment y no modifica evidencias SAT.
 """
-
 import logging
+import mimetypes
 import re
 import uuid
+from pathlib import PurePath
 
 from odoo import _
 from odoo.exceptions import UserError
-
 from odoo.addons.odoo_onedrive_integration.services.drive_service import DriveService
-
 
 _logger = logging.getLogger(__name__)
 
 
 class RepuestoMicrosoftService:
-
-    ROOT_PATH = (
-        'SAT',
-        'Biblioteca Repuestos',
-    )
-
-    VALID_IMAGES = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.webp': 'image/webp',
+    ROOT_PATH = ('SAT', 'Biblioteca Repuestos')
+    MAX_NAME_LENGTH = 160
+    # No se fija límite de bytes. Los límites reales dependen del servidor,
+    # de Odoo y del mecanismo de carga de DriveService / Microsoft Graph.
+    DANGEROUS_EXTENSIONS = {
+        '.exe', '.dll', '.bat', '.cmd', '.com', '.msi', '.msp',
+        '.ps1', '.psm1', '.vbs', '.vbe', '.js', '.jse', '.wsf',
+        '.wsh', '.scr', '.pif', '.hta', '.jar', '.sh', '.php',
+        '.py', '.pl', '.rb', '.reg', '.lnk', '.iso', '.img',
     }
 
-    MAX_NAME_LENGTH = 160
-
-    # =========================================================
-    # INICIALIZACIÓN
-    # =========================================================
-
     def __init__(self, location, user=None):
-
         location.ensure_one()
-
         if location._name != 'microsoft.storage.location':
-            raise UserError(
-                _('La ubicación de Microsoft 365 no es válida.')
-            )
-
+            raise UserError(_('La ubicación de Microsoft 365 no es válida.'))
         if not location.active or not location.drive_id:
-            raise UserError(
-                _(
-                    'Seleccione una biblioteca SharePoint activa '
-                    'con Drive ID.'
-                )
-            )
-
+            raise UserError(_('Seleccione una biblioteca SharePoint activa con Drive ID.'))
         self.location = location
         self.user = user or location.env.user
-
-        self.drive = DriveService(
-            location,
-            user=self.user,
-        )
-
-        _logger.info(
-            '[BIBLIOTECA][SHAREPOINT][INIT] '
-            'Servicio inicializado location_id=%s '
-            'drive_id=%s user_id=%s',
-            location.id,
-            location.drive_id,
-            self.user.id,
-        )
-
-    # =========================================================
-    # NORMALIZACIÓN DE NOMBRES
-    # =========================================================
-
-    @staticmethod
-    def _safe_name(value, fallback='foto'):
-
-        value = str(value or '').strip()
-
-        value = re.sub(
-            r'[\\/:*?"<>|\x00-\x1f]+',
-            '-',
-            value,
-        )
-
-        value = re.sub(
-            r'\s+',
-            ' ',
-            value,
-        )
-
-        value = value.strip(' .')
-
-        return value or fallback
+        self.drive = DriveService(location, user=self.user)
 
     @classmethod
     def _safe_filename(cls, filename):
-
-        filename = cls._safe_name(
-            filename,
-            'fotografia.jpg',
-        )
-
+        filename = str(filename or '').replace('\\', '/').split('/')[-1]
+        filename = re.sub(r'[\\/:*?"<>|\x00-\x1f]', '-', filename)
+        filename = re.sub(r'\s+', ' ', filename).strip(' .')
+        if not filename or '.' not in filename:
+            raise UserError(_('Seleccione un archivo con nombre y extensión válidos.'))
         stem, dot, extension = filename.rpartition('.')
-
-        if not dot:
-            raise UserError(
-                _('La fotografía debe tener una extensión válida.')
-            )
-
         extension = '.' + extension.lower()
-
-        if extension not in cls.VALID_IMAGES:
-            raise UserError(
-                _(
-                    'Formato no permitido. '
-                    'Utilice JPG, JPEG, PNG o WebP.'
-                )
-            )
-
-        max_stem_length = (
-            cls.MAX_NAME_LENGTH - len(extension)
-        )
-
-        stem = stem[:max_stem_length].rstrip(' .')
-
-        if not stem:
-            stem = 'fotografia'
-
-        return stem + extension
-
-    # =========================================================
-    # VALIDACIÓN DE IMÁGENES
-    # =========================================================
+        if not stem.strip(' .') or not re.fullmatch(r'\.[a-z0-9]{1,15}', extension):
+            raise UserError(_('La extensión del archivo no es válida.'))
+        if extension in cls.DANGEROUS_EXTENSIONS:
+            raise UserError(_('Este tipo de archivo ejecutable no está permitido.'))
+        # Rechazar dobles extensiones que encubran un ejecutable.
+        if any(part.lower() in cls.DANGEROUS_EXTENSIONS for part in PurePath(stem).suffixes):
+            raise UserError(_('El nombre contiene una extensión ejecutable no permitida.'))
+        available = cls.MAX_NAME_LENGTH - len(extension)
+        return stem[:available].rstrip(' .') + extension
 
     @classmethod
-    def validate_image(cls, data, filename):
-        """Valida el tipo de imagen sin imponer límite de peso."""
-
-        if not isinstance(data, (bytes, bytearray)):
-            raise UserError(
-                _('No se recibió una fotografía binaria válida.')
-            )
-
-        if not data:
-            raise UserError(
-                _('La fotografía está vacía.')
-            )
-
+    def validate_file(cls, data, filename):
+        if not isinstance(data, (bytes, bytearray)) or not data:
+            raise UserError(_('No se recibió un archivo binario válido.'))
+        safe = cls._safe_filename(filename)
         content = bytes(data)
+        guessed = mimetypes.guess_type(safe)[0] or 'application/octet-stream'
+        ext = '.' + safe.rsplit('.', 1)[-1].lower()
+        # Confirmar cabeceras cuando la firma es reconocible. No convertir
+        # una comprobación superficial en garantía de seguridad del archivo.
+        signature_mime = None
+        if content.startswith(b'\xff\xd8\xff'):
+            signature_mime = 'image/jpeg'
+        elif content.startswith(b'\x89PNG\r\n\x1a\n'):
+            signature_mime = 'image/png'
+        elif content.startswith(b'RIFF') and content[8:12] == b'WEBP':
+            signature_mime = 'image/webp'
+        elif content.startswith(b'%PDF-'):
+            signature_mime = 'application/pdf'
+        expected = {
+            '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
+            '.png': 'image/png', '.webp': 'image/webp',
+            '.pdf': 'application/pdf',
+        }.get(ext)
+        if expected and signature_mime != expected:
+            raise UserError(_('El contenido no coincide con el tipo de archivo indicado.'))
+        return content, safe, expected or guessed
 
-        safe_name = cls._safe_filename(filename)
-
-        extension = (
-            '.' + safe_name.rsplit('.', 1)[-1].lower()
-        )
-
-        header = content[:12]
-
-        if header.startswith(b'\xff\xd8\xff'):
-            detected_mime = 'image/jpeg'
-
-        elif header.startswith(b'\x89PNG\r\n\x1a\n'):
-            detected_mime = 'image/png'
-
-        elif (
-            header.startswith(b'RIFF')
-            and header[8:12] == b'WEBP'
-        ):
-            detected_mime = 'image/webp'
-
-        else:
-            raise UserError(
-                _(
-                    'El contenido del archivo no corresponde '
-                    'a una imagen JPG, PNG o WebP válida.'
-                )
-            )
-
-        expected_mime = cls.VALID_IMAGES[extension]
-
-        if expected_mime != detected_mime:
-            raise UserError(
-                _(
-                    'La extensión de la fotografía '
-                    'no coincide con su contenido.'
-                )
-            )
-
-        _logger.debug(
-            '[BIBLIOTECA][SHAREPOINT][VALIDATE] '
-            'Archivo validado nombre=%s mime=%s bytes=%s',
-            safe_name,
-            detected_mime,
-            len(content),
-        )
-
-        return content, safe_name, detected_mime
-
-    # =========================================================
-    # BÚSQUEDA DE CARPETAS
-    # =========================================================
-
-    def _find_folder(self, parent_id, folder_name):
-
-        if parent_id:
-            listing = self.drive.list_children(
-                parent_id
-            )
-        else:
-            listing = self.drive.list_root()
-
+    def _find_folder(self, parent_id, name):
+        listing = self.drive.list_children(parent_id) if parent_id else self.drive.list_root()
         if not isinstance(listing, dict):
-            raise UserError(
-                _('SharePoint devolvió una respuesta no válida.')
-            )
-
+            raise UserError(_('SharePoint devolvió una respuesta de carpetas inválida.'))
         for item in listing.get('value') or []:
-
-            if (
-                item.get('name') == folder_name
-                and isinstance(item.get('folder'), dict)
-                and item.get('id')
-            ):
+            if (item.get('name') == name and isinstance(item.get('folder'), dict)
+                    and item.get('id')):
                 return item['id']
-
         return False
 
-    # =========================================================
-    # CREACIÓN DE CARPETAS
-    # =========================================================
-
-    def _ensure_folder(self, parent_id, folder_name):
-
-        folder_name = self._safe_name(
-            folder_name,
-            'Carpeta',
-        )
-
-        existing = self._find_folder(
-            parent_id,
-            folder_name,
-        )
-
+    def _ensure_folder(self, parent_id, name):
+        existing = self._find_folder(parent_id, name)
         if existing:
-
-            _logger.debug(
-                '[BIBLIOTECA][SHAREPOINT][FOLDER] '
-                'Carpeta existente nombre=%s id=%s',
-                folder_name,
-                existing,
-            )
-
             return existing
-
-        _logger.info(
-            '[BIBLIOTECA][SHAREPOINT][FOLDER] '
-            'Creando carpeta nombre=%s parent_id=%s',
-            folder_name,
-            parent_id,
-        )
-
-        created = self.drive.create_folder(
-            folder_name,
-            parent_id,
-        )
-
-        if (
-            not isinstance(created, dict)
-            or not created.get('id')
-        ):
-            raise UserError(
-                _(
-                    'Microsoft no confirmó la creación '
-                    'de la carpeta %s.'
-                ) % folder_name
-            )
-
-        if (
-            created.get('name') == folder_name
-            and isinstance(created.get('folder'), dict)
-        ):
-
-            _logger.info(
-                '[BIBLIOTECA][SHAREPOINT][FOLDER] '
-                'Carpeta creada nombre=%s id=%s',
-                folder_name,
-                created['id'],
-            )
-
+        created = self.drive.create_folder(name, parent_id)
+        if not isinstance(created, dict) or not created.get('id'):
+            raise UserError(_('SharePoint no confirmó la carpeta %s.') % name)
+        if created.get('name') == name and isinstance(created.get('folder'), dict):
             return created['id']
-
-        existing = self._find_folder(
-            parent_id,
-            folder_name,
-        )
-
+        existing = self._find_folder(parent_id, name)
         if existing:
-
-            _logger.warning(
-                '[BIBLIOTECA][SHAREPOINT][FOLDER] '
-                'Posible creación concurrente '
-                'nombre=%s creada=%s reutilizada=%s',
-                folder_name,
-                created.get('id'),
-                existing,
-            )
-
             return existing
-
-        raise UserError(
-            _(
-                'SharePoint creó una carpeta con un nombre '
-                'inesperado. Revise la biblioteca.'
-            )
-        )
-
-    # =========================================================
-    # CARPETA DE REFERENCIA
-    # =========================================================
+        raise UserError(_('SharePoint creó una carpeta con nombre inesperado.'))
 
     def ensure_folder(self, compatibilidad):
-        """Crea SAT/Biblioteca Repuestos/Referencia-ID."""
-
         compatibilidad.ensure_one()
-
-        if (
-            compatibilidad._name != 'sat.repuesto.compatibilidad'
-            or not compatibilidad.id
-        ):
-            raise UserError(
-                _(
-                    'Primero debe guardar una ficha '
-                    'de compatibilidad válida.'
-                )
-            )
-
-        segments = (
-            *self.ROOT_PATH,
-            'Referencia-%s' % compatibilidad.id,
-        )
-
+        if compatibilidad._name != 'sat.repuesto.compatibilidad' or not compatibilidad.id:
+            raise UserError(_('Guarde primero una ficha de compatibilidad válida.'))
         parent_id = None
-
-        for segment in segments:
-
-            parent_id = self._ensure_folder(
-                parent_id,
-                segment,
-            )
-
-        _logger.info(
-            '[BIBLIOTECA][SHAREPOINT][FOLDER] '
-            'Carpeta referencia_id=%s folder_id=%s',
-            compatibilidad.id,
-            parent_id,
-        )
-
+        for name in (*self.ROOT_PATH, 'Referencia-%s' % compatibilidad.id):
+            parent_id = self._ensure_folder(parent_id, name)
         return parent_id
 
-    # =========================================================
-    # GENERACIÓN DE NOMBRE ÚNICO
-    # =========================================================
-
-    @classmethod
-    def _unique_filename(cls, filename):
-
-        filename = cls._safe_filename(filename)
-
-        stem, extension = filename.rsplit('.', 1)
-
-        identifier = uuid.uuid4().hex[:12]
-
-        suffix = '-%s.%s' % (
-            identifier,
-            extension,
-        )
-
-        allowed_length = (
-            cls.MAX_NAME_LENGTH - len(suffix)
-        )
-
-        stem = stem[:allowed_length].rstrip(' .')
-
-        return (stem or 'fotografia') + suffix
-
-    # =========================================================
-    # SUBIDA DE FOTOGRAFÍA
-    # =========================================================
-
     def upload(self, compatibilidad, data, filename):
-        """Sube la fotografía directamente a SharePoint.
-
-        No crea registros ir.attachment.
-
-        Devuelve metadatos para registrar en sat.repuesto.foto.
-        """
-
         compatibilidad.ensure_one()
-
-        if compatibilidad._name != 'sat.repuesto.compatibilidad':
-            raise UserError(
-                _('El registro de compatibilidad no es válido.')
-            )
-
-        if not compatibilidad.id:
-            raise UserError(
-                _('Guarde la ficha antes de agregar fotografías.')
-            )
-
-        content, safe_name, mime_type = (
-            self.validate_image(
-                data,
-                filename,
-            )
-        )
-
-        folder_id = self.ensure_folder(
-            compatibilidad
-        )
-
-        unique_name = self._unique_filename(
-            safe_name
-        )
-
+        content, safe_name, mime_type = self.validate_file(data, filename)
+        folder_id = self.ensure_folder(compatibilidad)
+        stem, extension = safe_name.rsplit('.', 1)
+        suffix = '-' + uuid.uuid4().hex[:12]
+        allowed = self.MAX_NAME_LENGTH - len(suffix) - len(extension) - 1
+        unique_name = stem[:allowed].rstrip(' .') + suffix + '.' + extension
         _logger.info(
-            '[BIBLIOTECA][SHAREPOINT][UPLOAD] '
-            'Iniciando subida '
-            'referencia_id=%s '
-            'archivo=%s '
-            'bytes=%s '
-            'folder_id=%s',
-            compatibilidad.id,
-            unique_name,
-            len(content),
-            folder_id,
+            '[BIBLIOTECA][SHAREPOINT][UPLOAD] Inicio ficha=%s archivo=%s bytes=%s',
+            compatibilidad.id, unique_name, len(content),
         )
-
         try:
-
-            result = self.drive.upload_file(
-                unique_name,
-                content,
-                parent_id=folder_id,
-            )
-
+            result = self.drive.upload_file(unique_name, content, parent_id=folder_id)
         except Exception:
-
             _logger.exception(
-                '[BIBLIOTECA][SHAREPOINT][UPLOAD] '
-                'Error subiendo fotografía '
-                'referencia_id=%s archivo=%s',
-                compatibilidad.id,
-                unique_name,
+                '[BIBLIOTECA][SHAREPOINT][UPLOAD] Error ficha=%s archivo=%s',
+                compatibilidad.id, unique_name,
             )
-
             raise
-
-        if (
-            not isinstance(result, dict)
-            or not result.get('id')
-        ):
-
-            _logger.error(
-                '[BIBLIOTECA][SHAREPOINT][UPLOAD] '
-                'Respuesta inválida referencia_id=%s',
-                compatibilidad.id,
-            )
-
-            raise UserError(
-                _(
-                    'Microsoft SharePoint no confirmó '
-                    'la subida de la fotografía.'
-                )
-            )
-
-        item_id = result['id']
-
+        if not isinstance(result, dict) or not result.get('id'):
+            raise UserError(_('SharePoint no confirmó la subida del archivo.'))
         _logger.info(
-            '[BIBLIOTECA][SHAREPOINT][UPLOAD] '
-            'Fotografía subida correctamente '
-            'referencia_id=%s '
-            'item_id=%s '
-            'drive_id=%s '
-            'archivo=%s '
-            'bytes=%s',
-            compatibilidad.id,
-            item_id,
-            self.location.drive_id,
-            result.get('name') or unique_name,
-            len(content),
+            '[BIBLIOTECA][SHAREPOINT][UPLOAD] OK ficha=%s item=%s bytes=%s',
+            compatibilidad.id, result['id'], len(content),
         )
-
         return {
-            'item_id': item_id,
+            'item_id': result['id'],
             'drive_id': self.location.drive_id,
             'folder_id': folder_id,
             'name': result.get('name') or unique_name,
