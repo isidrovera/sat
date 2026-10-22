@@ -53,3 +53,4 @@ from . import reparaciones_avance
 from . import app
 
 from . import monitoring
+from . import repuesto_media
