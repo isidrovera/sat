@@ -11,7 +11,7 @@
       <field name="name">sat.repuesto.compatibilidad.search</field>
       <field name="model">sat.repuesto.compatibilidad</field>
       <field name="arch" type="xml">
-        <search string="Buscar compatibilidades">
+        <search>
           <field name="name" string="Referencia" filter_domain="['|','|',('name','ilike',self),('codigo_parte','ilike',self),('codigos_alternativos','ilike',self)]"/>
           <field name="codigo_parte"/>
           <field name="componente_id"/>
@@ -26,7 +26,7 @@
           <filter name="filter_toner" string="Tóner" domain="[('tipo_registro','=','toner')]"/>
           <filter name="filter_con_fotos" string="Con fotografías" domain="[('foto_ids','!=',False)]"/>
           <filter name="filter_archivados" string="Archivados" domain="[('active','=',False)]"/>
-          <group expand="0" string="Agrupar por">
+          <group>
             <filter name="group_componente" string="Componente" context="{'group_by':'componente_id'}"/>
             <filter name="group_subparte" string="Subparte" context="{'group_by':'subparte_id'}"/>
             <filter name="group_marca" string="Marca" context="{'group_by':'marca_id'}"/>
