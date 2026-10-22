@@ -135,7 +135,10 @@
             </div>
             <div class="oe_title">
               <label for="name"/>
-              <h1><field name="name" readonly="1" force_save="1" placeholder="Se completa automáticamente con la subparte o el tóner"/></h1>
+              <h1><field name="name"
+       readonly="1"
+       force_save="1"
+       placeholder="Se completa automáticamente"/></h1>
             </div>
             <group>
               <group string="Identificación">
