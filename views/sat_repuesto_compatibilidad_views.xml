@@ -12,10 +12,10 @@
       <field name="model">sat.repuesto.compatibilidad</field>
       <field name="arch" type="xml">
         <search>
-          <field name="name" string="Referencia" filter_domain="['|','|',('name','ilike',self),('codigo_parte','ilike',self),('codigos_alternativos','ilike',self)]"/>
-          <field name="codigo_parte"/>
+          <field name="subparte_id" string="Buscar subparte" filter_domain="[('subparte_id.name', 'ilike', self)]"/>
+          <field name="name" string="N.º referencia"/>
+          <field name="codigo_parte" string="Código de parte"/>
           <field name="componente_id"/>
-          <field name="subparte_id"/>
           <field name="marca_id"/>
           <field name="toner_id"/>
           <field name="modelo_maquina_ids" string="Modelo compatible"/>
@@ -43,10 +43,10 @@
       <field name="arch" type="xml">
         <list string="Biblioteca de compatibilidades" decoration-success="estado == 'verificado'" decoration-muted="not active" multi_edit="1">
           <field name="active" column_invisible="True"/>
-          <field name="name" string="Referencia"/>
+          <field name="subparte_id" string="Subparte" optional="show"/>
+          <field name="name" string="N.º referencia"/>
           <field name="tipo_registro" widget="badge"/>
           <field name="componente_id" optional="show"/>
-          <field name="subparte_id" optional="show"/>
           <field name="toner_id" optional="hide"/>
           <field name="codigo_parte" optional="show"/>
           <field name="marca_id" optional="show"/>
@@ -67,7 +67,6 @@
           <field name="foto_principal_url"/><field name="name"/>
           <field name="tipo_registro"/>
           <field name="componente_id"/>
-          <field name="subparte_id"/>
           <field name="toner_id"/>
           <field name="codigo_parte"/>
           <field name="marca_id"/>
@@ -82,7 +81,11 @@
   <img t-if="record.foto_principal_url.raw_value" t-att-src="record.foto_principal_url.raw_value" class="w-100 h-100" style="object-fit:contain;" alt="Fotografía del repuesto" loading="lazy"/>
   <div t-else="" class="h-100 d-flex align-items-center justify-content-center text-muted"><i class="fa fa-image fa-3x"/></div>
 </div><div class="d-flex justify-content-between align-items-start gap-2">
-                  <div class="fw-bold fs-5 text-break"><field name="name"/></div>
+                  <div class="fw-bold fs-5 text-break">
+                    <t t-if="record.tipo_registro.raw_value == 'toner'"><field name="toner_id"/></t>
+                    <t t-else=""><field name="subparte_id"/></t>
+                    <div class="text-muted small fw-normal"><field name="name"/></div>
+                  </div>
                   <span t-if="record.estado.raw_value == 'verificado'" class="badge rounded-pill text-bg-success">Verificado</span>
                   <span t-elif="record.estado.raw_value == 'pendiente'" class="badge rounded-pill text-bg-warning">Pendiente</span>
                   <span t-elif="record.estado.raw_value == 'descartado'" class="badge rounded-pill text-bg-danger">Descartado</span>
@@ -135,10 +138,8 @@
             </div>
             <div class="oe_title">
               <label for="name"/>
-              <h1><field name="name"
-       readonly="1"
-       force_save="1"
-       placeholder="Se completa automáticamente"/></h1>
+              <h1><field name="name" readonly="1" placeholder="Nuevo (se asigna al guardar)"/></h1>
+              <div class="text-muted">El consecutivo REP se crea al guardar; para localizar repuestos utilice la búsqueda por subparte.</div>
             </div>
             <group>
               <group string="Identificación">
