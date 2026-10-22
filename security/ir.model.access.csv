@@ -373,3 +373,7 @@ access_sat_ai_provider_system,sat.ai.provider system,model_sat_ai_provider,base.
 access_sat_ai_prompt_system,sat.ai.prompt system,model_sat_ai_prompt,base.group_system,1,1,1,1
 access_modelo_toner_user,modelo.toner.user,model_modelo_toner,base.group_user,1,0,0,0
 access_modelo_toner_settings,modelo.toner.settings,model_modelo_toner,base.group_system,1,1,1,1
+access_sat_repuesto_compatibilidad_user,sat.repuesto.compatibilidad.user,model_sat_repuesto_compatibilidad,base.group_user,1,1,1,0
+access_sat_repuesto_compatibilidad_admin,sat.repuesto.compatibilidad.admin,model_sat_repuesto_compatibilidad,base.group_system,1,1,1,1
+access_sat_repuesto_foto_user,sat.repuesto.foto.user,model_sat_repuesto_foto,base.group_user,1,1,1,0
+access_sat_repuesto_foto_admin,sat.repuesto.foto.admin,model_sat_repuesto_foto,base.group_system,1,1,1,1

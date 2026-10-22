@@ -147,3 +147,4 @@ from . import toner_delivery_stock_integration
 from . import automation
 from . import ai
 from . import modelo_toner
+from . import sat_repuesto_compatibilidad
