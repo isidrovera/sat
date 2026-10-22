@@ -1269,19 +1269,13 @@
             </field>
         </record>
         
-<!-- =====================================================
-     VISTA DE BÚSQUEDA - MÁQUINAS
-     ODOO 19 / SAT
-====================================================== -->
-
 <record id="alquiler_andes_search_view" model="ir.ui.view">
     <field name="name">alquiler_andes.search</field>
     <field name="model">alquiler</field>
     <field name="arch" type="xml">
+        <search>
 
-        <search string="Buscar máquinas">
-
-            <!-- CAMPOS DE BÚSQUEDA -->
+            <!-- CAMPOS DE BUSQUEDA -->
             <field name="serie"/>
             <field name="cliente_id"/>
             <field name="marca"/>
@@ -1289,18 +1283,16 @@
 
             <separator/>
 
-            <!-- STOCK DE ANDES -->
+            <!-- FILTROS DE STOCK -->
             <filter
                 name="stock_andes"
                 string="Stock de Andes"
-                domain="[('estado_alquiler_id', 'not in', ['externo', 'vendida'])]"
-                help="Máquinas pertenecientes al stock de Andes"/>
+                domain="[('estado_alquiler_id', 'not in', ['externo', 'vendida'])]"/>
 
             <filter
                 name="fuera_stock_andes"
                 string="Fuera del stock"
-                domain="[('estado_alquiler_id', 'in', ['externo', 'vendida'])]"
-                help="Máquinas externas o vendidas"/>
+                domain="[('estado_alquiler_id', 'in', ['externo', 'vendida'])]"/>
 
             <separator/>
 
@@ -1317,67 +1309,55 @@
 
             <separator/>
 
-            <!-- ESTADOS DE MÁQUINA -->
-            <filter
-                name="estado_sin_revisar"
-                string="Sin revisar"
-                domain="[('estado_alquiler_id', '=', 'sin_revisar')]"/>
+            <!-- ESTADOS -->
+            <filter name="sin_revisar"
+                    string="Sin revisar"
+                    domain="[('estado_alquiler_id','=','sin_revisar')]"/>
 
-            <filter
-                name="estado_lista"
-                string="Lista"
-                domain="[('estado_alquiler_id', '=', 'lista')]"/>
+            <filter name="revisada"
+                    string="Revisada"
+                    domain="[('estado_alquiler_id','=','revisada')]"/>
 
-            <filter
-                name="estado_revisada"
-                string="Revisada"
-                domain="[('estado_alquiler_id', '=', 'revisada')]"/>
+            <filter name="lista"
+                    string="Lista"
+                    domain="[('estado_alquiler_id','=','lista')]"/>
 
-            <filter
-                name="estado_alquilada"
-                string="Alquilada"
-                domain="[('estado_alquiler_id', '=', 'alquilada')]"/>
+            <filter name="inspeccion"
+                    string="En inspección"
+                    domain="[('estado_alquiler_id','=','inspeccion')]"/>
 
-            <filter
-                name="estado_con_problemas"
-                string="Con problemas"
-                domain="[('estado_alquiler_id', '=', 'con_problemas')]"/>
+            <filter name="subsanacion"
+                    string="Esperando subsanación"
+                    domain="[('estado_alquiler_id','=','subsanacion')]"/>
 
-            <filter
-                name="estado_partes"
-                string="De partes"
-                domain="[('estado_alquiler_id', '=', 'partes')]"/>
+            <filter name="por_instalar"
+                    string="Por instalar"
+                    domain="[('estado_alquiler_id','=','por_instalar')]"/>
 
-            <filter
-                name="estado_externo"
-                string="Externo"
-                domain="[('estado_alquiler_id', '=', 'externo')]"/>
+            <filter name="alquilada"
+                    string="Alquilada"
+                    domain="[('estado_alquiler_id','=','alquilada')]"/>
 
-            <filter
-                name="estado_vendida"
-                string="Vendida"
-                domain="[('estado_alquiler_id', '=', 'vendida')]"/>
+            <filter name="con_problemas"
+                    string="Con problemas"
+                    domain="[('estado_alquiler_id','=','con_problemas')]"/>
 
-            <!-- ESTADOS ADICIONALES -->
-            <filter
-                name="estado_inspeccion"
-                string="En inspección"
-                domain="[('estado_alquiler_id', '=', 'inspeccion')]"/>
+            <filter name="partes"
+                    string="De partes"
+                    domain="[('estado_alquiler_id','=','partes')]"/>
 
-            <filter
-                name="estado_subsanacion"
-                string="Esperando subsanación"
-                domain="[('estado_alquiler_id', '=', 'subsanacion')]"/>
+            <filter name="externo"
+                    string="Externo"
+                    domain="[('estado_alquiler_id','=','externo')]"/>
 
-            <filter
-                name="estado_por_instalar"
-                string="Por instalar"
-                domain="[('estado_alquiler_id', '=', 'por_instalar')]"/>
+            <filter name="vendida"
+                    string="Vendida"
+                    domain="[('estado_alquiler_id','=','vendida')]"/>
 
             <separator/>
 
             <!-- AGRUPACIONES -->
-            <group expand="0" string="Agrupar por">
+            <group name="groupby">
 
                 <filter
                     name="group_by_estado"
@@ -1397,7 +1377,6 @@
             </group>
 
         </search>
-
     </field>
 </record>
 
