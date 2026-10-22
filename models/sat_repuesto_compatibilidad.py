@@ -81,6 +81,83 @@ class SatRepuestoCompatibilidad(models.Model):
     verificado_por_id = fields.Many2one('res.users', readonly=True, copy=False)
     fecha_verificacion = fields.Datetime(readonly=True, copy=False)
 
+    def _check_solapamiento_compatibilidades(self):
+        """Una subparte (o tóner) no puede repetirse en el mismo modelo activo.
+
+        La comprobación es deliberadamente independiente del código de parte,
+        estado y marca: el catálogo asigna una sola ficha por subparte/modelo.
+        Un bloqueo transaccional evita inserciones simultáneas del mismo par.
+        """
+        for record in self:
+            if not record.active or not record.modelo_maquina_ids:
+                continue
+            if record.tipo_registro == 'repuesto':
+                if not record.subparte_id:
+                    continue
+                category = 'repuesto'
+                value_id = record.subparte_id.id
+                scope = _('subparte %(parte)s') % {
+                    'parte': record.subparte_id.display_name,
+                }
+                domain_base = [
+                    ('tipo_registro', '=', 'repuesto'),
+                    ('subparte_id', '=', value_id),
+                ]
+            else:
+                if not record.toner_id:
+                    continue
+                category = 'toner'
+                value_id = record.toner_id.id
+                scope = _('tóner %(toner)s') % {
+                    'toner': record.toner_id.display_name,
+                }
+                domain_base = [
+                    ('tipo_registro', '=', 'toner'),
+                    ('toner_id', '=', value_id),
+                ]
+
+            # Dos sesiones creando la misma subparte esperan el mismo candado.
+            # Bloqueo acotado a la transacción actual y en un espacio propio.
+            self.env.cr.execute(
+                'SELECT pg_advisory_xact_lock(%s, hashtext(%s))',
+                (76439012, '%s:%s' % (category, value_id)),
+            )
+
+            conflicts = self.with_context(active_test=False).search(
+                domain_base + [
+                    ('active', '=', True),
+                    ('id', '!=', record.id),
+                    ('modelo_maquina_ids', 'in', record.modelo_maquina_ids.ids),
+                ],
+                order='id',
+            )
+            if not conflicts:
+                continue
+
+            lines = []
+            for other in conflicts:
+                repeated = record.modelo_maquina_ids & other.modelo_maquina_ids
+                models = ', '.join(sorted(repeated.mapped('name'), key=str.casefold))
+                lines.append('%s: %s' % (other.name or other.id, models))
+
+            _logger.warning(
+                '[BIBLIOTECA][DUPLICADOS] referencia=%s parte=%s conflictos=%s',
+                record.name, scope, lines,
+            )
+            raise ValidationError(_(
+                'Ya existe una compatibilidad para la %(parte)s en los mismos '
+                'modelos de máquina.\n\n%(detalles)s\n\n'
+                'Abra la ficha existente y agregue allí los modelos que faltan. '
+                'No cree otra ficha para la misma subparte y modelo.'
+            ) % {'parte': scope, 'detalles': '\n'.join(lines)})
+
+    @api.constrains(
+        'tipo_registro', 'subparte_id', 'toner_id',
+        'modelo_maquina_ids', 'active',
+    )
+    def _constrain_solapamiento_compatibilidades(self):
+        self._check_solapamiento_compatibilidades()
+
     @api.model_create_multi
     def create(self, vals_list):
         preparados = []
@@ -98,7 +175,9 @@ class SatRepuestoCompatibilidad(models.Model):
                 ))
             vals['name'] = referencia
             preparados.append(vals)
-        return super().create(preparados)
+        records = super().create(preparados)
+        records._check_solapamiento_compatibilidades()
+        return records
 
     @api.depends('componente_id')
     def _compute_subparte_permitida_ids(self):
@@ -223,7 +302,10 @@ class SatRepuestoCompatibilidad(models.Model):
                     'verificado_por_id': False,
                     'fecha_verificacion': False,
                 })
-        return super().write(vals)
+        result = super().write(vals)
+        if {'tipo_registro', 'subparte_id', 'toner_id', 'modelo_maquina_ids', 'active'} & set(vals):
+            self._check_solapamiento_compatibilidades()
+        return result
 
 
 class SatRepuestoFoto(models.Model):
