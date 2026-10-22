@@ -18,7 +18,7 @@ class SatRepuestoCompatibilidad(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'write_date desc, id desc'
 
-    name = fields.Char(string='Referencia / nombre comercial', required=True,
+    name = fields.Char(string='Referencia / nombre comercial',
                        tracking=True, index=True,
                        help='Nombre para identificar esta pieza física o referencia; no necesariamente el nombre genérico de subparte.')
     active = fields.Boolean(default=True)
