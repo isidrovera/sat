@@ -939,50 +939,136 @@
                 </kanban>
             </field>
         </record>
-        <!-- =========================================================
-             VISTA DE BÚSQUEDA
-        ========================================================== -->
-        <record id="view_toner_counter_submission_search" model="ir.ui.view">
-            <field name="name">toner.counter.submission.search</field>
-            <field name="model">toner.counter.submission</field>
-            <field name="arch" type="xml">
-                <search string="Buscar Solicitudes de Tóner">
-                    <field name="secuencia"/>
-                    <field name="partner_id"/>
-                    <field name="equipment_id"/>
-                    <field name="equipment_serie" string="Serie"/>
-                    <field name="client_name"/>
-                    <field name="client_phone"/>
-                    <field name="analysis_result"/>
-                    <field name="early_request_type"/>
-                    <separator/>
-                    <filter string="Recibidas" name="received" domain="[('state', '=', 'recibida')]"/>
-                    <filter string="En evaluación" name="review" domain="[('state', '=', 'evaluacion')]"/>
-                    <filter string="Pendientes de gerencia" name="management" domain="[('state', '=', 'pendiente_gerencia')]"/>
-                    <filter string="Pendientes de stock" name="sales" domain="[('state', '=', 'confirmacion_ventas')]"/>
-                    <filter string="Listas para despacho" name="ready_dispatch" domain="[('state', '=', 'lista_despacho')]"/>
-                    <filter string="En despacho" name="dispatch" domain="[('state', '=', 'en_despacho')]"/>
-                    <separator/>
-                    <filter string="Consumo anticipado" name="early" domain="[('analysis_result', '=', 'early_consumption')]"/>
-                    <filter string="Requiere revisión" name="evidence" domain="[('requires_evidence', '=', True)]"/>
-                    <filter string="Pedido para stock" name="stock_exception" domain="[('early_request_type', '=', 'client_stock')]"/>
-                    <filter string="Sin historial" name="no_history" domain="[('analysis_result', '=', 'no_history')]"/>
-                    <filter string="Duplicadas" name="duplicates" domain="[('analysis_result', '=', 'duplicate')]"/>
-                    <separator/>
-                    <filter string="Hoy" name="today" domain="[('submission_date', '&gt;=', context_today())]"/>
-                    <filter string="Últimos 7 días" name="last_7_days" domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
-                    <filter string="Este mes" name="month" domain="[('submission_date', '&gt;=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"/>
-                    <group>
-                        <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
-                        <filter string="Resultado" name="group_analysis" context="{'group_by': 'analysis_result'}"/>
-                        <filter string="Motivo anticipado" name="group_early_type" context="{'group_by': 'early_request_type'}"/>
-                        <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
-                        <filter string="Equipo" name="group_equipment" context="{'group_by': 'equipment_id'}"/>
-                        <filter string="Fecha" name="group_date" context="{'group_by': 'submission_date:day'}"/>
-                    </group>
-                </search>
-            </field>
-        </record>
+        
+<!-- =========================================================
+     VISTA DE BÚSQUEDA - GESTIÓN DE TÓNER
+     ODOO 19
+========================================================== -->
+<record id="view_toner_counter_submission_search" model="ir.ui.view">
+    <field name="name">toner.counter.submission.search</field>
+    <field name="model">toner.counter.submission</field>
+    <field name="arch" type="xml">
+        <search>
+
+            <!-- CAMPOS DE BÚSQUEDA -->
+            <field name="secuencia"/>
+            <field name="partner_id"/>
+            <field name="equipment_id"/>
+            <field name="equipment_serie" string="Serie"/>
+            <field name="client_name"/>
+            <field name="client_phone"/>
+            <field name="analysis_result"/>
+            <field name="early_request_type"/>
+
+            <separator/>
+
+            <!-- FILTROS DE ENTREGA -->
+            <filter string="Sin entregar"
+                    name="not_delivered"
+                    domain="[('state', '!=', 'entregada')]"/>
+
+            <filter string="Entregadas"
+                    name="delivered"
+                    domain="[('state', '=', 'entregada')]"/>
+
+            <separator/>
+
+            <!-- FILTROS POR ESTADO -->
+            <filter string="Recibidas"
+                    name="received"
+                    domain="[('state', '=', 'recibida')]"/>
+
+            <filter string="En evaluación"
+                    name="review"
+                    domain="[('state', '=', 'evaluacion')]"/>
+
+            <filter string="Pendientes de gerencia"
+                    name="management"
+                    domain="[('state', '=', 'pendiente_gerencia')]"/>
+
+            <filter string="Pendientes de stock"
+                    name="sales"
+                    domain="[('state', '=', 'confirmacion_ventas')]"/>
+
+            <filter string="Listas para despacho"
+                    name="ready_dispatch"
+                    domain="[('state', '=', 'lista_despacho')]"/>
+
+            <filter string="En despacho"
+                    name="dispatch"
+                    domain="[('state', '=', 'en_despacho')]"/>
+
+            <separator/>
+
+            <!-- FILTROS DE ANÁLISIS -->
+            <filter string="Consumo anticipado"
+                    name="early"
+                    domain="[('analysis_result', '=', 'early_consumption')]"/>
+
+            <filter string="Requiere revisión"
+                    name="evidence"
+                    domain="[('requires_evidence', '=', True)]"/>
+
+            <filter string="Pedido para stock"
+                    name="stock_exception"
+                    domain="[('early_request_type', '=', 'client_stock')]"/>
+
+            <filter string="Sin historial"
+                    name="no_history"
+                    domain="[('analysis_result', '=', 'no_history')]"/>
+
+            <filter string="Duplicadas"
+                    name="duplicates"
+                    domain="[('analysis_result', '=', 'duplicate')]"/>
+
+            <separator/>
+
+            <!-- FILTROS POR FECHA -->
+            <filter string="Hoy"
+                    name="today"
+                    domain="[('submission_date', '&gt;=', context_today())]"/>
+
+            <filter string="Últimos 7 días"
+                    name="last_7_days"
+                    domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+
+            <filter string="Este mes"
+                    name="month"
+                    domain="[('submission_date', '&gt;=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"/>
+
+            <!-- AGRUPACIONES -->
+            <group name="groupby">
+
+                <filter string="Estado"
+                        name="group_state"
+                        context="{'group_by': 'state'}"/>
+
+                <filter string="Resultado"
+                        name="group_analysis"
+                        context="{'group_by': 'analysis_result'}"/>
+
+                <filter string="Motivo anticipado"
+                        name="group_early_type"
+                        context="{'group_by': 'early_request_type'}"/>
+
+                <filter string="Cliente"
+                        name="group_partner"
+                        context="{'group_by': 'partner_id'}"/>
+
+                <filter string="Equipo"
+                        name="group_equipment"
+                        context="{'group_by': 'equipment_id'}"/>
+
+                <filter string="Fecha"
+                        name="group_date"
+                        context="{'group_by': 'submission_date:day'}"/>
+
+            </group>
+
+        </search>
+    </field>
+</record>
+
 
 
         <record id="view_toner_brand_list" model="ir.ui.view">

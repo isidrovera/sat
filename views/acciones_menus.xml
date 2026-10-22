@@ -191,13 +191,15 @@
       <field name="res_model">toner.brand</field>
       <field name="view_mode">list,form</field>
     </record>
+    
     <record id="action_toner_counter_submission" model="ir.actions.act_window">
       <field name="name">Gestión de Tóner</field>
       <field name="res_model">toner.counter.submission</field>
       <field name="view_mode">kanban,list,form</field>
       <field name="search_view_id" ref="view_toner_counter_submission_search"/>
-      <field name="context">{'search_default_pending': 1}</field>
+      <field name="context">{'search_default_not_delivered': 1}</field>
     </record>
+
     <record id="action_toner_delivery_schedule" model="ir.actions.act_window">
       <field name="name">Programación de Entregas</field>
       <field name="res_model">toner.delivery.schedule</field>
