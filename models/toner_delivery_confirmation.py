@@ -402,31 +402,50 @@ class TonerDeliveryConfirmation(models.Model):
     # MÉTODOS CREATE Y OVERRIDE
     # ==========================================
 
-    @api.model
-    def create(self, vals):
-        """Sobrescribe create para asignar secuencia y capturar stock anterior"""
-        if vals.get('secuencia', 'New') == 'New':
-            vals['secuencia'] = self.env['ir.sequence'].next_by_code('toner.delivery.confirmation') or 'TDC/001'
-        
-        # Capturar stock actual del equipo antes de crear
-        if vals.get('equipment_id'):
-            equipment = self.env['alquiler'].browse(vals['equipment_id'])
-            vals.update({
-                'stock_before_black': equipment.stock_cliente_toner_black,
-                'stock_before_cyan': equipment.stock_cliente_toner_cyan,
-                'stock_before_magenta': equipment.stock_cliente_toner_magenta,
-                'stock_before_yellow': equipment.stock_cliente_toner_yellow,
-            })
-        
-        result = super(TonerDeliveryConfirmation, self).create(vals)
-        
-        # Crear nota en el chatter
-        try:
-            result._create_chatter_note()
-        except Exception as e:
-            _logger.error("Error creando nota en chatter: %s", str(e))
-        
-        return result
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Asigna secuencias y captura el stock previo, compatible con Odoo 19."""
+        prepared_vals = []
+        for incoming_vals in vals_list:
+            vals = dict(incoming_vals)
+
+            if not vals.get('secuencia') or vals.get('secuencia') == 'New':
+                vals['secuencia'] = (
+                    self.env['ir.sequence'].next_by_code('toner.delivery.confirmation')
+                    or 'TDC/001'
+                )
+
+            # equipment_id es un campo related (readonly). Cuando la entrega
+            # proviene de una programacion, el equipo se obtiene de schedule_id.
+            equipment = self.env['alquiler']
+            if vals.get('schedule_id'):
+                schedule = self.env['toner.delivery.schedule'].browse(vals['schedule_id'])
+                equipment = schedule.equipment_id
+            elif vals.get('equipment_id'):
+                equipment = self.env['alquiler'].browse(vals['equipment_id'])
+
+            if equipment and equipment.exists():
+                vals.update({
+                    'stock_before_black': equipment.stock_cliente_toner_black,
+                    'stock_before_cyan': equipment.stock_cliente_toner_cyan,
+                    'stock_before_magenta': equipment.stock_cliente_toner_magenta,
+                    'stock_before_yellow': equipment.stock_cliente_toner_yellow,
+                })
+
+            prepared_vals.append(vals)
+
+        records = super().create(prepared_vals)
+
+        for record in records:
+            try:
+                record._create_chatter_note()
+            except Exception:
+                _logger.exception(
+                    "Error creando nota en chatter para confirmacion de toner id=%s",
+                    record.id,
+                )
+
+        return records
 
     def _create_chatter_note(self):
         """Crea nota informativa en el chatter"""
