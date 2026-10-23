@@ -1,0 +1,104 @@
+// Biblioteca de Repuestos - SAT / Odoo 19
+// Estilos aislados: no modifican otros kanban ni formularios.
+
+.sat_repuestos_catalog_kanban {
+  --sat-rep-purple: #714b67;
+  --sat-rep-border: #e8e4eb;
+  --sat-rep-text: #252635;
+
+  .o_kanban_record {
+    border: 1px solid var(--sat-rep-border) !important;
+    border-radius: 13px !important;
+    box-shadow: 0 3px 14px rgba(37, 27, 47, .06);
+    background: var(--o-view-background-color, #fff);
+    overflow: hidden;
+    min-width: 270px;
+    max-width: 350px;
+    padding: 0 !important;
+    transition: transform .16s ease, box-shadow .16s ease;
+    &:hover { transform: translateY(-2px); box-shadow: 0 9px 22px rgba(37, 27, 47, .12); }
+  }
+
+  .sat-rep-card {
+    color: var(--sat-rep-text);
+    min-height: 425px;
+  }
+  .sat-rep-card__photo {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 178px;
+    background: #faf9fb;
+    border-bottom: 1px solid var(--sat-rep-border);
+    img { width: 100%; height: 100%; object-fit: contain; padding: 10px; }
+  }
+  .sat-rep-card__empty { font-size: 34px; color: #b8b3bf; }
+  .sat-rep-card__state { position: absolute; left: 11px; top: 11px; }
+  .sat-rep-status {
+    display: inline-flex; align-items: center; padding: 4px 9px;
+    border-radius: 20px; font-size: 11px; font-weight: 700; line-height: 1.2;
+    &--ok { background: #dcf5e7; color: #167348; }
+    &--pending { background: #fff0cf; color: #925a08; }
+    &--draft { background: #eae7ee; color: #595264; }
+    &--rejected { background: #fde2e2; color: #a82d34; }
+  }
+  .sat-rep-card__body { padding: 13px 15px 9px; flex: 1; min-width: 0; }
+  .sat-rep-card__title { font-weight: 700; font-size: 14px; line-height: 1.45; overflow-wrap: anywhere; }
+  .sat-rep-card__reference { color: #765d77; font-size: 11px; letter-spacing: .02em; margin-top: 4px; }
+  .sat-rep-card__component { color: #6e6b75; font-size: 12px; margin-top: 6px; }
+  .sat-rep-card__code { font-size: 12px; margin-top: 5px; }
+  .sat-rep-card__models { border-top: 1px solid var(--sat-rep-border); margin-top: 13px; padding-top: 10px; }
+  .sat-rep-card__section-title { color: #4a4550; font-weight: 700; font-size: 12px; margin-bottom: 9px; }
+  .sat-rep-card__models .badge {
+    background: #f0eaf3 !important; color: #573c63 !important;
+    border: 1px solid #e7dbea !important; border-radius: 8px !important;
+    font-size: 11px; font-weight: 600; padding: 5px 8px !important;
+    white-space: normal; overflow-wrap: anywhere;
+  }
+  .sat-rep-card__footer { padding: 10px 15px 13px; display: flex; align-items: center; justify-content: space-between; gap: 8px; border-top: 1px solid var(--sat-rep-border); font-size: 12px; color: #726875; }
+  .sat-rep-card__link { color: var(--sat-rep-purple); font-weight: 700; text-decoration: none; &:hover { text-decoration: underline; } }
+}
+
+.sat-repuestos-premium-form {
+  --sat-rep-purple: #714b67;
+  .o_form_sheet_bg .o_form_sheet, .o_form_sheet {
+    border-radius: 13px;
+  }
+  .oe_title {
+    border-bottom: 1px solid #ece5ef;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    h1 { font-size: clamp(23px, 2.3vw, 31px); font-weight: 750; }
+  }
+  .sat-rep-form__section-intro { margin: 14px 0 8px; p { color: #77717b; font-size: 12px; margin: 0; } }
+  .sat-rep-form__eyebrow { color: var(--sat-rep-purple); font-size: 13px; font-weight: 750; }
+  .sat-rep-form__details, .sat-rep-form__compat, .sat-rep-form__gallery {
+    border: 1px solid #e9e4eb;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    background: var(--o-view-background-color, #fff);
+  }
+  .sat-rep-form__details { background: #fdfcfe; }
+  .sat-rep-form__compat .badge {
+    background: #efe8f2 !important;
+    color: #573c63 !important;
+    border: 1px solid #e1d4e7 !important;
+    border-radius: 8px !important;
+    padding: 6px 9px !important;
+    margin-bottom: 3px;
+  }
+  .sat-rep-form__gallery .o_kanban_record {
+    border: 1px solid #e9e3ec;
+    border-radius: 11px;
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(37, 27, 47, .06);
+  }
+  .sat-rep-form__gallery .o_kanban_record img { border-radius: 8px; }
+  .o_form_statusbar .btn-primary, .btn-primary { border-radius: 8px; }
+  @media (max-width: 767.98px) {
+    .sat-rep-form__details, .sat-rep-form__compat, .sat-rep-form__gallery { padding: 10px; }
+  }
+}

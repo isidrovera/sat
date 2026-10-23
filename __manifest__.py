@@ -524,6 +524,7 @@
             'sat/static/src/scss/ticket_repuesto_pedido.scss',
 
             'sat/static/src/scss/toner_counter_submission.scss',
+            'sat/static/src/scss/sat_repuesto_biblioteca.scss',
 
 
 
