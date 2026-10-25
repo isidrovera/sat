@@ -1565,96 +1565,113 @@ ACCIONES URGENTES:
 
         return True
 
-    def action_send_reminder(self):
+    def _has_answered_evaluation(self):
+        """Protege respuestas antiguas y nuevas aunque su estado haya quedado 'sent'."""
         self.ensure_one()
+        if self.state == 'completed' or self.response_date:
+            return True
+        return any(
+            bool(getattr(self, field_name, False))
+            for field_name in self.RATING_FIELDS + [
+                'realizo_pruebas', 'consulto_suministros', 'consulto_problemas'
+            ]
+        )
 
+    def _get_initial_notification_date(self):
+        """Fecha del primer envío realmente registrado; no usa evaluation_date."""
+        self.ensure_one()
+        dates = [
+            value for value in (self.email_sent_date, self.whatsapp_sent_date)
+            if value
+        ]
+        return min(dates) if dates else False
+
+    def action_send_reminder(self):
+        """Un solo recordatorio, exclusivamente por correo, tras 24 horas."""
+        self.ensure_one()
         now = fields.Datetime.now()
+        sent_at = self._get_initial_notification_date()
 
-        if self.state != 'sent' or (
-            self.expiration_date
-            and self.expiration_date <= now
+        if (
+            self.state != 'sent'
+            or self._has_answered_evaluation()
+            or self.reminder_count != 0
+            or self.last_reminder_date
+            or not sent_at
+            or sent_at > now - timedelta(hours=24)
+            or (self.expiration_date and self.expiration_date <= now)
         ):
-            _logger.warning(
-                "Recordatorio omitido para %s: estado=%s vencimiento=%s",
-                self.name,
-                self.state,
-                self.expiration_date,
+            _logger.info(
+                "[EVALUACION] Recordatorio omitido: id=%s estado=%s "
+                "respuesta=%s enviados=%s ultimo=%s inicio=%s vence=%s",
+                self.id, self.state, self.response_date, self.reminder_count,
+                self.last_reminder_date, sent_at, self.expiration_date,
             )
             return False
 
         recipient_email = self._get_recipient_email()
-        template = self.env.ref('sat.email_template_service_evaluation_reminder', False)
-
-        email_ok = False
-        whatsapp_ok = False
-        errors = []
-
-        if template and recipient_email:
-            try:
-                template.send_mail(
-                    self.id,
-                    force_send=True,
-                    email_values=self._get_mail_email_values()
-                )
-                email_ok = True
-            except Exception as exc:
-                errors.append(f'Correo: {exc}')
-                _logger.exception(
-                    "Error enviando recordatorio por correo para %s",
-                    self.name,
-                )
-        elif not recipient_email:
-            errors.append('Correo: destinatario no disponible')
-        else:
-            errors.append('Correo: plantilla de recordatorio no encontrada')
-
-        whatsapp_result = self._send_whatsapp_evaluation(reminder=True)
-        whatsapp_ok = bool(whatsapp_result.get('success'))
-
-        if not whatsapp_ok and not whatsapp_result.get('skipped'):
-            errors.append(
-                f"WhatsApp: {whatsapp_result.get('error') or 'error desconocido'}"
-            )
-
-        if not (email_ok or whatsapp_ok):
-            self.message_post(
-                body=(
-                    "<p>❌ <strong>No se pudo enviar el recordatorio</strong></p>"
-                    f"<p>{'<br/>'.join(errors)}</p>"
-                ),
-                message_type='notification',
-                subtype_xmlid='mail.mt_note',
+        template = self.env.ref(
+            'sat.email_template_service_evaluation_reminder',
+            raise_if_not_found=False,
+        )
+        if not recipient_email or not template:
+            _logger.warning(
+                "[EVALUACION] Recordatorio %s omitido: %s",
+                self.name,
+                'sin correo' if not recipient_email else 'sin plantilla',
             )
             return False
 
-        old_count = self.reminder_count
+        try:
+            # Solo correo; nunca se invoca al gateway de WhatsApp aquí.
+            mail_id = template.send_mail(
+                self.id,
+                force_send=True,
+                email_values=self._get_mail_email_values(),
+            )
+            if not mail_id:
+                _logger.warning(
+                    "[EVALUACION] La plantilla no generó correo para %s",
+                    self.name,
+                )
+                return False
+        except Exception:
+            _logger.exception(
+                "[EVALUACION] Error enviando recordatorio para %s",
+                self.name,
+            )
+            return False
+
         self.write({
-            'reminder_count': old_count + 1,
+            'reminder_count': 1,
             'last_reminder_date': now,
         })
-        self._set_notification_channel_from_results(email_ok, whatsapp_ok)
-
-        channels = []
-        if email_ok:
-            channels.append(f'correo ({recipient_email})')
-        if whatsapp_ok:
-            channels.append(f"WhatsApp ({whatsapp_result.get('phone')})")
-
         self.message_post(
-            body=f"""<p>🔔 <strong>Recordatorio enviado</strong></p>
-                    <ul>
-                        <li><strong>Recordatorio:</strong> #{old_count + 1}</li>
-                        <li><strong>Canales:</strong> {', '.join(channels)}</li>
-                        <li><strong>Fecha:</strong> {fields.Datetime.context_timestamp(self, now).strftime('%d/%m/%Y %H:%M')}</li>
-                    </ul>""",
+            body=(
+                "<p><strong>Recordatorio único enviado por correo</strong></p>"
+                f"<p>Destinatario: {recipient_email}</p>"
+            ),
             message_type='notification',
             subtype_xmlid='mail.mt_note',
         )
-
+        _logger.info(
+            "[EVALUACION] Recordatorio único enviado: id=%s correo=%s",
+            self.id, recipient_email,
+        )
         return True
 
     def action_resend_evaluation(self):
         self.ensure_one()
+
+        # Evita reabrir respuestas y enviar invitaciones extra tras el recordatorio.
+        if self._has_answered_evaluation() or self.reminder_count or self.last_reminder_date:
+            _logger.warning(
+                "[EVALUACION] Reenvío bloqueado: evaluación=%s respondida=%s "
+                "recordatorios=%s",
+                self.name, self._has_answered_evaluation(), self.reminder_count,
+            )
+            return False
+
 
         recipient_email = self._get_recipient_email()
         template = self.env.ref('sat.email_template_service_evaluation', False)
@@ -1673,7 +1690,7 @@ ACCIONES URGENTES:
                 email_ok = True
                 self.write({
                     'email_sent': True,
-                    'email_sent_date': fields.Datetime.now(),
+                    'email_sent_date': self.email_sent_date or fields.Datetime.now(),
                     'email_delivery_status': 'sent',
                     'email_error_message': False,
                 })
@@ -1734,6 +1751,7 @@ ACCIONES URGENTES:
 
             domain = [
                 ('state', '=', 'sent'),
+                ('response_date', '=', False),
                 ('expiration_date', '<', current_datetime)
             ]
 
@@ -1741,6 +1759,12 @@ ACCIONES URGENTES:
 
             if expired_evaluations:
                 for evaluation in expired_evaluations:
+                    if evaluation._has_answered_evaluation():
+                        _logger.info(
+                            "[EVALUACION] No expirar %s: contiene respuestas",
+                            evaluation.name,
+                        )
+                        continue
                     evaluation.write({'state': 'expired'})
 
                     expiration_text = ''
@@ -2004,56 +2028,48 @@ ACCIONES URGENTES:
 
     @api.model
     def _cron_send_pending_reminders(self):
-        _logger.info("🔔 Iniciando envío de recordatorios automáticos...")
+        """Busca respuestas pendientes y envía solo un correo >=24 h del inicio."""
+        _logger.info("[EVALUACION] Revisando recordatorios pendientes...")
+        now = fields.Datetime.now()
+        cutoff = now - timedelta(hours=24)
 
-        try:
-            now = fields.Datetime.now()
-            yesterday = now - timedelta(hours=24)
-            reminder_gap = now - timedelta(hours=20)
-            reminder_window_hours = max(
-                int(
-                    self.env['ir.config_parameter'].sudo().get_param(
-                        'sat.service_evaluation_reminder_window_hours',
-                        default='24',
+        domain = [
+            ('state', '=', 'sent'),
+            ('response_date', '=', False),
+            ('reminder_count', '=', 0),
+            ('last_reminder_date', '=', False),
+            ('expiration_date', '>', now),
+            '|',
+            ('email_sent_date', '<=', cutoff),
+            ('whatsapp_sent_date', '<=', cutoff),
+        ]
+        pending_evaluations = self.search(domain)
+        sent_count = 0
+        skipped_count = 0
+
+        for evaluation in pending_evaluations:
+            try:
+                if evaluation._has_answered_evaluation():
+                    skipped_count += 1
+                    _logger.info(
+                        "[EVALUACION] Omitida %s: ya contiene respuestas",
+                        evaluation.name,
                     )
-                ),
-                1,
-            )
-            reminder_window_end = now + timedelta(
-                hours=reminder_window_hours
-            )
+                    continue
+                if evaluation.action_send_reminder():
+                    sent_count += 1
+                else:
+                    skipped_count += 1
+                self.env.cr.commit()
+            except Exception:
+                self.env.cr.rollback()
+                skipped_count += 1
+                _logger.exception(
+                    "[EVALUACION] Error con recordatorio id=%s", evaluation.id
+                )
 
-            # Guard adicional: no repetir recordatorio si ya se envió uno en
-            # las últimas 20 horas (evita ráfagas si el cron corre varias veces
-            # al día o se ejecuta manualmente).
-            domain = [
-                ('state', '=', 'sent'),
-                ('evaluation_date', '<=', yesterday),
-                ('reminder_count', '<', 2),
-                ('expiration_date', '>', now),
-                ('expiration_date', '<=', reminder_window_end),
-                '|',
-                ('last_reminder_date', '=', False),
-                ('last_reminder_date', '<=', reminder_gap),
-            ]
-
-            pending_evaluations = self.search(domain)
-
-            sent_count = 0
-
-            for evaluation in pending_evaluations:
-                try:
-                    if evaluation.action_send_reminder():
-                        sent_count += 1
-                    self.env.cr.commit()
-                except Exception as e:
-                    self.env.cr.rollback()
-                    _logger.error(f"Error al enviar recordatorio para {evaluation.name}: {str(e)}")
-
-            _logger.info(
-                f"✅ Se enviaron {sent_count} recordatorios de {len(pending_evaluations)} evaluaciones pendientes"
-            )
-
-        except Exception as e:
-            _logger.error(f"❌ Error en cron de recordatorios: {str(e)}")
-            raise
+        _logger.info(
+            "[EVALUACION] Recordatorios correo enviados=%s omitidos=%s candidatos=%s",
+            sent_count, skipped_count, len(pending_evaluations),
+        )
+        return True
