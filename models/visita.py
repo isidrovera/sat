@@ -863,7 +863,7 @@ class TicketAlquilerVisita(models.Model):
             and ticket.responsable
             and ticket.partner_id
             and ticket.agenda
-            and ticket.estado in ('proceso', 'en_ruta', 'en_sitio', 'en_revision')
+            and ticket.estado in ('nuevo','proceso', 'en_ruta', 'en_sitio', 'en_revision')
             and self.env['sat.visita.tecnica']._coordenadas_validas(
                 ticket.equipo_latitud, ticket.equipo_longitud
             )
