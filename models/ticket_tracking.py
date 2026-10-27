@@ -878,6 +878,23 @@ class TicketAlquilerTracking(models.Model):
                 if visita.registrar_llegada_verificada(fix_utc, referencia, 'traccar'):
                     visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(notificar=False, fecha_evento=fix_utc)
                     _logger.info('[CRON-LLEGADA] Llegada observada por doble posición: visita=%s tecnico=%s', visita.id, vinculo.user_id.id)
+                    # El cron y el webhook son caminos alternativos. La llegada
+                    # solo se registra una vez; por ello no duplicamos el aviso.
+                    principal = visita.ticket_ids[:1]
+                    if principal:
+                        try:
+                            aceptado = principal.notificar_en_sitio(
+                                tickets_grupo=visita.ticket_ids,
+                                ubicacion_actual={'latitude': lat, 'longitude': lon},
+                            )
+                            visita._registrar_evento(
+                                'aviso', 'whatsapp',
+                                detalle=('Llegada por cron: solicitud aceptada' if aceptado
+                                         else 'Llegada por cron: envío rechazado'),
+                            )
+                            _logger.info('[TRACKING-WA] Aviso de llegada por cron visita=%s aceptado=%s', visita.id, aceptado)
+                        except Exception:
+                            _logger.exception('[TRACKING-WA] Error notificando llegada por cron visita=%s', visita.id)
                 parametros.set_param(clave, '')
             except Exception:
                 _logger.exception('[CRON-LLEGADA] Error verificando técnico %s; no se modificó llegada por esta observación', vinculo.user_id.id)
