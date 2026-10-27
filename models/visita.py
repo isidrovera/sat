@@ -19,6 +19,7 @@ REGLAS:
 
 import logging
 import math
+from datetime import timedelta
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
@@ -849,6 +850,128 @@ class TicketAlquilerVisita(models.Model):
         tracking=True,
     )
 
+    # ==========================================================
+    # VINCULACIÓN AUTOMÁTICA: UNA VISITA POR SEDE Y HORARIO
+    # ==========================================================
+
+    @api.model
+    def _gps_ticket_elegible_para_visita(self, ticket):
+        """No agrupar tickets históricos, sin programación o sin ubicación."""
+        return bool(
+            ticket
+            and not ticket.gps_visita_id
+            and ticket.responsable
+            and ticket.partner_id
+            and ticket.agenda
+            and ticket.estado in ('proceso', 'en_ruta', 'en_sitio', 'en_revision')
+            and self.env['sat.visita.tecnica']._coordenadas_validas(
+                ticket.equipo_latitud, ticket.equipo_longitud
+            )
+        )
+
+    def _gps_vincular_visita_si_corresponde(self):
+        """Vincula sin cambiar estado ni crear fecha GPS para el ticket."""
+        Visita = self.env['sat.visita.tecnica'].sudo()
+        for ticket in self.sudo():
+            if not self._gps_ticket_elegible_para_visita(ticket):
+                continue
+
+            # Serializa la selección + creación para un mismo técnico.
+            # En particular evita dos visitas duplicadas en concurrencia.
+            self.env.cr.execute(
+                'SELECT id FROM res_users WHERE id = %s FOR UPDATE',
+                [ticket.responsable.id],
+            )
+            ticket.invalidate_recordset(['gps_visita_id'])
+            if ticket.gps_visita_id:
+                continue
+
+            desde = ticket.agenda - timedelta(minutes=30)
+            hasta = ticket.agenda + timedelta(minutes=30)
+            candidatas = Visita.search([
+                ('tecnico_id', '=', ticket.responsable.id),
+                ('partner_id', '=', ticket.partner_id.id),
+                ('agenda', '>=', desde),
+                ('agenda', '<=', hasta),
+                ('estado', 'in', ['programada', 'en_ruta', 'en_sitio']),
+            ], order='agenda asc, id asc')
+
+            visita = False
+            for candidata in candidatas:
+                if not Visita._coordenadas_validas(candidata.latitud, candidata.longitud):
+                    continue
+                distancia = Visita._distancia_metros(
+                    candidata.latitud, candidata.longitud,
+                    ticket.equipo_latitud, ticket.equipo_longitud,
+                )
+                if distancia <= DISTANCIA_SEDE_MAXIMA:
+                    visita = candidata
+                    break
+
+            if not visita:
+                visita = Visita.create({
+                    'name': 'Visita %s - %s' % (
+                        ticket.name or ticket.id,
+                        ticket.partner_id.display_name or 'Cliente',
+                    ),
+                    'tecnico_id': ticket.responsable.id,
+                    'partner_id': ticket.partner_id.id,
+                    'sede_descripcion': ticket.partner_id.display_name or 'Sede por verificar',
+                    'latitud': ticket.equipo_latitud,
+                    'longitud': ticket.equipo_longitud,
+                    'agenda': ticket.agenda,
+                    'estado': 'programada',
+                })
+                visita._registrar_evento(
+                    tipo='incidencia',
+                    fuente='odoo',
+                    detalle=(
+                        'Visita agrupadora creada a partir del ticket %s. '
+                        'No se reconstruyen ni presumen llegadas o rutas pasadas.'
+                    ) % ticket.name,
+                )
+
+            ticket.with_context(sat_gps_vinculacion_interna=True).write({
+                'gps_visita_id': visita.id,
+            })
+            _logger.info(
+                '[SAT-GPS-VINCULO] ticket=%s visita=%s tecnico=%s estado_ticket=%s',
+                ticket.name, visita.id, ticket.responsable.id, ticket.estado,
+            )
+        return True
+
+    @api.model
+    def action_vincular_visitas_gps_pendientes(self):
+        """Reparación explícita de los tickets de HOY sin visita.
+
+        Se ejecuta a demanda desde odoo shell o una acción de servidor,
+        sin alterar estado, fecha_llegada ni fecha_en_ruta de los tickets.
+        """
+        from datetime import datetime, time, timezone
+        from zoneinfo import ZoneInfo
+        hoy = datetime.now(ZoneInfo('America/Lima')).date()
+        desde = datetime.combine(hoy, time.min, tzinfo=ZoneInfo('America/Lima')).astimezone(timezone.utc).replace(tzinfo=None)
+        hasta = datetime.combine(hoy, time.max, tzinfo=ZoneInfo('America/Lima')).astimezone(timezone.utc).replace(tzinfo=None)
+        tickets = self.sudo().search([
+            ('gps_visita_id', '=', False),
+            ('agenda', '>=', desde),
+            ('agenda', '<=', hasta),
+            ('estado', 'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
+        ], order='responsable, partner_id, agenda, id')
+        previos = len(tickets)
+        tickets._gps_vincular_visita_si_corresponde()
+        vinculados = len(tickets.filtered(lambda t: t.gps_visita_id))
+        _logger.info('[SAT-GPS-VINCULO] Pendientes hoy=%s vinculados=%s', previos, vinculados)
+        return {'candidatos': previos, 'vinculados': vinculados,
+                'omitidos': previos - vinculados}
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        tickets = super().create(vals_list)
+        if not self.env.context.get('sat_gps_vinculacion_interna'):
+            tickets._gps_vincular_visita_si_corresponde()
+        return tickets
+
     @api.constrains(
         'gps_visita_id',
         'responsable',
@@ -901,4 +1024,11 @@ class TicketAlquilerVisita(models.Model):
                         "no tiene salida confirmada."
                     ) % anterior.name)
 
-        return super().write(vals)
+        result = super().write(vals)
+        if (not self.env.context.get('sat_gps_vinculacion_interna')
+                and any(clave in vals for clave in (
+                    'responsable', 'partner_id', 'agenda', 'estado',
+                    'equipo_latitud', 'equipo_longitud',
+                ))):
+            self._gps_vincular_visita_si_corresponde()
+        return result
