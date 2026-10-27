@@ -801,8 +801,86 @@ class TicketAlquilerTracking(models.Model):
 
     @api.model
     def cron_gps_detectar_llegada(self):
-        """Una instantánea dentro de geocerca no prueba la hora real de entrada."""
-        _logger.info('[CRON-LLEGADA] Sin transición por instantánea; usar geofenceEnter fechado')
+        """Detecta presencia confirmada mediante DOS posiciones recientes distintas.
+
+        Si el webhook geofenceEnter no llegó (p.ej. técnico ya estaba dentro),
+        permite registrar el instante de la segunda observación, NUNCA la hora
+        histórica de entrada. No altera tickets sin visita vinculada o ante
+        varias visitas candidatas. No usa coordenadas de otra geocerca.
+        """
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            return True
+        ahora = fields.Datetime.now()
+        parametros = self.env['ir.config_parameter'].sudo()
+        Vinculo = self.env['tecnico.dispositivo.gps'].sudo()
+        Visita = self.env['sat.visita.tecnica'].sudo()
+        for vinculo in Vinculo.search([('activo', '=', True)]):
+            try:
+                pos = posiciones.get(vinculo.traccar_device_id)
+                if not self._gps_posicion_valida(pos, max_edad_min=5):
+                    continue
+                lat = pos.get('latitude')
+                lon = pos.get('longitude')
+                if lat is None or lon is None:
+                    continue
+                lat, lon = float(lat), float(lon)
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                    continue
+                precision = pos.get('accuracy')
+                if precision is None:
+                    precision = (pos.get('attributes') or {}).get('accuracy')
+                if precision is not None and float(precision) > 100:
+                    continue
+                fix = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
+                fix_utc = fix.astimezone(timezone.utc).replace(tzinfo=None)
+                if fix_utc > ahora + timedelta(minutes=2):
+                    continue
+                visitas = Visita.search([
+                    ('tecnico_id', '=', vinculo.user_id.id),
+                    ('estado', 'in', ['programada', 'en_ruta']),
+                    ('agenda', '>=', ahora - timedelta(days=1)),
+                    ('agenda', '<=', ahora + timedelta(days=1)),
+                ])
+                candidatos = visitas.filtered(lambda v: (
+                    v.ticket_ids and v.latitud and v.longitud
+                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) <= 100
+                    and any(t.traccar_geofence_id for t in v.ticket_ids)
+                ))
+                if len(candidatos) != 1:
+                    if visitas and not candidatos:
+                        _logger.info('[CRON-LLEGADA] Técnico %s: ninguna visita coincide con GPS actual', vinculo.user_id.id)
+                    continue
+                visita = candidatos[0]
+                # Verificar además la geocerca efectiva del ticket (no otro círculo).
+                gids = (pos.get('geofenceIds') if isinstance(pos.get('geofenceIds'), list) else None)
+                ids_visita = {t.traccar_geofence_id for t in visita.ticket_ids if t.traccar_geofence_id}
+                if gids is not None and not ids_visita.intersection(set(gids)):
+                    continue
+                clave = 'sat.gps.presencia.%s.%s' % (vinculo.traccar_device_id, visita.id)
+                anterior = parametros.get_param(clave, default='')
+                # Los puntos deben ser distintos y separados al menos 20 segundos.
+                if not anterior:
+                    parametros.set_param(clave, fix_utc.isoformat())
+                    continue
+                try:
+                    primera = datetime.fromisoformat(anterior)
+                except (ValueError, TypeError):
+                    primera = False
+                if not primera or (fix_utc - primera).total_seconds() > 300 or fix_utc < primera:
+                    parametros.set_param(clave, fix_utc.isoformat())
+                    continue
+                if (fix_utc - primera).total_seconds() < 20:
+                    continue
+                if visita.fecha_en_ruta and fix_utc < visita.fecha_en_ruta:
+                    continue
+                referencia = 'traccar-position:%s@%s' % (pos.get('id'), fix_utc.isoformat())
+                if visita.registrar_llegada_verificada(fix_utc, referencia, 'traccar'):
+                    visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(notificar=False, fecha_evento=fix_utc)
+                    _logger.info('[CRON-LLEGADA] Llegada observada por doble posición: visita=%s tecnico=%s', visita.id, vinculo.user_id.id)
+                parametros.set_param(clave, '')
+            except Exception:
+                _logger.exception('[CRON-LLEGADA] Error verificando técnico %s; no se modificó llegada por esta observación', vinculo.user_id.id)
         return True
 
     @api.model
@@ -904,8 +982,10 @@ class TicketAlquilerTracking(models.Model):
             _logger.warning('[GPS] geofenceEnter no corresponde a visita única device/geofence=%s', gid)
             return resultado
         visita = visitas[0]
-        ref = 'traccar-event:%s' % datos.get('id') if datos.get('id') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
+        ref = 'traccar-event:%s' % datos.get('eventId') if datos.get('eventId') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
         if visita.registrar_llegada_verificada(fecha, ref, 'traccar'):
+            visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(
+                notificar=False, fecha_evento=fecha)
             resultado = visita.ticket_ids
             if resultado:
                 try:
@@ -933,7 +1013,7 @@ class TicketAlquilerTracking(models.Model):
         visita = visitas[0]
         if visita.fecha_llegada and fecha < visita.fecha_llegada:
             return resultado
-        referencia = 'traccar-event:%s' % datos.get('id') if datos.get('id') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
+        referencia = 'traccar-event:%s' % datos.get('eventId') if datos.get('eventId') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
         if visita.estado == 'en_sitio':
             visita.registrar_salida_detectada(referencia=referencia)
         # No confirmar únicamente por 60 min o porque el dispositivo está lejos.
