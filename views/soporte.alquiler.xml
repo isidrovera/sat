@@ -437,6 +437,8 @@
                                 <group>
                                     <group string="Tiempos registrados">
                                         <button name="action_crear_geocerca_manual" string="📡 Crear / Recrear Geocerca" type="object" class="btn-primary"/>
+                                        <button name="action_crear_vincular_visita_gps" string="Crear / Vincular visita GPS" type="object" icon="fa-map-marker" class="btn-secondary" groups="base.group_system"/>
+                                        <field name="gps_visita_id" readonly="1" options="{'no_create': True}"/>
                                         <field name="fecha_asignacion"/>
                                         <field name="fecha_en_ruta"/>
                                         <field name="fecha_llegada"/>

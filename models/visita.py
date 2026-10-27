@@ -863,7 +863,7 @@ class TicketAlquilerVisita(models.Model):
             and ticket.responsable
             and ticket.partner_id
             and ticket.agenda
-            and ticket.estado in ('nuevo','proceso', 'en_ruta', 'en_sitio', 'en_revision')
+            and ticket.estado in ('nuevo', 'proceso', 'en_ruta', 'en_sitio', 'en_revision')
             and self.env['sat.visita.tecnica']._coordenadas_validas(
                 ticket.equipo_latitud, ticket.equipo_longitud
             )
@@ -939,6 +939,39 @@ class TicketAlquilerVisita(models.Model):
                 ticket.name, visita.id, ticket.responsable.id, ticket.estado,
             )
         return True
+
+    def action_crear_vincular_visita_gps(self):
+        """Botón manual: vincula/reutiliza y abre la visita sin cambiar estados."""
+        self.ensure_one()
+        ticket = self.sudo()
+        if not ticket.gps_visita_id:
+            faltantes = []
+            if not ticket.responsable:
+                faltantes.append('Técnico responsable')
+            if not ticket.partner_id:
+                faltantes.append('Cliente')
+            if not ticket.agenda:
+                faltantes.append('Fecha programada')
+            Visita = self.env['sat.visita.tecnica']
+            if not Visita._coordenadas_validas(ticket.equipo_latitud, ticket.equipo_longitud):
+                faltantes.append('Coordenadas válidas de la sede')
+            if faltantes:
+                raise UserError(_('No se puede crear la visita del ticket %s.\nFaltan: %s') % (
+                    ticket.name, ', '.join(faltantes)))
+            if ticket.estado not in ('nuevo', 'proceso', 'en_ruta', 'en_sitio', 'en_revision'):
+                raise UserError(_('El estado actual no permite programar una visita GPS.'))
+            ticket._gps_vincular_visita_si_corresponde()
+            ticket.invalidate_recordset(['gps_visita_id'])
+        if not ticket.gps_visita_id:
+            raise UserError(_('No fue posible vincular la visita. Revise la programación y la sede.'))
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Visita física GPS'),
+            'res_model': 'sat.visita.tecnica',
+            'res_id': ticket.gps_visita_id.id,
+            'view_mode': 'form',
+            'target': 'current',
+        }
 
     @api.model
     def action_vincular_visitas_gps_pendientes(self):
