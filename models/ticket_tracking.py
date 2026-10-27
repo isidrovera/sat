@@ -8,7 +8,7 @@ La salida física no reemplaza las validaciones de action_finalizar.
 import math
 import logging
 import requests
-from datetime import timedelta
+from datetime import timedelta, datetime, timezone
 
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
@@ -265,6 +265,13 @@ class TicketAlquilerTracking(models.Model):
         string='Fue puntual?',
         compute='_compute_tiempos_tracking', store=True,
     )
+    gps_geofence_device_id = fields.Integer(string='Dispositivo vinculado a geocerca', readonly=True, copy=False)
+    gps_salida_detectada_utc = fields.Datetime(string='Detección GPS de retiro', readonly=True, copy=False)
+    gps_aviso_retiro_estado = fields.Selection([('pendiente', 'Pendiente'), ('solicitado', 'Solicitado al proveedor'), ('error', 'Error de envío')], string='Estado aviso de retiro', readonly=True, copy=False)
+    gps_aviso_retiro_error = fields.Text(string='Error aviso retiro', readonly=True, copy=False)
+    gps_salida_fuente = fields.Selection([('webhook', 'Evento Traccar'), ('cron', 'Observación GPS'), ('manual', 'Confirmación manual')], string='Fuente detección de retiro', readonly=True, copy=False)
+    gps_salida_latitud = fields.Float(string='Latitud última detección', digits=(10, 7), readonly=True, copy=False)
+    gps_salida_longitud = fields.Float(string='Longitud última detección', digits=(10, 7), readonly=True, copy=False)
     traccar_geofence_id = fields.Integer(
         string='Geocerca Traccar ID',
         readonly=True,
@@ -313,7 +320,13 @@ class TicketAlquilerTracking(models.Model):
             cambio_estado = 'estado' in valores and nuevo_estado != anterior
             campo = campos_estado.get(nuevo_estado) if cambio_estado else None
             if campo and not valores.get(campo) and not rec[campo]:
-                valores[campo] = ahora
+                if nuevo_estado in ('en_ruta', 'en_sitio') and rec.gps_visita_id:
+                    origen = rec.gps_visita_id.fecha_en_ruta if nuevo_estado == 'en_ruta' else rec.gps_visita_id.fecha_llegada
+                    if not origen:
+                        raise UserError(_('La visita no tiene evento físico verificado para este estado.'))
+                    valores[campo] = origen
+                elif nuevo_estado not in ('en_ruta', 'en_sitio'):
+                    valores[campo] = ahora
             if (valores.get('responsable') and not rec.fecha_asignacion
                     and not valores.get('fecha_asignacion')):
                 valores['fecha_asignacion'] = ahora
@@ -330,9 +343,8 @@ class TicketAlquilerTracking(models.Model):
                         f"Responsable actualizado: {rec.responsable.name or 'Sin asignar'}"
                     )
                 if tecnico_cambio and rec.responsable and rec.equipo_tiene_coordenadas:
-                    if rec.traccar_geofence_id:
-                        rec._geocerca_borrar()
-                    rec._geocerca_crear()
+                    if not rec.traccar_geofence_id or rec._geocerca_borrar():
+                        rec._geocerca_crear()
         return resultado
 
     # ═══════════════════════════════════════════════════════════════
@@ -374,11 +386,15 @@ class TicketAlquilerTracking(models.Model):
         if not geofence_id:
             self._registrar_evento("No se pudo crear geocerca en Traccar")
             return False
-        traccar.vincular_geocerca_dispositivo(
+        vinculado = traccar.vincular_geocerca_dispositivo(
             geofence_id=geofence_id,
             device_id=vinculo.traccar_device_id,
         )
-        self.sudo().write({'traccar_geofence_id': geofence_id})
+        if not vinculado:
+            traccar.borrar_geocerca(geofence_id)
+            self._registrar_evento('Geocerca no vinculada; no se registró como activa')
+            return False
+        self.sudo().write({'traccar_geofence_id': geofence_id, 'gps_geofence_device_id': vinculo.traccar_device_id})
         self._registrar_evento(
             f"Geocerca Traccar creada automaticamente "
             f"(ID:{geofence_id}, radio:{radio}m) - "
@@ -390,27 +406,24 @@ class TicketAlquilerTracking(models.Model):
         self.ensure_one()
         if not self.traccar_geofence_id:
             return False
-        geofence_id = self.traccar_geofence_id
-        traccar     = self.env['traccar.api.service']
-        if self.responsable:
-            vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
-                ('user_id', '=', self.responsable.id),
-                ('activo', '=', True),
-            ], limit=1)
-            if vinculo:
-                traccar.desvincular_geocerca_dispositivo(
-                    geofence_id=geofence_id,
-                    device_id=vinculo.traccar_device_id,
-                )
-        traccar.borrar_geocerca(geofence_id)
-        self.sudo().write({'traccar_geofence_id': 0})
-        self._registrar_evento(f"Geocerca Traccar ID:{geofence_id} eliminada")
+        gid = self.traccar_geofence_id
+        device_id = self.gps_geofence_device_id
+        api = self.env['traccar.api.service']
+        # Retener referencias si Traccar está inaccesible; evitar geocercas huérfanas.
+        if device_id and not api.desvincular_geocerca_dispositivo(gid, device_id):
+            self._registrar_evento('Geocerca no eliminada: falló desvinculación en Traccar')
+            return False
+        if not api.borrar_geocerca(gid):
+            self._registrar_evento('Geocerca pendiente de eliminación en Traccar')
+            return False
+        self.sudo().write({'traccar_geofence_id': 0, 'gps_geofence_device_id': 0})
+        self._registrar_evento(f'Geocerca Traccar ID:{gid} eliminada')
         return True
 
     def action_crear_geocerca_manual(self):
         self.ensure_one()
-        if self.traccar_geofence_id:
-            self._geocerca_borrar()
+        if self.traccar_geofence_id and not self._geocerca_borrar():
+            raise UserError('No se pudo retirar la geocerca anterior en Traccar.')
         result = self._geocerca_crear()
         if result:
             return {
@@ -447,7 +460,7 @@ class TicketAlquilerTracking(models.Model):
                 rec.tiempo_traslado_minutos = round(delta.total_seconds() / 60, 1)
             else:
                 rec.tiempo_traslado_minutos = 0
-            fin_sitio = rec.fecha_salida_sitio or rec.fecha_finalizacion
+            fin_sitio = rec.fecha_salida_sitio
             if rec.fecha_llegada and fin_sitio:
                 delta = fin_sitio - rec.fecha_llegada
                 rec.tiempo_en_sitio_minutos = round(delta.total_seconds() / 60, 1)
@@ -461,7 +474,7 @@ class TicketAlquilerTracking(models.Model):
             if rec.fecha_llegada and rec.agenda:
                 delta = rec.fecha_llegada - rec.agenda
                 rec.diferencia_puntualidad_minutos = round(delta.total_seconds() / 60, 1)
-                rec.es_puntual = abs(rec.diferencia_puntualidad_minutos) <= 15
+                rec.es_puntual = rec.diferencia_puntualidad_minutos <= 15
             else:
                 rec.diferencia_puntualidad_minutos = 0
                 rec.es_puntual = False
@@ -514,8 +527,66 @@ class TicketAlquilerTracking(models.Model):
             and t.responsable.id == self.responsable.id
             and t.agenda
             and agenda_ini <= t.agenda <= agenda_fin
+            and (not self.equipo_latitud or not self.equipo_longitud
+                 or (t.equipo_latitud and t.equipo_longitud
+                     and self._haversine_metros(self.equipo_latitud, self.equipo_longitud,
+                                                t.equipo_latitud, t.equipo_longitud) <= 200))
         ))
         return misma_visita if misma_visita else self
+
+    @staticmethod
+    def _gps_fecha_evento(datos):
+        """Solo devuelve una hora de evento explícita; nunca usa serverTime/fixTime como sustitutos."""
+        valor = (datos or {}).get('eventTime')
+        if not valor:
+            return None
+        try:
+            if isinstance(valor, datetime):
+                dt = valor
+            else:
+                dt = datetime.fromisoformat(str(valor).strip().replace('Z', '+00:00'))
+            if not dt.tzinfo:
+                return None
+            utc = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            if utc > fields.Datetime.now() + timedelta(minutes=2):
+                return None
+            return utc
+        except (ValueError, TypeError, OverflowError):
+            return None
+
+    @staticmethod
+    def _gps_posicion_valida(pos, max_edad_min=10):
+        """Para crons: la antigüedad y validez de una posición son obligatorias."""
+        if not pos or pos.get('valid') is not True:
+            return False
+        valor = pos.get('fixTime')
+        if not valor:
+            return False
+        try:
+            dt = datetime.fromisoformat(str(valor).replace('Z', '+00:00'))
+            if not dt.tzinfo:
+                return False
+            edad = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()
+            return -120 <= edad <= max_edad_min * 60
+        except (ValueError, TypeError, OverflowError):
+            return False
+
+    def _registrar_deteccion_salida(self, lat=None, lon=None, fecha_evento=None, fuente='cron'):
+        """Detección != salida confirmada, != ticket finalizado."""
+        self.ensure_one()
+        if self.fecha_salida_sitio:
+            return
+        if self.gps_salida_detectada_utc and fecha_evento and fecha_evento >= self.gps_salida_detectada_utc:
+            return
+        vals = {'gps_salida_fuente': fuente}
+        if fecha_evento:
+            vals['gps_salida_detectada_utc'] = fecha_evento
+        # Si falta hora de evento, no presentar 'ahora' como hora GPS.
+        if lat is not None:
+            vals['gps_salida_latitud'] = lat
+        if lon is not None:
+            vals['gps_salida_longitud'] = lon
+        self.sudo().write(vals)
 
     # ═══════════════════════════════════════════════════════════════
     #  LÓGICA DE RETIRO PENDIENTE (NUEVO v7)
@@ -530,104 +601,72 @@ class TicketAlquilerTracking(models.Model):
     #   3. Cualquier otro caso → crear token y enviar link al técnico
     # ═══════════════════════════════════════════════════════════════
 
-    def _evaluar_salida_geocerca(self, lat_actual=None, lon_actual=None):
-        """
-        Evalúa qué hacer cuando se detecta que el técnico salió de la geocerca.
+    def _evaluar_salida_geocerca(self, lat_actual=None, lon_actual=None,
+                                fecha_evento=None, fuente='cron'):
+        """Evalúa una DETECCIÓN de retiro; nunca finaliza el ticket.
 
-        Retorna:
-          'ya_preguntado'  → ya hay un token pendiente, no hacer nada
-          'salida_registrada' → salida física confirmada (60min + 2km)
-          'token_enviado'  → se creó token y se envió link al técnico
-          'sin_datos'      → no había fecha de llegada, se registra salida directo
+        Si hay evidencia suficiente de permanencia + distancia y evento fechado,
+        puede registrar salida. De otro modo requiere confirmación del técnico.
         """
         self.ensure_one()
-
-        # ── Verificar si ya hay token pendiente para este ticket ──
+        if self.fecha_salida_sitio:
+            return 'salida_ya_registrada'
+        self._registrar_deteccion_salida(lat_actual, lon_actual, fecha_evento, fuente)
         token_existente = self.env['ticket.retiro.token'].sudo().search([
-            ('ticket_id', '=', self.id),
-            ('estado',    '=', 'pendiente'),
+            ('ticket_id', '=', self.id), ('estado', '=', 'pendiente'),
         ], limit=1)
         if token_existente:
-            _logger.info(
-                "[RETIRO] Ticket %s ya tiene token pendiente, ignorando nueva salida",
-                self.name,
-            )
             return 'ya_preguntado'
-
-        ahora = fields.Datetime.now()
-
-        # ── Calcular tiempo real en sitio hasta este momento ──
         if not self.fecha_llegada:
-            # Sin fecha de llegada registrada → salida directa sin preguntar
-            self.sudo().action_registrar_salida_sitio(notificar=True)
-            return 'sin_datos'
-
-        delta_sitio = ahora - self.fecha_llegada
-        minutos_en_sitio = delta_sitio.total_seconds() / 60
-
-        # ── Calcular distancia al equipo ──
-        distancia_metros = None
-        if (lat_actual and lon_actual
-                and self.equipo_latitud and self.equipo_longitud):
-            distancia_metros = self._haversine_metros(
-                lat_actual, lon_actual,
-                self.equipo_latitud, self.equipo_longitud,
-            )
-
-        _logger.info(
-            "[RETIRO] Ticket %s | tiempo_sitio=%.1fmin | distancia=%s m",
-            self.name,
-            minutos_en_sitio,
-            f"{distancia_metros:.0f}" if distancia_metros is not None else "N/A",
+            self._registrar_evento('Retiro detectado sin llegada verificada; se solicita confirmación')
+        referencia = fecha_evento or fields.Datetime.now()
+        minutos = max(0.0, (referencia - self.fecha_llegada).total_seconds() / 60) if self.fecha_llegada else 0.0
+        distancia = None
+        if (lat_actual is not None and lon_actual is not None and
+                self.equipo_latitud and self.equipo_longitud):
+            distancia = self._haversine_metros(lat_actual, lon_actual,
+                                               self.equipo_latitud, self.equipo_longitud)
+        # Un geofenceExit acredita detección, no necesariamente retiro definitivo.
+        # La confirmación se tramita mediante el token de retiro y la visita.
+        # Usar API existente de tokens, sin inventar fechas de salida.
+        token = self.env['ticket.retiro.token'].sudo().crear_token_retiro(
+            ticket=self, lat=lat_actual, lon=lon_actual, tiempo_en_sitio=minutos,
         )
-
-        # ── Regla: >= 60 min en sitio Y >= 2 km → registrar salida física ──
-        if (minutos_en_sitio >= UMBRAL_MINUTOS_SITIO
-                and distancia_metros is not None
-                and distancia_metros >= UMBRAL_METROS_SALIDA):
-            _logger.info(
-                "[RETIRO] Ticket %s → salida física confirmada "
-                "(%.1fmin en sitio, %.0fm de distancia)",
-                self.name, minutos_en_sitio, distancia_metros,
-            )
-            self._registrar_evento(
-                f"Salida detectada: {minutos_en_sitio:.0f}min en sitio, "
-                f"{distancia_metros:.0f}m → salida física confirmada; cierre del servicio pendiente"
-            )
-            self.sudo().action_registrar_salida_sitio(notificar=True)
-            return 'salida_registrada'
-
-        # ── Todos los demás casos → crear token y preguntar ──
-        token_rec = self.env['ticket.retiro.token'].sudo().crear_token_retiro(
-            ticket=self,
-            lat=lat_actual,
-            lon=lon_actual,
-            tiempo_en_sitio=minutos_en_sitio,
-        )
-
-        # Construir URL del link
-        base_url = self.env['ir.config_parameter'].sudo().get_param(
-            'web.base.url', 'http://localhost:8069'
-        )
-        link = f"{base_url}/sat/retiro/{token_rec.token}"
-
-        self._registrar_evento(
-            f"Salida detectada: {minutos_en_sitio:.0f}min en sitio "
-            f"{'(' + str(round(distancia_metros)) + 'm)' if distancia_metros else ''}"
-            f" → esperando confirmación de motivo"
-        )
-
-        # Enviar WhatsApp al técnico
+        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url') or ''
+        link = f"{base_url.rstrip('/')}/sat/retiro/{token.token}"
+        self._registrar_evento('Posible retiro GPS detectado; esperando confirmación del técnico')
         try:
-            self.notificar_retiro_pendiente(
-                link=link,
-                tiempo_en_sitio=minutos_en_sitio,
-            )
+            aceptado = self.notificar_retiro_pendiente(link=link, tiempo_en_sitio=minutos)
+            self.sudo().write({'gps_aviso_retiro_estado': 'solicitado' if aceptado else 'error',
+                               'gps_aviso_retiro_error': False if aceptado else 'Proveedor no aceptó el envío'})
+            self._registrar_evento('Solicitud de retiro aceptada por proveedor; entrega no verificada' if aceptado
+                                   else 'ERROR: proveedor no aceptó el aviso de retiro')
         except Exception as e:
-            _logger.error("[RETIRO] Error enviando link al técnico %s: %s",
-                          self.responsable.name if self.responsable else 'N/A', e)
+            _logger.exception('[RETIRO] Falló aviso ticket %s: %s', self.id, e)
+            self.sudo().write({'gps_aviso_retiro_estado': 'error', 'gps_aviso_retiro_error': str(e)})
+            self._registrar_evento(f'ERROR enviando confirmación de retiro: {e}')
+        return 'token_enviado_o_intentado'
 
-        return 'token_enviado'
+    def action_reenviar_aviso_retiro(self):
+        """Reintento explícito si el proveedor falló, sin duplicar tokens."""
+        for ticket in self:
+            token = self.env['ticket.retiro.token'].sudo().search([
+                ('ticket_id', '=', ticket.id), ('estado', '=', 'pendiente')
+            ], limit=1)
+            if not token:
+                raise UserError('No existe solicitud de retiro pendiente para reenviar.')
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url') or ''
+            url = f"{base_url.rstrip('/')}/sat/retiro/{token.token}"
+            minutos = max(0, (fields.Datetime.now() - ticket.fecha_llegada).total_seconds() / 60) if ticket.fecha_llegada else 0
+            try:
+                ticket.notificar_retiro_pendiente(link=url, tiempo_en_sitio=minutos)
+                ticket.sudo().write({'gps_aviso_retiro_estado': 'solicitado', 'gps_aviso_retiro_error': False})
+                ticket._registrar_evento('Reintento de aviso retiro solicitado al proveedor; entrega no verificada')
+            except Exception as exc:
+                ticket.sudo().write({'gps_aviso_retiro_estado': 'error', 'gps_aviso_retiro_error': str(exc)})
+                ticket._registrar_evento(f'Fallo reintento aviso retiro: {exc}')
+                raise UserError(f'No se pudo reenviar la notificación: {exc}') from exc
+        return True
 
     def _cancelar_tokens_retiro_pendientes(self):
         """
@@ -655,46 +694,31 @@ class TicketAlquilerTracking(models.Model):
     # ═══════════════════════════════════════════════════════════════
 
     def action_en_ruta(self, notificar=True):
-        ahora = fields.Datetime.now()
+        """La ruta empieza en la visita; jamás por movimiento genérico."""
         for ticket in self:
-            if ticket.estado not in ('proceso',):
-                raise UserError(_(
-                    "Solo se puede marcar En Ruta un ticket asignado.\n"
-                    "Estado actual: %s"
-                ) % ticket.estado)
-            vals = {'estado': 'en_ruta'}
-            ticket.write(vals)
-            ticket._registrar_evento(
-                f"Tecnico {ticket.responsable.name or 'N/A'} en ruta"
-            )
-            if notificar:
-                try:
-                    ticket.notificar_en_ruta()
-                except Exception as e:
-                    _logger.error("[TRACKING] Error notificando en_ruta: %s", e)
+            visita = ticket.gps_visita_id
+            if not visita:
+                raise UserError(_('Asigne una visita física antes de iniciar ruta.'))
+            if visita.estado != 'en_ruta':
+                raise UserError(_('Inicie el recorrido desde la visita física.'))
+            visita._validar_siguiente_ruta()
+            if ticket.estado == 'proceso':
+                # La visita es dueña del horario. No generar una segunda fecha.
+                ticket.write({'estado': 'en_ruta', 'fecha_en_ruta': visita.fecha_en_ruta})
+        return True
 
-    def action_en_sitio(self, notificar=True):
-        ahora = fields.Datetime.now()
+    def action_en_sitio(self, notificar=True, fecha_evento=None):
+        """La llegada física se registra y notifica UNA VEZ en la visita."""
         for ticket in self:
-            if ticket.estado not in ('proceso', 'en_ruta'):
-                raise UserError(_(
-                    "Solo se puede marcar En Sitio desde asignado o en ruta.\n"
-                    "Estado actual: %s"
-                ) % ticket.estado)
-            vals = {'estado': 'en_sitio'}
-            if not ticket.fecha_llegada:
-                vals['fecha_llegada'] = ahora
-            ticket.write(vals)
-            ticket._registrar_evento(
-                f"Tecnico {ticket.responsable.name or 'N/A'} llego al sitio"
-            )
-            # Si regresa al sitio con token pendiente → cancelarlo
+            visita = ticket.gps_visita_id
+            if not visita:
+                raise UserError(_('El ticket no está asociado a una visita física.'))
+            if not visita.fecha_llegada:
+                raise UserError(_('La visita no tiene llegada física confirmada.'))
+            if ticket.estado in ('proceso', 'en_ruta'):
+                ticket.write({'estado': 'en_sitio', 'fecha_llegada': visita.fecha_llegada})
             ticket._cancelar_tokens_retiro_pendientes()
-            if notificar:
-                try:
-                    ticket.notificar_en_sitio()
-                except Exception as e:
-                    _logger.error("[TRACKING] Error notificando en_sitio: %s", e)
+        return True
 
     def action_en_revision(self):
         ahora = fields.Datetime.now()
@@ -716,19 +740,27 @@ class TicketAlquilerTracking(models.Model):
             except Exception as e:
                 _logger.error("[TRACKING] Error notificando en_revision: %s", e)
 
-    def action_registrar_salida_sitio(self, notificar=True):
-        ahora = fields.Datetime.now()
+    def action_registrar_salida_sitio(self, notificar=True, fecha_salida=None, fuente='manual'):
+        """La visita confirma la salida; este método no finaliza servicios."""
         for ticket in self:
-            if not ticket.fecha_salida_sitio:
-                ticket.write({'fecha_salida_sitio': ahora})
-                ticket._registrar_evento(
-                    f"Tecnico {ticket.responsable.name or 'N/A'} salio del sitio"
-                )
-                if notificar:
-                    try:
-                        ticket.notificar_salida_sitio()
-                    except Exception as e:
-                        _logger.error("[TRACKING] Error notificando salida_sitio: %s", e)
+            visita = ticket.gps_visita_id
+            if not visita:
+                raise UserError(_('Vincule el ticket a una visita física.'))
+            if visita.fecha_salida:
+                if not ticket.fecha_salida_sitio:
+                    ticket.write({'fecha_salida_sitio': visita.fecha_salida})
+                continue
+            # No se permite inventar fechas GPS a partir de la hora de Odoo.
+            if fuente.lower() not in ('manual', 'confirmacion_manual', 'traccar'):
+                raise UserError(_('Fuente de salida no reconocida.'))
+            if fuente.lower() == 'traccar' and not fecha_salida:
+                raise UserError(_('La salida GPS requiere fecha original del evento.'))
+            fecha = fecha_salida or fields.Datetime.now()
+            referencia = 'odoo-user:%s' % self.env.uid if fuente.lower() != 'traccar' else self.env.context.get('traccar_event_reference')
+            if not referencia:
+                raise UserError(_('Falta referencia verificable del evento GPS.'))
+            visita.registrar_salida_confirmada(fecha, 'traccar' if fuente.lower() == 'traccar' else 'manual', referencia)
+        return True
 
     def action_proceso(self):
         ahora = fields.Datetime.now()
@@ -750,7 +782,8 @@ class TicketAlquilerTracking(models.Model):
             if vals:
                 ticket.write(vals)
             ticket._registrar_evento("Ticket finalizado")
-            ticket._geocerca_borrar()
+            if not ticket.gps_visita_id or ticket.gps_visita_id.estado in ('salida_confirmada', 'cancelada'):
+                ticket._geocerca_borrar()
             try:
                 ticket.notificar_finalizado()
             except Exception as e:
@@ -762,388 +795,32 @@ class TicketAlquilerTracking(models.Model):
 
     @api.model
     def cron_gps_detectar_movimiento(self):
-        """
-        Red de seguridad para deviceMoving.
-        proceso → en_ruta si el tecnico esta en movimiento en Traccar.
-        Frecuencia: cada 5 minutos.
-        """
-        _logger.info("[CRON-MOVIMIENTO] Iniciando verificacion de movimiento GPS")
-
-        hoy_inicio, hoy_fin = self._get_rango_hoy()
-        ahora   = fields.Datetime.now()
-        ventana = timedelta(hours=2)
-
-        tickets = self.sudo().search([
-            ('estado', '=', 'proceso'),
-            ('responsable', '!=', False),
-            ('agenda', '>=', hoy_inicio),
-            ('agenda', '<=', hoy_fin),
-        ], order='agenda asc')
-
-        if not tickets:
-            _logger.info("[CRON-MOVIMIENTO] Sin tickets en proceso para hoy")
-            return
-
-        tecnicos_ids = tickets.mapped('responsable.id')
-        vinculos = self.env['tecnico.dispositivo.gps'].sudo().search([
-            ('user_id', 'in', tecnicos_ids),
-            ('activo', '=', True),
-        ])
-        if not vinculos:
-            tickets._registrar_impedimento_tracking('GPS pendiente: ningún responsable tiene dispositivo activo vinculado')
-            return
-
-        posiciones = self.env['traccar.api.service'].get_all_positions()
-        if not posiciones:
-            tickets._registrar_impedimento_tracking('GPS pendiente: Traccar no devolvió posiciones; revisar conexión y acceso')
-            _logger.warning("[CRON-MOVIMIENTO] No se obtuvieron posiciones de Traccar")
-            return
-
-        mapa_tecnico_device = {v.user_id.id: v.traccar_device_id for v in vinculos}
-
-        tickets_por_tecnico = {}
-        for ticket in tickets:
-            tid = ticket.responsable.id
-            tickets_por_tecnico.setdefault(tid, self.env['ticket.alquiler'])
-            tickets_por_tecnico[tid] |= ticket
-
-        procesados = 0
-
-        for tecnico_id, tickets_tecnico in tickets_por_tecnico.items():
-            try:
-                device_id = mapa_tecnico_device.get(tecnico_id)
-                if not device_id:
-                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: técnico sin dispositivo activo vinculado')
-                    continue
-
-                pos = posiciones.get(device_id)
-                if not pos:
-                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: no hay posición disponible del dispositivo')
-                    continue
-
-                attrs  = pos.get('attributes', {})
-                speed  = pos.get('speed', 0) or 0
-                motion = attrs.get('motion', False)
-
-                if not (speed > 1 or motion):
-                    continue
-
-                ubicacion_actual = {
-                    'latitude':  pos.get('latitude'),
-                    'longitude': pos.get('longitude'),
-                    'speed':     speed,
-                }
-
-                ahora_local = fields.Datetime.now()
-                marcados = self.env['ticket.alquiler']
-
-                for ticket in tickets_tecnico:
-                    diff       = ticket.agenda - ahora_local
-                    ya_paso    = diff.total_seconds() < 0
-                    esta_cerca = 0 <= diff.total_seconds() <= ventana.total_seconds()
-                    if not ya_paso and not esta_cerca:
-                        continue
-
-                    _logger.info(
-                        "[CRON-MOVIMIENTO] Tecnico %s en movimiento "
-                        "(speed=%.1f motion=%s) -> en_ruta ticket %s",
-                        ticket.responsable.name, speed, motion, ticket.name
-                    )
-                    ticket.sudo().action_en_ruta(notificar=False)
-                    ticket._registrar_evento(
-                        f"En ruta detectado por cron GPS "
-                        f"(speed={speed:.1f} motion={motion})"
-                    )
-                    marcados |= ticket
-                    procesados += 1
-
-                if marcados:
-                    try:
-                        marcados[0].notificar_en_ruta(
-                            tickets_grupo=marcados,
-                            ubicacion_actual=ubicacion_actual,
-                        )
-                    except Exception as e:
-                        _logger.error("[CRON-MOVIMIENTO] Error notificando en_ruta: %s", e)
-
-            except Exception as e:
-                _logger.error("[CRON-MOVIMIENTO] Error tecnico ID %s: %s", tecnico_id, e)
-
-        _logger.info("[CRON-MOVIMIENTO] Completado — %d tickets marcados en_ruta", procesados)
+        """El movimiento general del celular NO acredita desplazamiento hacia un ticket."""
+        _logger.info('[CRON-MOVIMIENTO] Observación sin cambio de estado: no se inventa fecha en ruta')
+        return True
 
     @api.model
     def cron_gps_detectar_llegada(self):
-        """
-        Red de seguridad para geofenceEnter.
-        en_ruta/proceso → en_sitio si tecnico esta dentro de geocerca.
-        Frecuencia: cada 3 minutos.
-        """
-        _logger.info("[CRON-LLEGADA] Iniciando verificacion de llegada GPS")
-
-        hoy_inicio, hoy_fin = self._get_rango_hoy()
-
-        tickets = self.sudo().search([
-            ('estado', 'in', ['en_ruta', 'proceso']),
-            ('responsable', '!=', False),
-            ('traccar_geofence_id', '!=', 0),
-            ('traccar_geofence_id', '!=', False),
-            ('agenda', '>=', hoy_inicio),
-            ('agenda', '<=', hoy_fin),
-        ], order='agenda asc')
-
-        if not tickets:
-            _logger.info("[CRON-LLEGADA] Sin tickets candidatos para verificar llegada")
-            return
-
-        tecnicos_ids = tickets.mapped('responsable.id')
-        vinculos = self.env['tecnico.dispositivo.gps'].sudo().search([
-            ('user_id', 'in', tecnicos_ids),
-            ('activo', '=', True),
-        ])
-        if not vinculos:
-            tickets._registrar_impedimento_tracking('GPS pendiente: ningún responsable tiene dispositivo activo vinculado')
-            return
-
-        posiciones = self.env['traccar.api.service'].get_all_positions()
-        if not posiciones:
-            tickets._registrar_impedimento_tracking('GPS pendiente: Traccar no devolvió posiciones; revisar conexión y acceso')
-            _logger.warning("[CRON-LLEGADA] No se obtuvieron posiciones de Traccar")
-            return
-
-        mapa_tecnico_device = {v.user_id.id: v.traccar_device_id for v in vinculos}
-
-        tickets_por_tecnico = {}
-        for ticket in tickets:
-            tid = ticket.responsable.id
-            tickets_por_tecnico.setdefault(tid, self.env['ticket.alquiler'])
-            tickets_por_tecnico[tid] |= ticket
-
-        procesados = 0
-        for tecnico_id, tickets_tecnico in tickets_por_tecnico.items():
-            try:
-                device_id = mapa_tecnico_device.get(tecnico_id)
-                if not device_id:
-                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: técnico sin dispositivo activo vinculado')
-                    continue
-
-                pos = posiciones.get(device_id)
-                if not pos:
-                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: no hay posición disponible del dispositivo')
-                    continue
-
-                geofence_ids_activos = pos.get('geofenceIds') or []
-                ubicacion_actual = {
-                    'latitude':  pos.get('latitude'),
-                    'longitude': pos.get('longitude'),
-                }
-
-                for ticket in tickets_tecnico:
-                    if ticket.traccar_geofence_id in geofence_ids_activos:
-                        _logger.info(
-                            "[CRON-LLEGADA] Tecnico %s dentro geocerca %s -> en_sitio %s",
-                            ticket.responsable.name,
-                            ticket.traccar_geofence_id,
-                            ticket.name,
-                        )
-                        tickets_visita = ticket._get_tickets_misma_visita(tickets_tecnico)
-                        marcados = self.env['ticket.alquiler']
-                        for t in tickets_visita:
-                            if t.estado in ('en_ruta', 'proceso'):
-                                t.sudo().action_en_sitio(notificar=False)
-                                t._registrar_evento(
-                                    f"Llegada detectada por cron GPS "
-                                    f"(geocerca ID:{ticket.traccar_geofence_id})"
-                                )
-                                marcados |= t
-                                procesados += 1
-
-                        if marcados:
-                            try:
-                                marcados[0].notificar_en_sitio(
-                                    tickets_grupo=marcados,
-                                    ubicacion_actual=ubicacion_actual,
-                                )
-                            except Exception as e:
-                                _logger.error("[CRON-LLEGADA] Error notificando en_sitio: %s", e)
-                        break
-
-            except Exception as e:
-                _logger.error(
-                    "[CRON-LLEGADA] Error tecnico ID %s: %s", tecnico_id, e
-                )
-
-        _logger.info("[CRON-LLEGADA] Completado — %d tickets marcados en_sitio", procesados)
+        """Una instantánea dentro de geocerca no prueba la hora real de entrada."""
+        _logger.info('[CRON-LLEGADA] Sin transición por instantánea; usar geofenceEnter fechado')
+        return True
 
     @api.model
     def cron_gps_detectar_salida(self):
-        """
-        Red de seguridad para geofenceExit.
-        en_sitio/en_revision → evaluar salida con lógica de retiro pendiente.
-        Frecuencia: cada 5 minutos.
-
-        CAMBIO v7: ya no llama action_registrar_salida_sitio directamente.
-        Llama _evaluar_salida_geocerca() que decide si:
-          - Ignorar (ya hay token pendiente)
-          - Finalizar directo (60min + 2km)
-          - Preguntar al técnico (crear token + enviar link)
-        """
-        _logger.info("[CRON-SALIDA] Iniciando verificacion de salida GPS")
-
-        hoy_inicio, hoy_fin = self._get_rango_hoy()
-
-        tickets = self.sudo().search([
-            ('estado', 'in', ['en_sitio', 'en_revision']),
-            ('responsable', '!=', False),
-            ('fecha_salida_sitio', '=', False),
-            ('traccar_geofence_id', '!=', 0),
-            ('traccar_geofence_id', '!=', False),
-            ('agenda', '>=', hoy_inicio),
-            ('agenda', '<=', hoy_fin),
-        ], order='agenda asc')
-
-        if not tickets:
-            _logger.info("[CRON-SALIDA] Sin tickets en sitio para verificar salida")
-            return
-
-        tecnicos_ids = tickets.mapped('responsable.id')
-        vinculos = self.env['tecnico.dispositivo.gps'].sudo().search([
-            ('user_id', 'in', tecnicos_ids),
-            ('activo', '=', True),
-        ])
-        if not vinculos:
-            tickets._registrar_impedimento_tracking('GPS pendiente: ningún responsable tiene dispositivo activo vinculado')
-            return
-
-        posiciones = self.env['traccar.api.service'].get_all_positions()
-        if not posiciones:
-            tickets._registrar_impedimento_tracking('GPS pendiente: Traccar no devolvió posiciones; revisar conexión y acceso')
-            _logger.warning("[CRON-SALIDA] No se obtuvieron posiciones de Traccar")
-            return
-
-        mapa_tecnico_device = {v.user_id.id: v.traccar_device_id for v in vinculos}
-
-        tickets_por_tecnico = {}
-        for ticket in tickets:
-            tid = ticket.responsable.id
-            tickets_por_tecnico.setdefault(tid, self.env['ticket.alquiler'])
-            tickets_por_tecnico[tid] |= ticket
-
-        for tecnico_id, tickets_tecnico in tickets_por_tecnico.items():
-            try:
-                device_id = mapa_tecnico_device.get(tecnico_id)
-                if not device_id:
-                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: técnico sin dispositivo activo vinculado')
-                    continue
-
-                pos = posiciones.get(device_id)
-                if not pos:
-                    tickets_tecnico._registrar_impedimento_tracking('GPS pendiente: no hay posición disponible del dispositivo')
-                    continue
-
-                geofence_ids_activos = pos.get('geofenceIds') or []
-                lat_actual = pos.get('latitude')
-                lon_actual = pos.get('longitude')
-
-                for ticket in tickets_tecnico:
-                    if ticket.traccar_geofence_id not in geofence_ids_activos:
-                        _logger.info(
-                            "[CRON-SALIDA] Tecnico %s fuera geocerca %s -> evaluando retiro %s",
-                            ticket.responsable.name,
-                            ticket.traccar_geofence_id,
-                            ticket.name,
-                        )
-
-                        tickets_visita = ticket._get_tickets_misma_visita(tickets_tecnico)
-
-                        for t in tickets_visita:
-                            if not t.fecha_salida_sitio:
-                                resultado = t.sudo()._evaluar_salida_geocerca(
-                                    lat_actual=lat_actual,
-                                    lon_actual=lon_actual,
-                                )
-                                _logger.info(
-                                    "[CRON-SALIDA] Ticket %s → resultado: %s",
-                                    t.name, resultado,
-                                )
-
-                        # Siguiente ticket en_ruta automático SOLO si alguno finalizó
-                        # (no si está esperando confirmación de motivo)
-                        tickets_finalizados = tickets_visita.filtered(
-                            lambda t: t.fecha_salida_sitio
-                        )
-                        if tickets_finalizados:
-                            todos_hoy = self.sudo().search([
-                                ('responsable',  '=', tecnico_id),
-                                ('estado',       'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
-                                ('agenda',       '>=', hoy_inicio),
-                                ('agenda',       '<=', hoy_fin),
-                            ], order='agenda asc')
-                            siguiente = todos_hoy.filtered(lambda t: t.estado == 'proceso')
-                            if siguiente:
-                                sig = siguiente[0]
-                                try:
-                                    sig.sudo().action_en_ruta(notificar=False)
-                                    sig._registrar_evento(
-                                        "En ruta automatico por cron — salida del servicio anterior"
-                                    )
-                                    ubicacion_actual = {
-                                        'latitude':  lat_actual,
-                                        'longitude': lon_actual,
-                                    }
-                                    try:
-                                        sig.notificar_en_ruta(
-                                            tickets_grupo=sig,
-                                            ubicacion_actual=ubicacion_actual,
-                                        )
-                                    except Exception as e:
-                                        _logger.error(
-                                            "[CRON-SALIDA] Error notificando siguiente: %s", e
-                                        )
-                                except Exception as e:
-                                    _logger.error(
-                                        "[CRON-SALIDA] Error marcando siguiente en_ruta: %s", e
-                                    )
-                        break
-
-            except Exception as e:
-                _logger.error("[CRON-SALIDA] Error tecnico ID %s: %s", tecnico_id, e)
-
-        _logger.info("[CRON-SALIDA] Completado")
+        """Las instantáneas no acreditan salida histórica; no cambiar estados."""
+        _logger.info('[CRON-GPS] Sin geofenceExit fechado no se confirma salida física')
+        return True
 
     @api.model
     def cron_actualizar_en_revision(self):
-        """
-        en_sitio con fecha_llegada hace mas de 15 min -> en_revision.
-        Frecuencia: cada 5 minutos.
-        """
-        umbral = int(
-            self.env['ir.config_parameter'].sudo().get_param(
-                'tracking.minutos_para_revision', '15'
-            )
-        )
-        limite  = fields.Datetime.now() - timedelta(minutes=umbral)
-        tickets = self.sudo().search([
-            ('estado', '=', 'en_sitio'),
-            ('fecha_llegada', '<=', limite),
-            ('fecha_inicio_revision', '=', False),
-        ])
-        if not tickets:
-            return
-        _logger.info("[CRON-REVISION] %d tickets -> en_revision automatico", len(tickets))
-        for ticket in tickets:
-            try:
-                ticket.action_en_revision()
-            except Exception as e:
-                _logger.error("[CRON-REVISION] Error en %s: %s", ticket.name, e)
-                ticket._registrar_evento(f"Error cron en_revision: {str(e)}")
-
-    # ═══════════════════════════════════════════════════════════════
-    #  API GPS (webhook Traccar)
-    # ═══════════════════════════════════════════════════════════════
+        """Desactivado deliberadamente: permanencia no prueba inicio de revisión."""
+        _logger.info('[CRON-REVISION] No se infiere revisión por el paso del tiempo')
+        return True
 
     @api.model
     def api_actualizar_estado_gps(self, tecnico_traccar_device_id, evento_tipo, datos=None):
         datos = datos or {}
+        datos['_fecha_evento_validada'] = self._gps_fecha_evento(datos)
         _logger.info(
             "[GPS-API] device=%s tipo=%s lat=%s lon=%s geofence_id=%s",
             tecnico_traccar_device_id, evento_tipo,
@@ -1213,195 +890,67 @@ class TicketAlquilerTracking(models.Model):
         }
 
     def _gps_procesar_llegada(self, tickets_hoy, datos):
-        geofence_id  = datos.get('geofenceId')
-        lat_tec      = datos.get('latitude')
-        lon_tec      = datos.get('longitude')
-        actualizados = self.env['ticket.alquiler']
-
-        ubicacion_actual = {
-            'latitude':  lat_tec,
-            'longitude': lon_tec,
-        }
-
-        for ticket in tickets_hoy.filtered(
-                lambda t: t.estado in ('en_sitio', 'en_revision')):
-            coincide = bool(geofence_id and ticket.traccar_geofence_id == geofence_id)
-            if (not coincide and lat_tec is not None and lon_tec is not None
-                    and ticket.equipo_latitud and ticket.equipo_longitud):
-                coincide = self._haversine_metros(
-                    lat_tec, lon_tec, ticket.equipo_latitud, ticket.equipo_longitud
-                ) <= 200
-            if coincide:
-                ticket._cancelar_tokens_retiro_pendientes()
-
-        candidatos = tickets_hoy.filtered(lambda t: t.estado in ('proceso', 'en_ruta'))
-        if not candidatos:
-            estados = ', '.join(set(tickets_hoy.mapped('estado')))
-            for t in tickets_hoy:
-                t._registrar_evento(f"geofenceEnter ignorado — sin candidatos (estados: {estados})")
-            return actualizados
-
-        ticket_match = None
-        metodo_match = None
-
-        if geofence_id:
-            for ticket in candidatos:
-                if ticket.traccar_geofence_id == geofence_id:
-                    ticket_match = ticket
-                    metodo_match = f"geocerca automatica ID:{geofence_id}"
-                    break
-
-        if not ticket_match and lat_tec and lon_tec:
-            for ticket in candidatos:
-                lat_eq = getattr(ticket, 'equipo_latitud', None)
-                lon_eq = getattr(ticket, 'equipo_longitud', None)
-                if lat_eq and lon_eq:
-                    dist = self._haversine_metros(lat_tec, lon_tec, lat_eq, lon_eq)
-                    if dist <= 200:
-                        ticket_match = ticket
-                        metodo_match = f"proximidad GPS ({dist:.0f}m)"
-                        break
-                    else:
-                        ticket._registrar_evento(
-                            f"Tecnico a {dist:.0f}m del equipo (min 200m)"
-                        )
-
-        if not ticket_match:
-            for ticket in candidatos:
-                ticket._registrar_evento(
-                    "Llegada GPS ignorada: sin coincidencia de geocerca ni proximidad al equipo"
-                )
-            return actualizados
-
-        tickets_visita = ticket_match._get_tickets_misma_visita(candidatos)
-
-        for ticket in tickets_visita:
-            ticket.sudo().action_en_sitio(notificar=False)
-            ticket._registrar_evento(f"Llegada registrada — metodo: {metodo_match}")
-            actualizados |= ticket
-
-        if actualizados:
-            try:
-                actualizados[0].notificar_en_sitio(
-                    tickets_grupo=actualizados,
-                    ubicacion_actual=ubicacion_actual,
-                )
-            except Exception as e:
-                _logger.error("[GPS] Error notificando en_sitio grupal: %s", e)
-
-        return actualizados
+        """Solo geofenceEnter explícito con visita y geocerca correspondiente."""
+        resultado = self.env['ticket.alquiler']
+        gid = datos.get('geofenceId')
+        fecha = datos.get('_fecha_evento_validada')
+        if not gid or not fecha:
+            return resultado
+        candidatos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
+            t.gps_visita_id.estado in ('programada', 'en_ruta') and
+            t.traccar_geofence_id == gid)
+        visitas = candidatos.mapped('gps_visita_id')
+        if len(visitas) != 1:
+            _logger.warning('[GPS] geofenceEnter no corresponde a visita única device/geofence=%s', gid)
+            return resultado
+        visita = visitas[0]
+        ref = 'traccar-event:%s' % datos.get('id') if datos.get('id') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
+        if visita.registrar_llegada_verificada(fecha, ref, 'traccar'):
+            resultado = visita.ticket_ids
+            if resultado:
+                try:
+                    aceptado = resultado[0].notificar_en_sitio(
+                        tickets_grupo=resultado, ubicacion_actual={
+                            'latitude': datos.get('latitude'), 'longitude': datos.get('longitude')})
+                    visita._registrar_evento('aviso', 'whatsapp', detalle='Solicitud aceptada' if aceptado else 'Envío rechazado')
+                except Exception:
+                    _logger.exception('[GPS] Error avisando llegada visita %s', visita.id)
+        return resultado
 
     def _gps_procesar_salida(self, tickets_hoy, datos):
-        """
-        CAMBIO v7: en lugar de registrar salida directo,
-        llama _evaluar_salida_geocerca() por cada ticket.
-        Retorna los tickets que tuvieron alguna acción (incluye los que
-        quedaron esperando confirmación de motivo).
-        """
-        procesados = self.env['ticket.alquiler']
-
-        lat_actual = datos.get('latitude')
-        lon_actual = datos.get('longitude')
-
-        en_sitio_o_revision = tickets_hoy.filtered(
-            lambda t: t.estado in ('en_sitio', 'en_revision')
-        )
-        if not en_sitio_o_revision:
-            for t in tickets_hoy:
-                t._registrar_evento("geofenceExit ignorado — ningun ticket en sitio/revision")
-            return procesados
-
-        clientes_procesados = set()
-        tickets_a_evaluar = self.env['ticket.alquiler']
-        for ticket in en_sitio_o_revision:
-            clave = (ticket.partner_id.id, ticket.agenda.date() if ticket.agenda else None)
-            if clave not in clientes_procesados:
-                clientes_procesados.add(clave)
-                tickets_a_evaluar |= ticket._get_tickets_misma_visita(en_sitio_o_revision)
-
-        for ticket in tickets_a_evaluar:
-            resultado = ticket.sudo()._evaluar_salida_geocerca(
-                lat_actual=lat_actual,
-                lon_actual=lon_actual,
-            )
-            _logger.info("[GPS-SALIDA] Ticket %s → %s", ticket.name, resultado)
-            procesados |= ticket
-
-        # Siguiente en_ruta automático SOLO si algún ticket finalizó efectivamente
-        tickets_finalizados = tickets_a_evaluar.filtered(lambda t: t.fecha_salida_sitio)
-        if tickets_finalizados:
-            siguiente = tickets_hoy.filtered(lambda t: t.estado == 'proceso')
-            if siguiente:
-                sig = siguiente[0]
-                try:
-                    sig.sudo().action_en_ruta(notificar=False)
-                    sig._registrar_evento("En ruta automatico — salida del servicio anterior")
-                    ubicacion_actual = {'latitude': lat_actual, 'longitude': lon_actual}
-                    try:
-                        procesados[0].notificar_siguiente_en_ruta(
-                            sig,
-                            ubicacion_actual=ubicacion_actual,
-                        )
-                    except Exception as e:
-                        _logger.error("[GPS] Error notificando siguiente: %s", e)
-                except Exception as e:
-                    _logger.error("[GPS-SECUENCIAL] Error marcando siguiente en_ruta: %s", e)
-                    sig._registrar_evento(f"Error al marcar en_ruta automatico: {str(e)}")
-        else:
-            if procesados:
-                _logger.info(
-                    "[GPS-SALIDA] Ningún ticket finalizó aún — esperando confirmación de motivo"
-                )
-
-        return procesados
+        """geofenceExit: solo visita correspondiente; sin finalizar tickets."""
+        resultado = self.env['ticket.alquiler']
+        gid = datos.get('geofenceId')
+        fecha = datos.get('_fecha_evento_validada')
+        if not gid or not fecha:
+            return resultado
+        candidatos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
+            t.gps_visita_id.estado in ('en_sitio', 'salida_pendiente') and
+            t.traccar_geofence_id == gid)
+        visitas = candidatos.mapped('gps_visita_id')
+        if len(visitas) != 1:
+            return resultado
+        visita = visitas[0]
+        if visita.fecha_llegada and fecha < visita.fecha_llegada:
+            return resultado
+        referencia = 'traccar-event:%s' % datos.get('id') if datos.get('id') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
+        if visita.estado == 'en_sitio':
+            visita.registrar_salida_detectada(referencia=referencia)
+        # No confirmar únicamente por 60 min o porque el dispositivo está lejos.
+        # El técnico confirma mediante el token vigente, o una integración GPS
+        # validada acepta evidencia inequívoca en el flujo de la visita.
+        principal = visita.ticket_ids[:1]
+        if principal:
+            t = principal[0]
+            if not t.fecha_salida_sitio:
+                t._evaluar_salida_geocerca(datos.get('latitude'), datos.get('longitude'),
+                                           fecha_evento=fecha, fuente='webhook')
+            resultado = visita.ticket_ids
+        return resultado
 
     def _gps_procesar_movimiento(self, tickets_hoy, datos):
-        actualizados = self.env['ticket.alquiler']
-        ahora   = fields.Datetime.now()
-        ventana = timedelta(hours=2)
-
-        ubicacion_actual = {
-            'latitude':  datos.get('latitude'),
-            'longitude': datos.get('longitude'),
-            'speed':     datos.get('speed', 0),
-        }
-
-        ya_en_ruta = tickets_hoy.filtered(lambda t: t.estado == 'en_ruta')
-        if ya_en_ruta:
-            return actualizados
-
-        for ticket in tickets_hoy.filtered(lambda t: t.estado == 'proceso'):
-            if not ticket.agenda:
-                continue
-            diff       = ticket.agenda - ahora
-            ya_paso    = diff.total_seconds() < 0
-            esta_cerca = 0 <= diff.total_seconds() <= ventana.total_seconds()
-            if ya_paso or esta_cerca:
-                ticket.sudo().action_en_ruta(notificar=False)
-                ticket._registrar_evento("En ruta detectado por movimiento GPS")
-                actualizados |= ticket
-                break
-            else:
-                h = int(diff.total_seconds() / 3600)
-                m = int((diff.total_seconds() % 3600) / 60)
-                ticket._registrar_evento(
-                    f"deviceMoving ignorado — agenda en {h}h {m}min (ventana: 2h)"
-                )
-
-        if actualizados:
-            try:
-                actualizados[0].notificar_en_ruta(
-                    tickets_grupo=actualizados,
-                    ubicacion_actual=ubicacion_actual,
-                )
-            except Exception as e:
-                _logger.error("[GPS] Error notificando en_ruta grupal: %s", e)
-
-        return actualizados
-
-    # ═══════════════════════════════════════════════════════════════
-    #  HELPERS ESTATICOS
-    # ═══════════════════════════════════════════════════════════════
+        """deviceMoving no permite determinar a cuál cliente se dirige el técnico."""
+        return self.env['ticket.alquiler']
 
     @staticmethod
     def _get_rango_hoy():

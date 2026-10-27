@@ -149,3 +149,4 @@ from . import ai
 from . import modelo_toner
 from . import sat_repuesto_compatibilidad
 from . import sat_repuesto_media
+from . import visita

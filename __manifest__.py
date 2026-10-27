@@ -409,6 +409,7 @@
         'views/modelo_toner_views.xml',
         'views/repuesto_foto_upload_views.xml',
         'views/sat_repuesto_compatibilidad_views.xml',
+        'views/sat_visita_tecnica_views.xml',
         'views/acciones_menus.xml',
 
 

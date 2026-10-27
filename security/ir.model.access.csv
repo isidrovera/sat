@@ -379,3 +379,9 @@ access_sat_repuesto_foto_user,sat.repuesto.foto.user,model_sat_repuesto_foto,bas
 access_sat_repuesto_foto_admin,sat.repuesto.foto.admin,model_sat_repuesto_foto,base.group_system,1,1,1,1
 access_sat_repuesto_foto_upload_wizard_user,sat.repuesto.foto.upload.wizard.user,model_sat_repuesto_foto_upload_wizard,base.group_user,1,1,1,0
 access_sat_repuesto_foto_upload_wizard_admin,sat.repuesto.foto.upload.wizard.admin,model_sat_repuesto_foto_upload_wizard,base.group_system,1,1,1,1
+access_sat_visita_tecnica_tecnico,sat.visita.tecnica.tecnico,model_sat_visita_tecnica,sat.sat_tecnica_group_user,1,1,0,0
+access_sat_visita_tecnica_jefes,sat.visita.tecnica.jefes,model_sat_visita_tecnica,sat.sat_jefes_group_user,1,1,1,0
+access_sat_visita_tecnica_admin,sat.visita.tecnica.admin,model_sat_visita_tecnica,base.group_system,1,1,1,1
+access_sat_visita_evento_tecnico,sat.visita.evento.tecnico,model_sat_visita_evento,sat.sat_tecnica_group_user,1,0,0,0
+access_sat_visita_evento_jefes,sat.visita.evento.jefes,model_sat_visita_evento,sat.sat_jefes_group_user,1,0,0,0
+access_sat_visita_evento_admin,sat.visita.evento.admin,model_sat_visita_evento,base.group_system,1,0,1,0
