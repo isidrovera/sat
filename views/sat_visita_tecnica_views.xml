@@ -1,78 +1,135 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- ==========================================================
-         SAT / ODOO 19 - VISITAS FISICAS GPS
-         Archivo: views/sat_visita_tecnica_views.xml
-         Modelos: sat.visita.tecnica / sat.visita.evento
-         ========================================================== -->
+
+    <!-- ===================================================== -->
+    <!-- VISTA DE BÚSQUEDA: VISITAS GPS                         -->
+    <!-- ===================================================== -->
 
     <record id="view_sat_visita_tecnica_search" model="ir.ui.view">
         <field name="name">sat.visita.tecnica.search</field>
         <field name="model">sat.visita.tecnica</field>
         <field name="arch" type="xml">
-            <search string="Buscar visitas GPS">
+            <search>
                 <field name="name"/>
                 <field name="tecnico_id"/>
                 <field name="partner_id"/>
                 <field name="sede_descripcion"/>
                 <field name="agenda"/>
-                <filter name="activas" string="Visitas activas"
-                        domain="[('estado','in',['en_ruta','en_sitio','salida_pendiente'])]"/>
-                <filter name="pendientes" string="Programadas"
-                        domain="[('estado','=','programada')]"/>
-                <filter name="retiros_pendientes" string="Salida pendiente"
-                        domain="[('estado','=','salida_pendiente')]"/>
-                <filter name="completadas" string="Salidas confirmadas"
-                        domain="[('estado','=','salida_confirmada')]"/>
-                <filter name="hoy" string="Programadas hoy"
-                        domain="[('agenda','&gt;=',datetime.datetime.combine(context_today(), datetime.time.min)),('agenda','&lt;',datetime.datetime.combine(context_today() + datetime.timedelta(days=1), datetime.time.min))]"/>
+
                 <separator/>
-                <filter name="mis_visitas" string="Mis visitas"
-                        domain="[('tecnico_id','=',uid)]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter name="group_tecnico" string="Técnico" context="{'group_by':'tecnico_id'}"/>
-                    <filter name="group_cliente" string="Cliente" context="{'group_by':'partner_id'}"/>
-                    <filter name="group_estado" string="Estado físico" context="{'group_by':'estado'}"/>
-                    <filter name="group_agenda" string="Fecha programada" context="{'group_by':'agenda:day'}"/>
+
+                <filter name="activas"
+                        string="Visitas activas"
+                        domain="[('estado', 'in', ['en_ruta', 'en_sitio', 'salida_pendiente'])]"/>
+
+                <filter name="pendientes"
+                        string="Programadas"
+                        domain="[('estado', '=', 'programada')]"/>
+
+                <filter name="retiros_pendientes"
+                        string="Salida pendiente"
+                        domain="[('estado', '=', 'salida_pendiente')]"/>
+
+                <filter name="completadas"
+                        string="Salidas confirmadas"
+                        domain="[('estado', '=', 'salida_confirmada')]"/>
+
+                <filter name="agenda_fecha"
+                        string="Fecha programada"
+                        date="agenda"/>
+
+                <separator/>
+
+                <filter name="mis_visitas"
+                        string="Mis visitas"
+                        domain="[('tecnico_id', '=', uid)]"/>
+
+                <group name="groupby">
+                    <filter name="group_tecnico"
+                            string="Técnico"
+                            context="{'group_by': 'tecnico_id'}"/>
+
+                    <filter name="group_cliente"
+                            string="Cliente"
+                            context="{'group_by': 'partner_id'}"/>
+
+                    <filter name="group_estado"
+                            string="Estado físico"
+                            context="{'group_by': 'estado'}"/>
+
+                    <filter name="group_agenda"
+                            string="Fecha programada"
+                            context="{'group_by': 'agenda:day'}"/>
                 </group>
             </search>
         </field>
     </record>
 
+    <!-- ===================================================== -->
+    <!-- VISTA LISTA                                           -->
+    <!-- ===================================================== -->
+
     <record id="view_sat_visita_tecnica_list" model="ir.ui.view">
         <field name="name">sat.visita.tecnica.list</field>
         <field name="model">sat.visita.tecnica</field>
         <field name="arch" type="xml">
+
             <list string="Visitas físicas GPS"
-                  default_order="agenda asc,id asc"
+                  default_order="agenda asc, id asc"
                   decoration-info="estado == 'en_ruta'"
                   decoration-success="estado == 'salida_confirmada'"
                   decoration-warning="estado == 'salida_pendiente'"
                   decoration-muted="estado == 'cancelada'">
+
                 <field name="name"/>
+
                 <field name="agenda"/>
-                <field name="tecnico_id" widget="many2one_avatar_user"/>
+
+                <field name="tecnico_id"
+                       widget="many2one_avatar_user"/>
+
                 <field name="partner_id"/>
+
                 <field name="sede_descripcion"/>
-                <field name="estado" widget="badge"
+
+                <field name="estado"
+                       widget="badge"
                        decoration-info="estado == 'en_ruta'"
                        decoration-success="estado == 'salida_confirmada'"
                        decoration-warning="estado == 'salida_pendiente'"
                        decoration-danger="estado == 'cancelada'"/>
-                <field name="fecha_en_ruta" optional="show"/>
-                <field name="fecha_llegada" optional="show"/>
-                <field name="fecha_salida" optional="show"/>
-                <field name="tiempo_traslado_minutos" optional="hide"/>
-                <field name="tiempo_en_sitio_minutos" optional="show"/>
+
+                <field name="fecha_en_ruta"
+                       optional="show"/>
+
+                <field name="fecha_llegada"
+                       optional="show"/>
+
+                <field name="fecha_salida"
+                       optional="show"/>
+
+                <field name="tiempo_traslado_minutos"
+                       optional="hide"/>
+
+                <field name="tiempo_en_sitio_minutos"
+                       optional="show"/>
+
             </list>
         </field>
     </record>
+
+    <!-- ===================================================== -->
+    <!-- VISTA KANBAN                                          -->
+    <!-- ===================================================== -->
 
     <record id="view_sat_visita_tecnica_kanban" model="ir.ui.view">
         <field name="name">sat.visita.tecnica.kanban</field>
         <field name="model">sat.visita.tecnica</field>
         <field name="arch" type="xml">
-            <kanban default_group_by="estado" class="o_kanban_small_column">
+
+            <kanban default_group_by="estado"
+                    class="o_kanban_small_column">
+
                 <field name="name"/>
                 <field name="estado"/>
                 <field name="tecnico_id"/>
@@ -81,242 +138,514 @@
                 <field name="agenda"/>
                 <field name="fecha_llegada"/>
                 <field name="fecha_salida"/>
+
                 <templates>
                     <t t-name="card">
-                        <div class="oe_kanban_global_click p-3">
+
+                        <div class="p-3">
+
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <strong><field name="name"/></strong>
-                                <field name="estado" widget="badge"/>
+
+                                <strong>
+                                    <field name="name"/>
+                                </strong>
+
+                                <field name="estado"
+                                       widget="badge"/>
+
                             </div>
+
                             <div class="mb-2">
                                 <i class="fa fa-user me-1 text-muted"/>
                                 <field name="tecnico_id"/>
                             </div>
+
                             <div class="mb-1">
                                 <i class="fa fa-building me-1 text-muted"/>
                                 <field name="partner_id"/>
                             </div>
+
                             <div class="text-muted small mb-2">
                                 <i class="fa fa-map-marker me-1"/>
                                 <field name="sede_descripcion"/>
                             </div>
+
                             <div class="border-top pt-2 small">
-                                <div>Agenda: <field name="agenda"/></div>
-                                <div>Llegada: <field name="fecha_llegada"/></div>
-                                <div>Salida: <field name="fecha_salida"/></div>
+
+                                <div>
+                                    Agenda:
+                                    <field name="agenda"/>
+                                </div>
+
+                                <div>
+                                    Llegada:
+                                    <field name="fecha_llegada"/>
+                                </div>
+
+                                <div>
+                                    Salida:
+                                    <field name="fecha_salida"/>
+                                </div>
+
                             </div>
+
                         </div>
+
                     </t>
                 </templates>
+
             </kanban>
         </field>
     </record>
+
+    <!-- ===================================================== -->
+    <!-- VISTA FORMULARIO                                      -->
+    <!-- ===================================================== -->
 
     <record id="view_sat_visita_tecnica_form" model="ir.ui.view">
         <field name="name">sat.visita.tecnica.form</field>
         <field name="model">sat.visita.tecnica</field>
         <field name="arch" type="xml">
+
             <form string="Visita física SAT">
+
                 <header>
-                    <button name="action_iniciar_ruta" type="object"
-                            string="Iniciar ruta" icon="fa-car"
+
+                    <button name="action_iniciar_ruta"
+                            type="object"
+                            string="Iniciar ruta"
+                            icon="fa-car"
                             class="oe_highlight"
                             invisible="estado != 'programada'"
                             confirm="¿Confirmar el inicio de esta visita?"/>
-                    <button name="action_cancelar" type="object"
+
+                    <button name="action_cancelar"
+                            type="object"
                             string="Cancelar visita"
                             invisible="estado != 'programada'"
                             confirm="¿Cancelar esta visita programada?"/>
-                    <field name="estado" widget="statusbar"
+
+                    <field name="estado"
+                           widget="statusbar"
                            statusbar_visible="programada,en_ruta,en_sitio,salida_pendiente,salida_confirmada"/>
+
                 </header>
+
                 <sheet>
+
                     <div class="oe_title">
                         <label for="name"/>
-                        <h1><field name="name" placeholder="Identificador de visita"/></h1>
+                        <h1>
+                            <field name="name"
+                                   placeholder="Identificador de visita"/>
+                        </h1>
                     </div>
+
                     <group>
+
                         <group string="Programación">
+
                             <field name="tecnico_id"
                                    readonly="estado != 'programada'"/>
+
                             <field name="partner_id"
                                    readonly="estado != 'programada'"/>
+
                             <field name="agenda"
                                    readonly="estado != 'programada'"/>
+
                             <field name="sede_descripcion"
                                    readonly="estado != 'programada'"/>
+
                         </group>
+
                         <group string="Ubicación de la sede">
-                            <field name="latitud" readonly="estado != 'programada'"/>
-                            <field name="longitud" readonly="estado != 'programada'"/>
+
+                            <field name="latitud"
+                                   readonly="estado != 'programada'"/>
+
+                            <field name="longitud"
+                                   readonly="estado != 'programada'"/>
+
                         </group>
+
                     </group>
 
-                    <div class="alert alert-warning" role="alert"
+                    <!-- SALIDA PENDIENTE -->
+
+                    <div class="alert alert-warning"
+                         role="alert"
                          invisible="estado != 'salida_pendiente'">
-                        Se detectó un posible retiro. La salida física todavía no está confirmada.
-                        No se debe iniciar otra visita mientras permanezca abierta.
+
+                        <strong>Salida pendiente de confirmación.</strong>
+
+                        Se detectó un posible retiro del técnico,
+                        pero la salida física todavía no está confirmada.
+
+                        No debe iniciarse otra visita mientras
+                        esta permanezca abierta.
+
                     </div>
 
-                    <div class="alert alert-success" role="alert"
+                    <!-- SALIDA CONFIRMADA -->
+
+                    <div class="alert alert-success"
+                         role="alert"
                          invisible="estado != 'salida_confirmada'">
-                        Salida física confirmada. Los tickets vinculados conservan
+
+                        <strong>Salida física confirmada.</strong>
+
+                        Los tickets vinculados conservan
                         su cierre administrativo independiente.
+
                     </div>
 
                     <notebook>
-                        <page string="Tickets vinculados" name="tickets">
+
+                        <!-- TICKETS VINCULADOS -->
+
+                        <page string="Tickets vinculados"
+                              name="tickets">
+
                             <field name="ticket_ids"
                                    readonly="estado != 'programada'">
-                                <list create="0" delete="0">
+
+                                <list create="0"
+                                      delete="0">
+
                                     <field name="name"/>
+
                                     <field name="partner_id"/>
+
                                     <field name="product_alquiler"/>
+
                                     <field name="responsable"/>
-                                    <field name="estado" widget="badge"/>
-                                    <field name="fecha_llegada" optional="hide"/>
-                                    <field name="fecha_salida_sitio" optional="hide"/>
+
+                                    <field name="estado"
+                                           widget="badge"/>
+
+                                    <field name="fecha_llegada"
+                                           optional="hide"/>
+
+                                    <field name="fecha_salida_sitio"
+                                           optional="hide"/>
+
                                 </list>
+
                             </field>
+
                         </page>
-                        <page string="Tiempos físicos" name="tiempos">
+
+                        <!-- FECHAS FÍSICAS -->
+
+                        <page string="Tiempos físicos"
+                              name="tiempos">
+
                             <group>
-                                <group string="Registro">
-                                    <field name="fecha_en_ruta" readonly="1"/>
-                                    <field name="fuente_ruta" readonly="1"/>
-                                    <field name="referencia_ruta" readonly="1"/>
-                                    <field name="fecha_llegada" readonly="1"/>
-                                    <field name="fuente_llegada" readonly="1"/>
-                                    <field name="referencia_llegada" readonly="1"/>
+
+                                <group string="Inicio y llegada">
+
+                                    <field name="fecha_en_ruta"
+                                           readonly="1"/>
+
+                                    <field name="fuente_ruta"
+                                           readonly="1"/>
+
+                                    <field name="referencia_ruta"
+                                           readonly="1"/>
+
+                                    <field name="fecha_llegada"
+                                           readonly="1"/>
+
+                                    <field name="fuente_llegada"
+                                           readonly="1"/>
+
+                                    <field name="referencia_llegada"
+                                           readonly="1"/>
+
                                 </group>
+
                                 <group string="Salida y duración">
-                                    <field name="fecha_salida" readonly="1"/>
-                                    <field name="fuente_salida" readonly="1"/>
-                                    <field name="referencia_salida" readonly="1"/>
-                                    <field name="tiempo_traslado_minutos" readonly="1"/>
-                                    <field name="tiempo_en_sitio_minutos" readonly="1"/>
+
+                                    <field name="fecha_salida"
+                                           readonly="1"/>
+
+                                    <field name="fuente_salida"
+                                           readonly="1"/>
+
+                                    <field name="referencia_salida"
+                                           readonly="1"/>
+
+                                    <field name="tiempo_traslado_minutos"
+                                           readonly="1"/>
+
+                                    <field name="tiempo_en_sitio_minutos"
+                                           readonly="1"/>
+
                                 </group>
+
                             </group>
+
                         </page>
-                        <page string="Auditoría" name="auditoria">
-                            <field name="evento_ids" readonly="1">
-                                <list create="0" edit="0" delete="0"
+
+                        <!-- AUDITORÍA GPS -->
+
+                        <page string="Auditoría"
+                              name="auditoria">
+
+                            <field name="evento_ids"
+                                   readonly="1">
+
+                                <list create="0"
+                                      edit="0"
+                                      delete="0"
                                       default_order="id desc">
+
                                     <field name="fecha_evento"/>
+
                                     <field name="fecha_recepcion"/>
-                                    <field name="tipo" widget="badge"/>
+
+                                    <field name="tipo"
+                                           widget="badge"/>
+
                                     <field name="fuente"/>
-                                    <field name="referencia" optional="show"/>
-                                    <field name="usuario_id" optional="hide"/>
+
+                                    <field name="referencia"
+                                           optional="show"/>
+
+                                    <field name="usuario_id"
+                                           optional="hide"/>
+
                                 </list>
+
                             </field>
+
                         </page>
+
                     </notebook>
+
                 </sheet>
-                <chatter/>
+
             </form>
         </field>
     </record>
+
+    <!-- ===================================================== -->
+    <!-- VISTA CALENDARIO                                      -->
+    <!-- ===================================================== -->
 
     <record id="view_sat_visita_tecnica_calendar" model="ir.ui.view">
         <field name="name">sat.visita.tecnica.calendar</field>
         <field name="model">sat.visita.tecnica</field>
         <field name="arch" type="xml">
-            <calendar string="Agenda de visitas SAT" date_start="agenda"
-                      color="tecnico_id" mode="week" event_open_popup="true">
+
+            <calendar string="Agenda de visitas SAT"
+                      date_start="agenda"
+                      color="tecnico_id"
+                      mode="week"
+                      event_open_popup="true">
+
                 <field name="name"/>
+
                 <field name="partner_id"/>
+
                 <field name="tecnico_id"/>
+
                 <field name="sede_descripcion"/>
+
                 <field name="estado"/>
+
             </calendar>
         </field>
     </record>
+
+    <!-- ===================================================== -->
+    <!-- BÚSQUEDA DEL HISTORIAL DE EVENTOS                     -->
+    <!-- ===================================================== -->
 
     <record id="view_sat_visita_evento_search" model="ir.ui.view">
         <field name="name">sat.visita.evento.search</field>
         <field name="model">sat.visita.evento</field>
         <field name="arch" type="xml">
-            <search string="Eventos físicos SAT">
+
+            <search>
+
                 <field name="visita_id"/>
+
                 <field name="tipo"/>
+
                 <field name="fuente"/>
+
                 <field name="referencia"/>
+
                 <field name="fecha_evento"/>
-                <group expand="0" string="Agrupar por">
-                    <filter name="group_visita" string="Visita"
-                            context="{'group_by':'visita_id'}"/>
-                    <filter name="group_tipo" string="Evento"
-                            context="{'group_by':'tipo'}"/>
-                    <filter name="group_fuente" string="Origen"
-                            context="{'group_by':'fuente'}"/>
+
+                <group name="groupby">
+
+                    <filter name="group_visita"
+                            string="Visita"
+                            context="{'group_by': 'visita_id'}"/>
+
+                    <filter name="group_tipo"
+                            string="Evento"
+                            context="{'group_by': 'tipo'}"/>
+
+                    <filter name="group_fuente"
+                            string="Origen"
+                            context="{'group_by': 'fuente'}"/>
+
                 </group>
+
             </search>
         </field>
     </record>
+
+    <!-- ===================================================== -->
+    <!-- LISTA DE EVENTOS                                      -->
+    <!-- ===================================================== -->
 
     <record id="view_sat_visita_evento_list" model="ir.ui.view">
         <field name="name">sat.visita.evento.list</field>
         <field name="model">sat.visita.evento</field>
         <field name="arch" type="xml">
+
             <list string="Historial de eventos físicos"
-                  create="0" edit="0" delete="0" default_order="id desc">
+                  create="0"
+                  edit="0"
+                  delete="0"
+                  default_order="id desc">
+
                 <field name="visita_id"/>
-                <field name="tipo" widget="badge"/>
+
+                <field name="tipo"
+                       widget="badge"/>
+
                 <field name="fecha_evento"/>
+
                 <field name="fecha_recepcion"/>
+
                 <field name="fuente"/>
+
                 <field name="referencia"/>
+
                 <field name="usuario_id"/>
+
             </list>
         </field>
     </record>
+
+    <!-- ===================================================== -->
+    <!-- FORMULARIO DE EVENTO GPS                              -->
+    <!-- ===================================================== -->
 
     <record id="view_sat_visita_evento_form" model="ir.ui.view">
         <field name="name">sat.visita.evento.form</field>
         <field name="model">sat.visita.evento</field>
         <field name="arch" type="xml">
+
             <form string="Evento de auditoría GPS"
-                  create="0" edit="0" delete="0">
+                  create="0"
+                  edit="0"
+                  delete="0">
+
                 <sheet>
+
                     <group>
+
                         <group>
-                            <field name="visita_id" readonly="1"/>
-                            <field name="tipo" readonly="1"/>
-                            <field name="fuente" readonly="1"/>
-                            <field name="usuario_id" readonly="1"/>
+
+                            <field name="visita_id"
+                                   readonly="1"/>
+
+                            <field name="tipo"
+                                   readonly="1"/>
+
+                            <field name="fuente"
+                                   readonly="1"/>
+
+                            <field name="usuario_id"
+                                   readonly="1"/>
+
                         </group>
+
                         <group>
-                            <field name="fecha_evento" readonly="1"/>
-                            <field name="fecha_recepcion" readonly="1"/>
-                            <field name="referencia" readonly="1"/>
+
+                            <field name="fecha_evento"
+                                   readonly="1"/>
+
+                            <field name="fecha_recepcion"
+                                   readonly="1"/>
+
+                            <field name="referencia"
+                                   readonly="1"/>
+
                         </group>
+
                     </group>
+
                     <group string="Detalle">
-                        <field name="detalle" nolabel="1" readonly="1"/>
+
+                        <field name="detalle"
+                               nolabel="1"
+                               readonly="1"/>
+
                     </group>
+
                 </sheet>
+
             </form>
         </field>
     </record>
 
-    <record id="action_sat_visita_tecnica" model="ir.actions.act_window">
+    <!-- ===================================================== -->
+    <!-- ACCIÓN: VISITAS FÍSICAS GPS                            -->
+    <!-- ===================================================== -->
+
+    <record id="action_sat_visita_tecnica"
+            model="ir.actions.act_window">
+
         <field name="name">Visitas físicas GPS</field>
+
         <field name="res_model">sat.visita.tecnica</field>
+
         <field name="view_mode">list,kanban,form,calendar</field>
-        <field name="search_view_id" ref="view_sat_visita_tecnica_search"/>
-        <field name="context">{'search_default_activas': 1}</field>
+
+        <field name="search_view_id"
+               ref="view_sat_visita_tecnica_search"/>
+
+        <field name="context">
+            {'search_default_activas': 1}
+        </field>
+
     </record>
 
-    <record id="action_sat_visita_evento" model="ir.actions.act_window">
+    <!-- ===================================================== -->
+    <!-- ACCIÓN: AUDITORÍA GPS                                  -->
+    <!-- ===================================================== -->
+
+    <record id="action_sat_visita_evento"
+            model="ir.actions.act_window">
+
         <field name="name">Auditoría de visitas GPS</field>
+
         <field name="res_model">sat.visita.evento</field>
+
         <field name="view_mode">list,form</field>
-        <field name="search_view_id" ref="view_sat_visita_evento_search"/>
-        <field name="context">{'create': False, 'edit': False, 'delete': False}</field>
+
+        <field name="search_view_id"
+               ref="view_sat_visita_evento_search"/>
+
+        <field name="context">
+            {'create': False, 'edit': False, 'delete': False}
+        </field>
+
     </record>
 
-    <!-- Menú GPS ya existente en views/acciones_menus.xml -->
+    <!-- ===================================================== -->
+    <!-- MENÚS GPS                                             -->
+    <!-- Reutiliza menú existente del SAT                       -->
+    <!-- ===================================================== -->
+
     <menuitem id="menu_sat_visitas_fisicas_gps"
               name="Visitas físicas GPS"
               parent="menu_gps_tracking_separator"
@@ -330,4 +659,5 @@
               action="action_sat_visita_evento"
               sequence="30"
               groups="sat.sat_jefes_group_user,base.group_system"/>
+
 </odoo>
