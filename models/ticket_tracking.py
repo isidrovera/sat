@@ -6,6 +6,7 @@ fecha local de Lima y salida GPS separada del cierre del servicio.
 La salida física no reemplaza las validaciones de action_finalizar.
 """
 import math
+import json
 import logging
 import requests
 from datetime import timedelta, datetime, timezone
@@ -795,8 +796,95 @@ class TicketAlquilerTracking(models.Model):
 
     @api.model
     def cron_gps_detectar_movimiento(self):
-        """El movimiento general del celular NO acredita desplazamiento hacia un ticket."""
-        _logger.info('[CRON-MOVIMIENTO] Observación sin cambio de estado: no se inventa fecha en ruta')
+        """Detecta salida rumbo a UNA visita usando dos posiciones GPS.
+
+        No basta deviceMoving: deben existir desplazamiento reciente, avance
+        hacia la sede, agenda próxima y visita inequívoca. La fecha registrada
+        es la observación GPS, no una hora histórica de salida presunta.
+        """
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            _logger.warning('[CRON-MOVIMIENTO] Traccar no devolvió posiciones')
+            return True
+
+        ahora = fields.Datetime.now()
+        Config = self.env['ir.config_parameter'].sudo()
+        Vinculo = self.env['tecnico.dispositivo.gps'].sudo()
+        Visita = self.env['sat.visita.tecnica'].sudo()
+        for vinculo in Vinculo.search([('activo', '=', True)]):
+            try:
+                pos = posiciones.get(vinculo.traccar_device_id)
+                if not self._gps_posicion_valida(pos, max_edad_min=5):
+                    _logger.info('[CRON-MOVIMIENTO] device=%s sin posición reciente válida', vinculo.traccar_device_id)
+                    continue
+                lat, lon = float(pos['latitude']), float(pos['longitude'])
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
+                    continue
+                precision = pos.get('accuracy')
+                if precision is None:
+                    precision = (pos.get('attributes') or {}).get('accuracy')
+                if precision is not None and float(precision) > 100:
+                    continue
+                dt = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
+                instante = dt.astimezone(timezone.utc).replace(tzinfo=None)
+                if instante > ahora + timedelta(minutes=2):
+                    continue
+
+                visitas = Visita.search([
+                    ('tecnico_id', '=', vinculo.user_id.id),
+                    ('estado', '=', 'programada'),
+                    ('agenda', '>=', ahora - timedelta(hours=2)),
+                    ('agenda', '<=', ahora + timedelta(hours=4)),
+                ])
+                # Solo una visita programada con tickets EN PROCESO y geocerca.
+                candidatas = visitas.filtered(lambda v: (
+                    v.ticket_ids
+                    and any(t.estado == 'proceso' and t.traccar_geofence_id for t in v.ticket_ids)
+                    and v._coordenadas_validas(v.latitud, v.longitud)
+                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) >= 150
+                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) <= 20000
+                ))
+                clave = 'sat.gps.movimiento.%s' % vinculo.traccar_device_id
+                if len(candidatas) != 1:
+                    Config.set_param(clave, '')
+                    _logger.info('[CRON-MOVIMIENTO] device=%s visitas candidatas=%s; sin cambio', vinculo.traccar_device_id, len(candidatas))
+                    continue
+                visita = candidatas[0]
+                # No inferir nuevo inicio si el técnico mantiene otra visita abierta.
+                if visita._otra_visita_activa():
+                    Config.set_param(clave, '')
+                    continue
+                actual = {'visita': visita.id, 'lat': lat, 'lon': lon, 'ts': instante.isoformat(), 'pos_id': pos.get('id')}
+                previo_txt = Config.get_param(clave, default='')
+                try:
+                    previo = json.loads(previo_txt) if previo_txt else None
+                except (ValueError, TypeError):
+                    previo = None
+                if not previo or previo.get('visita') != visita.id:
+                    Config.set_param(clave, json.dumps(actual))
+                    continue
+                anterior = datetime.fromisoformat(previo['ts'])
+                segundos = (instante - anterior).total_seconds()
+                if segundos <= 0:
+                    continue
+                if segundos > 600:
+                    Config.set_param(clave, json.dumps(actual))
+                    continue
+                if segundos < 30:
+                    continue
+                desplazamiento = self._haversine_metros(previo['lat'], previo['lon'], lat, lon)
+                distancia_antes = self._haversine_metros(previo['lat'], previo['lon'], visita.latitud, visita.longitud)
+                distancia_ahora = self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
+                if desplazamiento < 100 or distancia_antes - distancia_ahora < 80:
+                    Config.set_param(clave, json.dumps(actual))
+                    _logger.info('[CRON-MOVIMIENTO] device=%s desplazamiento=%.0fm acercamiento=%.0fm; insuficiente', vinculo.traccar_device_id, desplazamiento, distancia_antes-distancia_ahora)
+                    continue
+                referencia = 'traccar-movement:%s@%s' % (vinculo.traccar_device_id, instante.isoformat())
+                if visita.registrar_inicio_ruta_gps(instante, referencia, ubicacion_actual={'latitude': lat, 'longitude': lon}):
+                    _logger.info('[CRON-MOVIMIENTO] Ruta automática visita=%s técnico=%s', visita.id, vinculo.user_id.id)
+                Config.set_param(clave, '')
+            except Exception:
+                _logger.exception('[CRON-MOVIMIENTO] Falló evaluación device=%s', vinculo.traccar_device_id)
         return True
 
     @api.model
@@ -878,23 +966,6 @@ class TicketAlquilerTracking(models.Model):
                 if visita.registrar_llegada_verificada(fix_utc, referencia, 'traccar'):
                     visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(notificar=False, fecha_evento=fix_utc)
                     _logger.info('[CRON-LLEGADA] Llegada observada por doble posición: visita=%s tecnico=%s', visita.id, vinculo.user_id.id)
-                    # El cron y el webhook son caminos alternativos. La llegada
-                    # solo se registra una vez; por ello no duplicamos el aviso.
-                    principal = visita.ticket_ids[:1]
-                    if principal:
-                        try:
-                            aceptado = principal.notificar_en_sitio(
-                                tickets_grupo=visita.ticket_ids,
-                                ubicacion_actual={'latitude': lat, 'longitude': lon},
-                            )
-                            visita._registrar_evento(
-                                'aviso', 'whatsapp',
-                                detalle=('Llegada por cron: solicitud aceptada' if aceptado
-                                         else 'Llegada por cron: envío rechazado'),
-                            )
-                            _logger.info('[TRACKING-WA] Aviso de llegada por cron visita=%s aceptado=%s', visita.id, aceptado)
-                        except Exception:
-                            _logger.exception('[TRACKING-WA] Error notificando llegada por cron visita=%s', visita.id)
                 parametros.set_param(clave, '')
             except Exception:
                 _logger.exception('[CRON-LLEGADA] Error verificando técnico %s; no se modificó llegada por esta observación', vinculo.user_id.id)
