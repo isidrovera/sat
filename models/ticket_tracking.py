@@ -18,7 +18,7 @@ _logger = logging.getLogger(__name__)
 
 # Umbrales para confirmar salida física sin preguntar
 UMBRAL_MINUTOS_SITIO = 60   # minutos mínimos en sitio
-UMBRAL_METROS_SALIDA = 2000  # 2 km de distancia para confirmar salida
+UMBRAL_METROS_SALIDA = 150  # radio mínimo para comprobar el retiro físico
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -604,49 +604,20 @@ class TicketAlquilerTracking(models.Model):
 
     def _evaluar_salida_geocerca(self, lat_actual=None, lon_actual=None,
                                 fecha_evento=None, fuente='cron'):
-        """Evalúa una DETECCIÓN de retiro; nunca finaliza el ticket.
+        """Un geofenceExit aislado NO solicita retiro ni genera tokens.
 
-        Si hay evidencia suficiente de permanencia + distancia y evento fechado,
-        puede registrar salida. De otro modo requiere confirmación del técnico.
+        El cron 115 debe verificar posiciones GPS sucesivas a >150 m antes
+        de registrar una salida física. No se envían WhatsApp prematuros.
         """
         self.ensure_one()
         if self.fecha_salida_sitio:
             return 'salida_ya_registrada'
-        self._registrar_deteccion_salida(lat_actual, lon_actual, fecha_evento, fuente)
-        token_existente = self.env['ticket.retiro.token'].sudo().search([
-            ('ticket_id', '=', self.id), ('estado', '=', 'pendiente'),
-        ], limit=1)
-        if token_existente:
-            return 'ya_preguntado'
-        if not self.fecha_llegada:
-            self._registrar_evento('Retiro detectado sin llegada verificada; se solicita confirmación')
-        referencia = fecha_evento or fields.Datetime.now()
-        minutos = max(0.0, (referencia - self.fecha_llegada).total_seconds() / 60) if self.fecha_llegada else 0.0
-        distancia = None
-        if (lat_actual is not None and lon_actual is not None and
-                self.equipo_latitud and self.equipo_longitud):
-            distancia = self._haversine_metros(lat_actual, lon_actual,
-                                               self.equipo_latitud, self.equipo_longitud)
-        # Un geofenceExit acredita detección, no necesariamente retiro definitivo.
-        # La confirmación se tramita mediante el token de retiro y la visita.
-        # Usar API existente de tokens, sin inventar fechas de salida.
-        token = self.env['ticket.retiro.token'].sudo().crear_token_retiro(
-            ticket=self, lat=lat_actual, lon=lon_actual, tiempo_en_sitio=minutos,
+        _logger.info(
+            '[RETIRO] ticket=%s aviso GPS preliminar (%s); '
+            'pendiente de doble comprobación fuera de 150m',
+            self.name, fuente,
         )
-        base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url') or ''
-        link = f"{base_url.rstrip('/')}/sat/retiro/{token.token}"
-        self._registrar_evento('Posible retiro GPS detectado; esperando confirmación del técnico')
-        try:
-            aceptado = self.notificar_retiro_pendiente(link=link, tiempo_en_sitio=minutos)
-            self.sudo().write({'gps_aviso_retiro_estado': 'solicitado' if aceptado else 'error',
-                               'gps_aviso_retiro_error': False if aceptado else 'Proveedor no aceptó el envío'})
-            self._registrar_evento('Solicitud de retiro aceptada por proveedor; entrega no verificada' if aceptado
-                                   else 'ERROR: proveedor no aceptó el aviso de retiro')
-        except Exception as e:
-            _logger.exception('[RETIRO] Falló aviso ticket %s: %s', self.id, e)
-            self.sudo().write({'gps_aviso_retiro_estado': 'error', 'gps_aviso_retiro_error': str(e)})
-            self._registrar_evento(f'ERROR enviando confirmación de retiro: {e}')
-        return 'token_enviado_o_intentado'
+        return 'pendiente_verificacion_gps'
 
     def action_reenviar_aviso_retiro(self):
         """Reintento explícito si el proveedor falló, sin duplicar tokens."""
@@ -1042,9 +1013,30 @@ class TicketAlquilerTracking(models.Model):
                 if instante <= visita.fecha_llegada or instante > fields.Datetime.now():
                     continue
                 metros = visita._distancia_metros(lat, lon, visita.latitud, visita.longitud)
-                if metros < 300:
+                # La zona de permanencia es de 150 m; se respetan también
+                # los márgenes de precisión de las lecturas GPS.
+                margen_precision = max(0.0, float(precision or 0.0))
+                if metros <= UMBRAL_METROS_SALIDA + margen_precision:
                     Config.set_param(clave, '')
-                    _logger.info('[CRON-SALIDA] visita=%s a %.0fm de la sede, aún en zona', visita.id, metros)
+                    if visita.estado == 'salida_pendiente':
+                        referencia_regreso = 'traccar-position:%s@%s' % (
+                            pos.get('id'), instante.isoformat())
+                        # Sólo revertir ante una posición posterior a la detección.
+                        eventos_regreso = visita.evento_ids.filtered(
+                            lambda e: e.tipo == 'salida_detectada')
+                        ultima_salida = (eventos_regreso.sorted('id', reverse=True)[0]
+                                         if eventos_regreso else False)
+                        fecha_detectada = ((ultima_salida.fecha_evento or ultima_salida.fecha_recepcion)
+                                           if ultima_salida else visita.fecha_llegada)
+                        if instante > fecha_detectada and visita.registrar_regreso(
+                                instante, referencia_regreso):
+                            for ticket in visita.ticket_ids:
+                                ticket._cancelar_tokens_retiro_pendientes()
+                            _logger.info('[CRON-SALIDA] visita=%s regreso GPS confirmado a %.0fm',
+                                         visita.id, metros)
+                    _logger.info('[CRON-SALIDA] visita=%s a %.0fm de la sede '
+                                 '(radio=150m, precisión=%sm); aún en zona',
+                                 visita.id, metros, margen_precision)
                     continue
                 eventos = visita.evento_ids.filtered(lambda e: e.tipo in ('salida_detectada', 'regreso'))
                 ultimo = eventos.sorted('id', reverse=True)[0] if eventos else False
@@ -1276,34 +1268,32 @@ class TicketAlquilerTracking(models.Model):
         return resultado
 
     def _gps_procesar_salida(self, tickets_hoy, datos):
-        """geofenceExit: solo visita correspondiente; sin finalizar tickets."""
+        """geofenceExit aislado: señal preliminar; no cambia visita ni envía WA.
+
+        La salida se detecta por el cron 115 con dos lecturas fuera de 150m
+        y se confirma con una tercera, evitando los falsos retiros por jitter.
+        """
         resultado = self.env['ticket.alquiler']
         gid = datos.get('geofenceId')
         fecha = datos.get('_fecha_evento_validada')
         if not gid or not fecha:
             return resultado
-        candidatos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
-            t.gps_visita_id.estado in ('en_sitio', 'salida_pendiente') and
-            t.traccar_geofence_id == gid)
+        candidatos = tickets_hoy.filtered(
+            lambda t: t.gps_visita_id
+            and t.gps_visita_id.estado in ('en_sitio', 'salida_pendiente')
+            and t.traccar_geofence_id == gid
+        )
         visitas = candidatos.mapped('gps_visita_id')
         if len(visitas) != 1:
             return resultado
         visita = visitas[0]
         if visita.fecha_llegada and fecha < visita.fecha_llegada:
             return resultado
-        referencia = 'traccar-event:%s' % datos.get('eventId') if datos.get('eventId') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
-        if visita.estado == 'en_sitio':
-            visita.registrar_salida_detectada(referencia=referencia, fecha_evento=fecha)
-        # No confirmar únicamente por 60 min o porque el dispositivo está lejos.
-        # El técnico confirma mediante el token vigente, o una integración GPS
-        # validada acepta evidencia inequívoca en el flujo de la visita.
-        principal = visita.ticket_ids[:1]
-        if principal:
-            t = principal[0]
-            if not t.fecha_salida_sitio:
-                t._evaluar_salida_geocerca(datos.get('latitude'), datos.get('longitude'),
-                                           fecha_evento=fecha, fuente='webhook')
-            resultado = visita.ticket_ids
+        _logger.info(
+            '[GPS-SALIDA] geofenceExit preliminar visita=%s geocerca=%s '
+            'evento=%s; sin token ni cambio de estado (cron 115 verificará >150m)',
+            visita.id, gid, datos.get('eventId'),
+        )
         return resultado
 
     def _gps_procesar_movimiento(self, tickets_hoy, datos):
