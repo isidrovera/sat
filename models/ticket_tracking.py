@@ -798,8 +798,9 @@ class TicketAlquilerTracking(models.Model):
     def cron_gps_detectar_movimiento(self):
         """Detecta salida rumbo a UNA visita usando dos posiciones GPS.
 
-        No basta deviceMoving: deben existir desplazamiento reciente, avance
-        hacia la sede, agenda próxima y visita inequívoca. La fecha registrada
+        No basta deviceMoving: deben existir desplazamiento GPS real,
+        agenda próxima y visita inequívoca. El técnico puede tomar cualquier
+        ruta y no se exige acercamiento lineal hacia la sede. La fecha registrada
         es la observación GPS, no una hora histórica de salida presunta.
         """
         posiciones = self.env['traccar.api.service'].get_all_positions()
@@ -875,10 +876,20 @@ class TicketAlquilerTracking(models.Model):
                 desplazamiento = self._haversine_metros(previo['lat'], previo['lon'], lat, lon)
                 distancia_antes = self._haversine_metros(previo['lat'], previo['lon'], visita.latitud, visita.longitud)
                 distancia_ahora = self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
-                if desplazamiento < 100 or distancia_antes - distancia_ahora < 80:
+                # Una ruta urbana puede comenzar alejándose del cliente.
+                # Detectar desplazamiento real, no dirección hacia el destino.
+                # 300 m reduce activaciones por ruido GPS o movimientos mínimos.
+                if desplazamiento < 300:
                     Config.set_param(clave, json.dumps(actual))
-                    _logger.info('[CRON-MOVIMIENTO] device=%s desplazamiento=%.0fm acercamiento=%.0fm; insuficiente', vinculo.traccar_device_id, desplazamiento, distancia_antes-distancia_ahora)
+                    _logger.info(
+                        '[CRON-MOVIMIENTO] device=%s desplazamiento=%.0fm (<300m) acercamiento=%.0fm; esperando movimiento',
+                        vinculo.traccar_device_id, desplazamiento, distancia_antes - distancia_ahora,
+                    )
                     continue
+                _logger.info(
+                    '[CRON-MOVIMIENTO] device=%s visita=%s desplazamiento=%.0fm acercamiento=%.0fm; movimiento válido sin exigir dirección',
+                    vinculo.traccar_device_id, visita.id, desplazamiento, distancia_antes - distancia_ahora,
+                )
                 referencia = 'traccar-movement:%s@%s' % (vinculo.traccar_device_id, instante.isoformat())
                 if visita.registrar_inicio_ruta_gps(instante, referencia, ubicacion_actual={'latitude': lat, 'longitude': lon}):
                     _logger.info('[CRON-MOVIMIENTO] Ruta automática visita=%s técnico=%s', visita.id, vinculo.user_id.id)
