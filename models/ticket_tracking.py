@@ -796,12 +796,12 @@ class TicketAlquilerTracking(models.Model):
 
     @api.model
     def cron_gps_detectar_movimiento(self):
-        """Detecta salida rumbo a UNA visita usando dos posiciones GPS.
+        """Inicia una visita tras desplazamiento GPS desde un punto fijo.
 
-        No basta deviceMoving: deben existir desplazamiento GPS real,
-        agenda próxima y visita inequívoca. El técnico puede tomar cualquier
-        ruta y no se exige acercamiento lineal hacia la sede. La fecha registrada
-        es la observación GPS, no una hora histórica de salida presunta.
+        Conserva la primera observación durante hasta 10 minutos para que
+        tramos cortos (p. ej. 100 + 190 + 150 m) puedan superar el umbral.
+        No exige acercamiento lineal: el técnico puede tomar cualquier ruta.
+        No inicia otra visita mientras haya una visita física anterior abierta.
         """
         posiciones = self.env['traccar.api.service'].get_all_positions()
         if not posiciones:
@@ -868,6 +868,9 @@ class TicketAlquilerTracking(models.Model):
                 segundos = (instante - anterior).total_seconds()
                 if segundos <= 0:
                     continue
+                # El mismo fix de Traccar no es una segunda observación.
+                if str(previo.get('pos_id')) == str(actual['pos_id']):
+                    continue
                 if segundos > 600:
                     Config.set_param(clave, json.dumps(actual))
                     continue
@@ -880,10 +883,11 @@ class TicketAlquilerTracking(models.Model):
                 # Detectar desplazamiento real, no dirección hacia el destino.
                 # 300 m reduce activaciones por ruido GPS o movimientos mínimos.
                 if desplazamiento < 300:
-                    Config.set_param(clave, json.dumps(actual))
+                    # NO reemplazar el punto inicial: el movimiento se mide
+                    # de forma acumulada respecto a este anclaje válido.
                     _logger.info(
-                        '[CRON-MOVIMIENTO] device=%s desplazamiento=%.0fm (<300m) acercamiento=%.0fm; esperando movimiento',
-                        vinculo.traccar_device_id, desplazamiento, distancia_antes - distancia_ahora,
+                        '[CRON-MOVIMIENTO] device=%s visita=%s desde_inicio=%.0fm '                         '(<300m) ventana=%.0fs; conserva anclaje',
+                        vinculo.traccar_device_id, visita.id, desplazamiento, segundos,
                     )
                     continue
                 _logger.info(
