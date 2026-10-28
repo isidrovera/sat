@@ -984,22 +984,27 @@ class TicketAlquilerTracking(models.Model):
 
     @api.model
     def cron_gps_detectar_salida(self):
-        """Confirma visitas con retiro detectado y dos observaciones GPS externas.
+        """Comprueba salidas GPS reales de visitas en sitio o pendientes.
 
-        Incluye visitas antiguas, aunque sus tickets ya estén finalizados.
-        Nunca inventa fecha retrospectiva: fecha_salida es la fecha de la
-        segunda observación GPS que confirmó la ausencia de la sede.
+        Evento geofenceExit: se requieren dos posiciones externas posteriores.
+        Sin webhook: se exigen tres posiciones externas verificadas: dos
+        para detectar el retiro y una tercera para confirmarlo.
+        Nunca depende del estado administrativo de los tickets.
         """
-        posiciones = self.env['traccar.api.service'].get_all_positions()
-        if not posiciones:
-            _logger.warning('[CRON-SALIDA] Traccar no entregó posiciones')
-            return True
-        parametros = self.env['ir.config_parameter'].sudo()
-        visitas = self.env['sat.visita.tecnica'].sudo().search([
-            ('estado', '=', 'salida_pendiente'),
+        Visita = self.env['sat.visita.tecnica'].sudo()
+        Config = self.env['ir.config_parameter'].sudo()
+        visitas = Visita.search([
+            ('estado', 'in', ['en_sitio', 'salida_pendiente']),
             ('fecha_llegada', '!=', False),
             ('fecha_salida', '=', False),
         ], order='id asc')
+        _logger.info('[CRON-SALIDA] visitas_abiertas=%s', len(visitas))
+        if not visitas:
+            return True
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            _logger.warning('[CRON-SALIDA] Sin posiciones Traccar; no se confirma nada')
+            return True
         confirmadas = 0
         for visita in visitas:
             clave = 'sat.gps.salida.verificacion.%s' % visita.id
@@ -1009,14 +1014,13 @@ class TicketAlquilerTracking(models.Model):
                     ('activo', '=', True),
                 ], limit=1)
                 if not vinculo:
-                    _logger.warning('[CRON-SALIDA] visita=%s sin vinculo GPS', visita.id)
+                    _logger.info('[CRON-SALIDA] visita=%s sin dispositivo asignado', visita.id)
                     continue
                 pos = posiciones.get(vinculo.traccar_device_id)
                 if not self._gps_posicion_valida(pos, max_edad_min=5):
-                    _logger.info('[CRON-SALIDA] visita=%s sin posicion reciente', visita.id)
+                    _logger.info('[CRON-SALIDA] visita=%s sin posición GPS reciente', visita.id)
                     continue
-                lat = float(pos['latitude'])
-                lon = float(pos['longitude'])
+                lat, lon = float(pos['latitude']), float(pos['longitude'])
                 if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
                     continue
                 precision = pos.get('accuracy')
@@ -1025,76 +1029,129 @@ class TicketAlquilerTracking(models.Model):
                 if precision is not None and float(precision) > 100:
                     continue
                 if not visita._coordenadas_validas(visita.latitud, visita.longitud):
+                    _logger.warning('[CRON-SALIDA] visita=%s sin destino GPS válido', visita.id)
                     continue
                 fix = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
                 if fix.tzinfo is None:
                     continue
                 instante = fix.astimezone(timezone.utc).replace(tzinfo=None)
-                if instante < visita.fecha_llegada or instante > fields.Datetime.now() + timedelta(minutes=2):
+                if instante <= visita.fecha_llegada or instante > fields.Datetime.now():
                     continue
-                # El ultimo evento de salida protege contra posicion antigua.
+                metros = visita._distancia_metros(lat, lon, visita.latitud, visita.longitud)
+                if metros < 300:
+                    Config.set_param(clave, '')
+                    _logger.info('[CRON-SALIDA] visita=%s a %.0fm de la sede, aún en zona', visita.id, metros)
+                    continue
                 eventos = visita.evento_ids.filtered(lambda e: e.tipo in ('salida_detectada', 'regreso'))
-                if not eventos:
-                    continue
-                ultimo = eventos.sorted('id', reverse=True)[0]
-                if ultimo.tipo == 'regreso':
-                    parametros.set_param(clave, '')
-                    continue
-                limite = ultimo.fecha_evento or ultimo.fecha_recepcion
+                ultimo = eventos.sorted('id', reverse=True)[0] if eventos else False
+                # Un regreso no bloquea futuros retiros: reinicia la
+                # comprobación y exige posiciones posteriores al regreso.
+                limite = (ultimo.fecha_evento or ultimo.fecha_recepcion) if ultimo else visita.fecha_llegada
                 if instante <= limite:
-                    continue
-                distancia = visita._distancia_metros(
-                    lat, lon, visita.latitud, visita.longitud)
-                # 300 m fuera de la sede evita falsos positivos de 50-100 m.
-                if distancia < 300:
-                    parametros.set_param(clave, '')
-                    _logger.info('[CRON-SALIDA] visita=%s distancia=%.0fm; aun cerca', visita.id, distancia)
                     continue
                 actual = {
                     'lat': lat, 'lon': lon, 'ts': instante.isoformat(),
                     'position_id': str(pos.get('id') or ''),
-                    'evento_id': ultimo.id,
+                    'evento_id': ultimo.id if ultimo else 0,
+                    'visita_id': visita.id,
                 }
-                anterior_txt = parametros.get_param(clave) or ''
+                anterior_txt = Config.get_param(clave) or ''
                 try:
                     anterior = json.loads(anterior_txt) if anterior_txt else None
                 except (ValueError, TypeError):
                     anterior = None
-                if not anterior or anterior.get('evento_id') != ultimo.id:
-                    parametros.set_param(clave, json.dumps(actual))
-                    _logger.info('[CRON-SALIDA] visita=%s primera posicion externa %.0fm; pendiente segunda', visita.id, distancia)
+                if (not anterior or anterior.get('visita_id') != visita.id
+                        or anterior.get('evento_id') != actual['evento_id']):
+                    Config.set_param(clave, json.dumps(actual))
+                    _logger.info('[CRON-SALIDA] visita=%s primera posición externa %.0fm', visita.id, metros)
                     continue
-                anterior_ts = datetime.fromisoformat(anterior['ts'])
-                segundos = (instante - anterior_ts).total_seconds()
-                if segundos <= 0:
+                transcurrido = (instante - datetime.fromisoformat(anterior['ts'])).total_seconds()
+                if transcurrido <= 0 or anterior['position_id'] == actual['position_id']:
                     continue
-                if segundos > 1800:
-                    parametros.set_param(clave, json.dumps(actual))
+                if transcurrido > 1800:
+                    Config.set_param(clave, json.dumps(actual))
                     continue
-                if segundos < 120:
+                if transcurrido < 120:
                     continue
-                if str(pos.get('id') or '') == anterior.get('position_id'):
+                # Si no llegó el webhook, las dos observaciones externas generan
+                # una detección fechada, y una tercera confirma el retiro.
+                if visita.estado == 'en_sitio':
+                    ref_detectada = 'traccar-posiciones:%s,%s' % (anterior['position_id'], actual['position_id'])
+                    if visita.registrar_salida_detectada(referencia=ref_detectada, fecha_evento=instante):
+                        Config.set_param(clave, json.dumps({
+                            **actual, 'evento_id': visita.evento_ids.sorted('id', reverse=True)[0].id,
+                        }))
+                        _logger.info('[CRON-SALIDA] visita=%s retiro detectado por GPS sin webhook; requiere tercera posición', visita.id)
+                    continue
+                if visita.estado != 'salida_pendiente':
+                    continue
+                # En espera tras la detección por cron, la referencia guarda
+                # como evidencia la fecha de las dos primeras posiciones.
+                if ultimo and instante <= (ultimo.fecha_evento or ultimo.fecha_recepcion):
                     continue
                 ref = 'traccar-posiciones:%s,%s@%s' % (
-                    anterior.get('position_id'), pos.get('id'), instante.isoformat())
-                # Confirmar al momento de la segunda observacion, NO en la
-                # fecha historica de geofenceExit ni al finalizar los tickets.
-                if visita.registrar_salida_confirmada(
-                    instante, 'traccar', ref,
-                    ubicacion_actual={'latitude': lat, 'longitude': lon},
-                ):
-                    confirmadas += 1
-                    parametros.set_param(clave, '')
-                    _logger.info('[CRON-SALIDA] Visita=%s CONFIRMADA; metros=%.0f', visita.id, distancia)
+                    anterior['position_id'], actual['position_id'], instante.isoformat())
+                with self.env.cr.savepoint():
+                    if visita.registrar_salida_confirmada(
+                        instante, 'traccar', ref,
+                        ubicacion_actual={'latitude': lat, 'longitude': lon},
+                    ):
+                        confirmadas += 1
+                        Config.set_param(clave, '')
+                        _logger.info('[CRON-SALIDA] Confirmada visita=%s a %.0fm', visita.id, metros)
             except Exception:
-                _logger.exception('[CRON-SALIDA] Error visita=%s; se conserva pendiente', visita.id)
-        _logger.info('[CRON-SALIDA] pendientes=%s confirmadas=%s', len(visitas), confirmadas)
+                _logger.exception('[CRON-SALIDA] Error procesando visita=%s', visita.id)
+        _logger.info('[CRON-SALIDA] abiertas=%s confirmadas=%s', len(visitas), confirmadas)
         return True
 
     @api.model
     def cron_actualizar_en_revision(self):
-        """Desactivado deliberadamente: permanencia no prueba inicio de revisión."""
-        _logger.info('[CRON-REVISION] No se infiere revisión por el paso del tiempo')
+        """Pasar de en_sitio a en_revision tras 10 min de llegada confirmada.
+
+        Es una regla administrativa de SAT: el tiempo transcurrido no demuestra
+        que el técnico haya empezado físicamente una revisión. No se cambia el
+        estado de la visita ni se inventan eventos GPS.
+        """
+        ahora = fields.Datetime.now()
+        umbral = ahora - timedelta(minutes=10)
+        tickets = self.sudo().search([
+            ('estado', '=', 'en_sitio'),
+            ('gps_visita_id', '!=', False),
+            ('fecha_llegada', '!=', False),
+            ('fecha_llegada', '<=', umbral),
+        ], order='fecha_llegada asc', limit=200)
+        actualizados = 0
+        omitidos = 0
+        for ticket in tickets:
+            visita = ticket.gps_visita_id
+            # Si se detectó salida o la visita ya está cerrada, no iniciar revisión.
+            if (not visita or visita.estado != 'en_sitio'
+                    or not visita.fecha_llegada
+                    or visita.fecha_llegada > umbral
+                    or visita.fecha_salida):
+                omitidos += 1
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    # Reutiliza la acción existente: registra fecha, evento
+                    # y notifica una sola vez cuando cambia el estado.
+                    ticket.action_en_revision()
+                    actualizados += 1
+                    _logger.info(
+                        '[CRON-REVISION] ticket=%s visita=%s '
+                        'en_sitio -> en_revision tras %.1f min',
+                        ticket.name, visita.id,
+                        (ahora - visita.fecha_llegada).total_seconds() / 60.0,
+                    )
+            except Exception:
+                _logger.exception(
+                    '[CRON-REVISION] Falló ticket=%s visita=%s',
+                    ticket.name, visita.id,
+                )
+        _logger.info(
+            '[CRON-REVISION] candidatos=%s actualizados=%s omitidos=%s',
+            len(tickets), actualizados, omitidos,
+        )
         return True
 
     @api.model
@@ -1176,6 +1233,21 @@ class TicketAlquilerTracking(models.Model):
         fecha = datos.get('_fecha_evento_validada')
         if not gid or not fecha:
             return resultado
+        # Regreso a la geocerca durante una salida pendiente.
+        regresos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
+            t.gps_visita_id.estado == 'salida_pendiente' and
+            t.traccar_geofence_id == gid).mapped('gps_visita_id')
+        if len(regresos) == 1:
+            visita_regreso = regresos[0]
+            if fecha >= visita_regreso.fecha_llegada:
+                referencia_regreso = ('traccar-event:%s' % datos.get('eventId')
+                                      if datos.get('eventId') else
+                                      'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha)))
+                if visita_regreso.registrar_regreso(fecha, referencia_regreso):
+                    self.env['ir.config_parameter'].sudo().set_param(
+                        'sat.gps.salida.verificacion.%s' % visita_regreso.id, '')
+                    _logger.info('[GPS] Regreso geocerca confirmado visita=%s', visita_regreso.id)
+                    return visita_regreso.ticket_ids
         candidatos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
             t.gps_visita_id.estado in ('programada', 'en_ruta') and
             t.traccar_geofence_id == gid)
