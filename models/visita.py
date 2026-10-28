@@ -627,33 +627,26 @@ class SatVisitaTecnica(models.Model):
     # POSIBLE SALIDA
     # ======================================================
 
-    def registrar_salida_detectada(
-        self,
-        referencia=False,
-    ):
+    def registrar_salida_detectada(self, referencia=False, fecha_evento=False):
+        """Guarda la detección con la fecha original si existe.
+
+        No supone que el técnico abandonó definitivamente la sede.
+        """
         self.ensure_one()
+        if not referencia:
+            raise UserError(_('La detección requiere referencia Traccar.'))
+        fecha = self._validar_fecha(fecha_evento, 'Detección de salida') if fecha_evento else False
         self._lock_tecnico()
-
-        if self.estado == 'salida_pendiente':
-            return False
-
         if self.estado != 'en_sitio':
             return False
-
-        self.write({
-            'estado': 'salida_pendiente',
-        })
-
+        if self.fecha_llegada and fecha and fecha < self.fecha_llegada:
+            return False
+        self.write({'estado': 'salida_pendiente'})
         self._registrar_evento(
-            tipo='salida_detectada',
-            fuente='traccar',
-            referencia=referencia,
-            detalle=(
-                "Se detectó posible retiro. "
-                "Todavía no existe salida confirmada."
-            ),
+            tipo='salida_detectada', fuente='traccar',
+            fecha_evento=fecha, referencia=referencia,
+            detalle='Salida detectada por geocerca; pendiente de verificación GPS posterior.',
         )
-
         return True
 
     # ======================================================
@@ -704,6 +697,7 @@ class SatVisitaTecnica(models.Model):
         fecha_evento,
         fuente,
         referencia,
+        ubicacion_actual=None,
     ):
         self.ensure_one()
 
@@ -769,7 +763,8 @@ class SatVisitaTecnica(models.Model):
 
             try:
                 enviado = principal.notificar_salida_sitio(
-                    tickets_grupo=self.ticket_ids
+                    tickets_grupo=self.ticket_ids,
+                    ubicacion_actual=ubicacion_actual,
                 )
 
                 self._registrar_evento(

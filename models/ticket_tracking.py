@@ -973,8 +973,111 @@ class TicketAlquilerTracking(models.Model):
 
     @api.model
     def cron_gps_detectar_salida(self):
-        """Las instantáneas no acreditan salida histórica; no cambiar estados."""
-        _logger.info('[CRON-GPS] Sin geofenceExit fechado no se confirma salida física')
+        """Confirma visitas con retiro detectado y dos observaciones GPS externas.
+
+        Incluye visitas antiguas, aunque sus tickets ya estén finalizados.
+        Nunca inventa fecha retrospectiva: fecha_salida es la fecha de la
+        segunda observación GPS que confirmó la ausencia de la sede.
+        """
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            _logger.warning('[CRON-SALIDA] Traccar no entregó posiciones')
+            return True
+        parametros = self.env['ir.config_parameter'].sudo()
+        visitas = self.env['sat.visita.tecnica'].sudo().search([
+            ('estado', '=', 'salida_pendiente'),
+            ('fecha_llegada', '!=', False),
+            ('fecha_salida', '=', False),
+        ], order='id asc')
+        confirmadas = 0
+        for visita in visitas:
+            clave = 'sat.gps.salida.verificacion.%s' % visita.id
+            try:
+                vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
+                    ('user_id', '=', visita.tecnico_id.id),
+                    ('activo', '=', True),
+                ], limit=1)
+                if not vinculo:
+                    _logger.warning('[CRON-SALIDA] visita=%s sin vinculo GPS', visita.id)
+                    continue
+                pos = posiciones.get(vinculo.traccar_device_id)
+                if not self._gps_posicion_valida(pos, max_edad_min=5):
+                    _logger.info('[CRON-SALIDA] visita=%s sin posicion reciente', visita.id)
+                    continue
+                lat = float(pos['latitude'])
+                lon = float(pos['longitude'])
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
+                    continue
+                precision = pos.get('accuracy')
+                if precision is None:
+                    precision = (pos.get('attributes') or {}).get('accuracy')
+                if precision is not None and float(precision) > 100:
+                    continue
+                if not visita._coordenadas_validas(visita.latitud, visita.longitud):
+                    continue
+                fix = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
+                if fix.tzinfo is None:
+                    continue
+                instante = fix.astimezone(timezone.utc).replace(tzinfo=None)
+                if instante < visita.fecha_llegada or instante > fields.Datetime.now() + timedelta(minutes=2):
+                    continue
+                # El ultimo evento de salida protege contra posicion antigua.
+                eventos = visita.evento_ids.filtered(lambda e: e.tipo in ('salida_detectada', 'regreso'))
+                if not eventos:
+                    continue
+                ultimo = eventos.sorted('id', reverse=True)[0]
+                if ultimo.tipo == 'regreso':
+                    parametros.set_param(clave, '')
+                    continue
+                limite = ultimo.fecha_evento or ultimo.fecha_recepcion
+                if instante <= limite:
+                    continue
+                distancia = visita._distancia_metros(
+                    lat, lon, visita.latitud, visita.longitud)
+                # 300 m fuera de la sede evita falsos positivos de 50-100 m.
+                if distancia < 300:
+                    parametros.set_param(clave, '')
+                    _logger.info('[CRON-SALIDA] visita=%s distancia=%.0fm; aun cerca', visita.id, distancia)
+                    continue
+                actual = {
+                    'lat': lat, 'lon': lon, 'ts': instante.isoformat(),
+                    'position_id': str(pos.get('id') or ''),
+                    'evento_id': ultimo.id,
+                }
+                anterior_txt = parametros.get_param(clave) or ''
+                try:
+                    anterior = json.loads(anterior_txt) if anterior_txt else None
+                except (ValueError, TypeError):
+                    anterior = None
+                if not anterior or anterior.get('evento_id') != ultimo.id:
+                    parametros.set_param(clave, json.dumps(actual))
+                    _logger.info('[CRON-SALIDA] visita=%s primera posicion externa %.0fm; pendiente segunda', visita.id, distancia)
+                    continue
+                anterior_ts = datetime.fromisoformat(anterior['ts'])
+                segundos = (instante - anterior_ts).total_seconds()
+                if segundos <= 0:
+                    continue
+                if segundos > 1800:
+                    parametros.set_param(clave, json.dumps(actual))
+                    continue
+                if segundos < 120:
+                    continue
+                if str(pos.get('id') or '') == anterior.get('position_id'):
+                    continue
+                ref = 'traccar-posiciones:%s,%s@%s' % (
+                    anterior.get('position_id'), pos.get('id'), instante.isoformat())
+                # Confirmar al momento de la segunda observacion, NO en la
+                # fecha historica de geofenceExit ni al finalizar los tickets.
+                if visita.registrar_salida_confirmada(
+                    instante, 'traccar', ref,
+                    ubicacion_actual={'latitude': lat, 'longitude': lon},
+                ):
+                    confirmadas += 1
+                    parametros.set_param(clave, '')
+                    _logger.info('[CRON-SALIDA] Visita=%s CONFIRMADA; metros=%.0f', visita.id, distancia)
+            except Exception:
+                _logger.exception('[CRON-SALIDA] Error visita=%s; se conserva pendiente', visita.id)
+        _logger.info('[CRON-SALIDA] pendientes=%s confirmadas=%s', len(visitas), confirmadas)
         return True
 
     @api.model
@@ -1103,7 +1206,7 @@ class TicketAlquilerTracking(models.Model):
             return resultado
         referencia = 'traccar-event:%s' % datos.get('eventId') if datos.get('eventId') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
         if visita.estado == 'en_sitio':
-            visita.registrar_salida_detectada(referencia=referencia)
+            visita.registrar_salida_detectada(referencia=referencia, fecha_evento=fecha)
         # No confirmar únicamente por 60 min o porque el dispositivo está lejos.
         # El técnico confirma mediante el token vigente, o una integración GPS
         # validada acepta evidencia inequívoca en el flujo de la visita.
