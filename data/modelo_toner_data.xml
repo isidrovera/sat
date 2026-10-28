@@ -2,6 +2,16 @@
 <odoo>
   <data >
     <!-- CANON - modelos de tóner de la tabla indicada por el usuario -->
+    <record id="toner_canon_canon_03" model="modelo.toner">
+      <field name="name">T03</field>
+      <field name="marca_id" ref="marca_canon"/>
+      <field name="codigo_parte">2725C001AA</field>
+      <field name="color">black</field>
+      <field name="duracion_fabricante">51500</field>
+      <field name="duracion_referencial">51500</field>
+      <field name="fuente_informacion">fabricante</field>
+      <field name="observaciones">Dato de rendimiento/código tomado de la tabla y ficha de producto indicada para Canon.</field>
+    </record>
     <record id="toner_canon_canon_104" model="modelo.toner">
       <field name="name">Canon 104</field>
       <field name="marca_id" ref="marca_canon"/>
