@@ -6,10 +6,6 @@ import logging
 import re
 import requests
 import uuid
-import json
-import re
-
-import requests
 
 _logger = logging.getLogger(__name__)
 
@@ -524,14 +520,14 @@ class ClientServiceEvaluation(models.Model):
         for record in self:
             record.ticket_id = record.ticket_ids[:1] if record.ticket_ids else False
 
-    @api.depends('evaluation_date')
+    @api.depends('evaluation_date', 'email_sent_date')
     def _compute_expiration_date(self):
-        expiration_days = self._get_expiration_days()
+        # Solo las evaluaciones NUEVAS usan fecha de cola de correo.
+        # Históricas sin email_sent_date conservan la fecha original.
+        days = self._get_expiration_days()
         for record in self:
-            if record.evaluation_date:
-                record.expiration_date = record.evaluation_date + timedelta(days=expiration_days)
-            else:
-                record.expiration_date = False
+            start = record.email_sent_date or record.evaluation_date
+            record.expiration_date = start + timedelta(days=days) if start else False
 
     @api.depends('token')
     def _compute_evaluation_url(self):
@@ -1586,160 +1582,76 @@ ACCIONES URGENTES:
         ]
         return min(dates) if dates else False
 
+    def _queue_evaluation_email(self, template_xmlid, is_reminder=False):
+        """Encola dentro de la transacción: nunca entrega antes del commit.
+
+        mail.mail se crea por send_mail(force_send=False). Si la transacción
+        revierte, se revierten tanto la evaluación como el correo.
+        """
+        self.ensure_one()
+        template = self.env.ref(template_xmlid, raise_if_not_found=False)
+        recipient = self._get_recipient_email()
+        if not template or not recipient:
+            return False
+        mail_id = template.send_mail(
+            self.id, force_send=False,
+            email_values={'email_to': recipient},
+        )
+        return mail_id or False
+
     def action_send_reminder(self):
-        """Un solo recordatorio, exclusivamente por correo, tras 24 horas."""
+        """Un recordatorio máximo, por correo y 24 h tras el primer correo."""
         self.ensure_one()
         now = fields.Datetime.now()
-        sent_at = self._get_initial_notification_date()
-
+        today = self._get_lima_today()
         if (
             self.state != 'sent'
             or self._has_answered_evaluation()
-            or self.reminder_count != 0
-            or self.last_reminder_date
-            or not sent_at
-            or sent_at > now - timedelta(hours=24)
-            or (self.expiration_date and self.expiration_date <= now)
+            or self.reminder_count != 0 or self.last_reminder_date
+            or not self.email_sent or not self.email_sent_date
+            or self.email_sent_date > now - timedelta(hours=24)
+            or self.email_sent_date < now - timedelta(days=3)
+            or not self.visit_date
+            or self.visit_date < today - timedelta(days=2)
+            or self.visit_date > today
+            or not self.expiration_date or self.expiration_date <= now
         ):
-            _logger.info(
-                "[EVALUACION] Recordatorio omitido: id=%s estado=%s "
-                "respuesta=%s enviados=%s ultimo=%s inicio=%s vence=%s",
-                self.id, self.state, self.response_date, self.reminder_count,
-                self.last_reminder_date, sent_at, self.expiration_date,
-            )
             return False
-
-        recipient_email = self._get_recipient_email()
-        template = self.env.ref(
-            'sat.email_template_service_evaluation_reminder',
-            raise_if_not_found=False,
+        # Bloquear concurrencia entre cron y reintentos sin esperar.
+        self.env.cr.execute(
+            'SELECT id FROM client_service_evaluation WHERE id = %s FOR UPDATE',
+            (self.id,),
         )
-        if not recipient_email or not template:
-            _logger.warning(
-                "[EVALUACION] Recordatorio %s omitido: %s",
-                self.name,
-                'sin correo' if not recipient_email else 'sin plantilla',
-            )
+        self.invalidate_recordset()
+        if self.state != 'sent' or self._has_answered_evaluation() or self.reminder_count or self.last_reminder_date:
             return False
-
-        try:
-            # Solo correo; nunca se invoca al gateway de WhatsApp aquí.
-            mail_id = template.send_mail(
-                self.id,
-                force_send=True,
-                email_values=self._get_mail_email_values(),
-            )
-            if not mail_id:
-                _logger.warning(
-                    "[EVALUACION] La plantilla no generó correo para %s",
-                    self.name,
-                )
-                return False
-        except Exception:
-            _logger.exception(
-                "[EVALUACION] Error enviando recordatorio para %s",
-                self.name,
-            )
+        mail_id = self._queue_evaluation_email(
+            'sat.email_template_service_evaluation_reminder', is_reminder=True,
+        )
+        if not mail_id:
             return False
-
-        self.write({
-            'reminder_count': 1,
-            'last_reminder_date': now,
-        })
-        self.message_post(
-            body=(
-                "<p><strong>Recordatorio único enviado por correo</strong></p>"
-                f"<p>Destinatario: {recipient_email}</p>"
-            ),
-            message_type='notification',
-            subtype_xmlid='mail.mt_note',
-        )
-        _logger.info(
-            "[EVALUACION] Recordatorio único enviado: id=%s correo=%s",
-            self.id, recipient_email,
-        )
+        self.write({'reminder_count': 1, 'last_reminder_date': now})
+        _logger.info('[EVALUACION] Recordatorio ENCOLADO evaluación=%s mail=%s', self.id, mail_id)
         return True
 
     def action_resend_evaluation(self):
+        """Reenvío manual de invitación vigente, en cola y solo por correo."""
         self.ensure_one()
-
-        # Evita reabrir respuestas y enviar invitaciones extra tras el recordatorio.
-        if self._has_answered_evaluation() or self.reminder_count or self.last_reminder_date:
-            _logger.warning(
-                "[EVALUACION] Reenvío bloqueado: evaluación=%s respondida=%s "
-                "recordatorios=%s",
-                self.name, self._has_answered_evaluation(), self.reminder_count,
-            )
+        now = fields.Datetime.now()
+        if (
+            self.state != 'sent' or self._has_answered_evaluation()
+            or self.reminder_count or self.last_reminder_date
+            or not self.visit_date
+            or self.visit_date < self._get_lima_today() - timedelta(days=2)
+            or self.visit_date > self._get_lima_today()
+            or not self.expiration_date or self.expiration_date <= now
+        ):
             return False
-
-
-        recipient_email = self._get_recipient_email()
-        template = self.env.ref('sat.email_template_service_evaluation', False)
-
-        email_ok = False
-        whatsapp_ok = False
-        errors = []
-
-        if template and recipient_email:
-            try:
-                template.send_mail(
-                    self.id,
-                    force_send=True,
-                    email_values=self._get_mail_email_values()
-                )
-                email_ok = True
-                self.write({
-                    'email_sent': True,
-                    'email_sent_date': self.email_sent_date or fields.Datetime.now(),
-                    'email_delivery_status': 'sent',
-                    'email_error_message': False,
-                })
-            except Exception as exc:
-                errors.append(f'Correo: {exc}')
-                self.write({
-                    'email_delivery_status': 'failed',
-                    'email_error_message': str(exc),
-                })
-                _logger.exception(
-                    "Error reenviando evaluación por correo %s",
-                    self.name,
-                )
-
-        whatsapp_result = self._send_whatsapp_evaluation(reminder=False)
-        whatsapp_ok = bool(whatsapp_result.get('success'))
-
-        if not whatsapp_ok and not whatsapp_result.get('skipped'):
-            errors.append(
-                f"WhatsApp: {whatsapp_result.get('error') or 'error desconocido'}"
-            )
-
-        if email_ok or whatsapp_ok:
-            self.write({'state': 'sent'})
-            self._set_notification_channel_from_results(email_ok, whatsapp_ok)
-
-            channels = []
-            if email_ok:
-                channels.append(f'correo ({recipient_email})')
-            if whatsapp_ok:
-                channels.append(f"WhatsApp ({whatsapp_result.get('phone')})")
-
-            self.message_post(
-                body=f"""<p>📨 <strong>Evaluación reenviada</strong></p>
-                        <p><strong>Canales:</strong> {', '.join(channels)}</p>""",
-                message_type='notification',
-                subtype_xmlid='mail.mt_note',
-            )
-            return True
-
-        self.message_post(
-            body=(
-                "<p>❌ <strong>No se pudo reenviar la evaluación</strong></p>"
-                f"<p>{'<br/>'.join(errors) or 'No hay correo ni celular disponible.'}</p>"
-            ),
-            message_type='notification',
-            subtype_xmlid='mail.mt_note',
-        )
-        return False
+        mail_id = self._queue_evaluation_email('sat.email_template_service_evaluation')
+        if not mail_id:
+            return False
+        _logger.info('[EVALUACION] Reenvío ENCOLADO evaluación=%s mail=%s', self.id, mail_id)
+        return True
 
     # ==================== CRON JOBS ====================
     @api.model
@@ -1804,272 +1716,148 @@ ACCIONES URGENTES:
 
     @api.model
     def _cron_send_service_evaluations(self):
+        """Una encuesta por empresa + técnico + día de visita.
+
+        Ventana estricta: ayer; hoy después de las 18:00 (Lima).
+        Usa únicamente la cola mail.mail transaccional, sin SMTP directo.
         """
-        Cron para enviar evaluaciones.
-
-        Regla nueva:
-        - 1 ticket finalizado = 1 evaluación.
-        - No agrupa máquinas por cliente/técnico/fecha.
-        - Si el ticket tiene conformidad registrada, usa como destinatario a
-          la persona que firmó.
-        - Mientras el nuevo flujo está en desarrollo, si el ticket no tiene
-          conformidad se mantiene como fallback el correo de partner_id.
-        - Las evaluaciones históricas con varios ticket_ids se conservan y
-          siguen evitando duplicados para esos tickets.
-        """
-        _logger.info("📧 Iniciando envío de evaluaciones de servicio...")
-
-        try:
-            today = self._get_lima_today()
-            window_days = self._get_evaluation_window_days()
-
-            start_date = today - timedelta(days=window_days)
-            start_dt, _ = self._get_lima_datetime_range_utc_naive(start_date)
-            _, end_dt = self._get_lima_datetime_range_utc_naive(today)
-
-            domain = [
-                ('estado', '=', 'finalizado'),
-                ('agenda', '>=', start_dt),
-                ('agenda', '<=', end_dt),
-                ('partner_id', '!=', False),
-                ('responsable', '!=', False)
-            ]
-
-            tickets = self.env['ticket.alquiler'].search(domain)
-            _logger.info(
-                f"🎫 Se encontraron {len(tickets)} tickets finalizados "
-                f"dentro de la ventana de evaluación"
-            )
-
-            if not tickets:
-                _logger.info("✅ No hay tickets para evaluar")
-                return True
-
-            already_evaluated_ticket_ids = self._get_tickets_already_in_evaluations(tickets)
-            pending_tickets = tickets.filtered(
-                lambda ticket: ticket.id not in already_evaluated_ticket_ids
-            )
-
-            _logger.info(
-                f"🎫 Tickets pendientes de evaluación: {len(pending_tickets)} "
-                f"de {len(tickets)} encontrados"
-            )
-
-            sent_count = 0
-            error_count = 0
-            skipped_no_email_count = 0
-
-            for ticket in pending_tickets:
-                try:
-                    partner = ticket.partner_id
-                    technician = ticket.responsable
-                    visit_date = self._get_ticket_visit_date(ticket)
-
-                    evaluation = self.create({
-                        'ticket_ids': [(6, 0, [ticket.id])],
-                        'partner_id': partner.id,
-                        'technician_id': technician.id,
-                        'visit_date': visit_date,
-                        'state': 'draft',
-                    })
-
-                    recipient = evaluation._get_recipient_email()
-
-                    _logger.info(
-                        f"📋 Evaluación creada #{evaluation.name} - "
-                        f"Ticket: {ticket.name}, Cliente: {partner.name}, "
-                        f"Técnico: {technician.name}, Visita: {visit_date}, "
-                        f"Destinatario: {recipient or 'Sin correo'}"
-                    )
-
-                    evaluation.message_post(
-                        body=f"""<p>🤖 <strong>Evaluación Creada Automáticamente</strong></p>
-                                <ul>
-                                    <li><strong>Ticket:</strong> {ticket.name}</li>
-                                    <li><strong>Cliente:</strong> {partner.name}</li>
-                                    <li><strong>Técnico:</strong> {technician.name}</li>
-                                    <li><strong>Persona evaluadora:</strong> {evaluation.evaluator_name or 'No registrada'}</li>
-                                    <li><strong>Destinatario:</strong> {recipient or 'Sin correo'}</li>
-                                    <li><strong>Fecha de visita:</strong> {visit_date.strftime('%d/%m/%Y')}</li>
-                                    <li><strong>Fecha de creación:</strong> {fields.Datetime.context_timestamp(evaluation, fields.Datetime.now()).strftime('%d/%m/%Y %H:%M')}</li>
-                                </ul>""",
-                        message_type='notification',
-                        subtype_xmlid='mail.mt_note'
-                    )
-
-                    template = self.env.ref('sat.email_template_service_evaluation', False)
-
-                    email_ok = False
-                    whatsapp_ok = False
-                    channel_errors = []
-
-                    if template and recipient:
-                        try:
-                            template.send_mail(
-                                evaluation.id,
-                                force_send=True,
-                                email_values=evaluation._get_mail_email_values()
-                            )
-
-                            evaluation.write({
-                                'state': 'sent',
-                                'email_sent': True,
-                                'email_sent_date': fields.Datetime.now(),
-                                'email_delivery_status': 'sent',
-                                'email_error_message': False
-                            })
-                            email_ok = True
-
-                        except Exception as email_error:
-                            error_msg = str(email_error)
-                            channel_errors.append(f'Correo: {error_msg}')
-                            _logger.exception(
-                                "Error al enviar correo para %s",
-                                evaluation.name,
-                            )
-
-                            evaluation.write({
-                                'email_delivery_status': 'failed',
-                                'email_error_message': error_msg
-                            })
-                    elif not recipient:
-                        skipped_no_email_count += 1
-                        evaluation.write({
-                            'email_delivery_status': 'failed',
-                            'email_error_message': 'No existe correo para el destinatario.',
-                        })
-                    else:
-                        channel_errors.append('Correo: plantilla no encontrada')
-                        evaluation.write({
-                            'email_delivery_status': 'failed',
-                            'email_error_message': 'Plantilla de correo no encontrada'
-                        })
-
-                    whatsapp_result = evaluation._send_whatsapp_evaluation(
-                        reminder=False
-                    )
-                    whatsapp_ok = bool(whatsapp_result.get('success'))
-
-                    if (
-                        not whatsapp_ok
-                        and not whatsapp_result.get('skipped')
-                    ):
-                        channel_errors.append(
-                            'WhatsApp: %s' % (
-                                whatsapp_result.get('error')
-                                or 'error desconocido'
-                            )
-                        )
-
-                    if email_ok or whatsapp_ok:
-                        evaluation.write({'state': 'sent'})
-                        evaluation._set_notification_channel_from_results(
-                            email_ok,
-                            whatsapp_ok,
-                        )
-
-                        channels = []
-                        if email_ok:
-                            channels.append(f'correo ({recipient})')
-                        if whatsapp_ok:
-                            channels.append(
-                                f"WhatsApp ({whatsapp_result.get('phone')})"
-                            )
-
-                        evaluation.message_post(
-                            body=f"""<p>✅ <strong>Evaluación enviada</strong></p>
-                                    <ul>
-                                        <li><strong>Ticket:</strong> {ticket.name}</li>
-                                        <li><strong>Destinatario:</strong> {evaluation._get_recipient_name()}</li>
-                                        <li><strong>Canales:</strong> {', '.join(channels)}</li>
-                                    </ul>""",
-                            message_type='notification',
-                            subtype_xmlid='mail.mt_note',
-                        )
-                        sent_count += 1
-                    else:
-                        evaluation.message_post(
-                            body=(
-                                "<p>❌ <strong>No se pudo enviar la evaluación</strong></p>"
-                                f"<p>{'<br/>'.join(channel_errors) or 'No hay correo ni celular disponible.'}</p>"
-                            ),
-                            message_type='notification',
-                            subtype_xmlid='mail.mt_note',
-                        )
-                        error_count += 1
-
-                    self.env.cr.commit()
-
-                except Exception as e:
-                    error_msg = str(e)
-                    self.env.cr.rollback()
-
-                    _logger.error(
-                        f"❌ Error al procesar evaluación - "
-                        f"Ticket: {ticket.id}: {error_msg}"
-                    )
-
-                    error_count += 1
-
-            _logger.info(
-                f"📊 Resumen de envío: "
-                f"Enviadas: {sent_count}, "
-                f"Sin correo: {skipped_no_email_count}, "
-                f"Errores: {error_count}, "
-                f"Tickets procesados: {len(pending_tickets)}"
-            )
-
+        ICP = self.env['ir.config_parameter'].sudo()
+        if (ICP.get_param('sat.service_evaluation_notifications_enabled', 'True') or '').lower() in ('false', '0', 'no'):
+            _logger.warning('[EVALUACION] Envíos deshabilitados por configuración')
             return True
 
-        except Exception as e:
-            self.env.cr.rollback()
-            _logger.error(f"❌ Error general en cron de evaluaciones: {str(e)}")
-            raise
+        lima_tz = pytz.timezone('America/Lima')
+        now_local = fields.Datetime.now().replace(tzinfo=pytz.utc).astimezone(lima_tz)
+        today = now_local.date()
+        earliest_day = today - timedelta(days=1)
+        cutoff_day = today if now_local.hour >= 18 else earliest_day
+        start_dt, _ = self._get_lima_datetime_range_utc_naive(earliest_day)
+        _, end_dt = self._get_lima_datetime_range_utc_naive(cutoff_day)
+
+        tickets = self.env['ticket.alquiler'].search([
+            ('estado', '=', 'finalizado'),
+            ('agenda', '>=', start_dt), ('agenda', '<=', end_dt),
+            ('partner_id', '!=', False), ('responsable', '!=', False),
+        ])
+        already_linked = set(self._get_tickets_already_in_evaluations(tickets))
+        groups = {}
+        for ticket in tickets:
+            if not ticket.agenda:
+                continue
+            visit_day = pytz.utc.localize(ticket.agenda).astimezone(lima_tz).date()
+            if not earliest_day <= visit_day <= cutoff_day:
+                continue
+            partner = ticket.partner_id.commercial_partner_id or ticket.partner_id
+            key = (partner.id, ticket.responsable.id, visit_day)
+            groups.setdefault(key, self.env['ticket.alquiler'])
+            groups[key] |= ticket
+
+        created = linked = queued = skipped = 0
+        for (partner_id, tech_id, visit_day), group_tickets in groups.items():
+            try:
+                # SAVEPOINT permite continuar con otros grupos ante un error.
+                # La transacción completa la confirma Odoo al terminar el cron.
+                with self.env.cr.savepoint():
+                    candidates = self.search([
+                        ('technician_id', '=', tech_id),
+                        ('visit_date', '=', visit_day),
+                    ], order='id asc')
+                    existing = candidates.filtered(
+                        lambda e: e.partner_id and
+                        e.partner_id.commercial_partner_id.id == partner_id
+                    )[:1]
+                    if existing:
+                        extra_ids = [t.id for t in group_tickets if t.id not in already_linked]
+                        if extra_ids:
+                            existing.write({'ticket_ids': [(4, id_) for id_ in extra_ids]})
+                            linked += len(extra_ids)
+                        continue
+
+                    eligible = group_tickets.filtered(lambda t: t.id not in already_linked)
+                    if not eligible:
+                        continue
+                    evaluation = self.create({
+                        'ticket_ids': [(6, 0, eligible.ids)],
+                        'partner_id': partner_id,
+                        'technician_id': tech_id,
+                        'visit_date': visit_day,
+                        'state': 'draft',
+                    })
+                    created += 1
+                    if not evaluation._get_recipient_email():
+                        evaluation.write({
+                            'email_delivery_status': 'failed',
+                            'email_error_message': 'Sin correo de destinatario',
+                        })
+                        skipped += 1
+                        continue
+                    # El estado y la fecha se confirman junto al correo en cola.
+                    # No usar force_send=True: SMTP debe ejecutarse después del commit.
+                    now = fields.Datetime.now()
+                    evaluation.write({
+                        'state': 'sent',
+                        'email_sent': True,
+                        'email_sent_date': now,
+                        'email_delivery_status': 'pending',
+                        'notification_channel': 'email',
+                    })
+                    mail_id = evaluation._queue_evaluation_email(
+                        'sat.email_template_service_evaluation'
+                    )
+                    if not mail_id:
+                        evaluation.write({
+                            'state': 'draft',
+                            'email_sent': False,
+                            'email_sent_date': False,
+                            'email_delivery_status': 'failed',
+                            'email_error_message': 'No se pudo preparar el mensaje en cola',
+                        })
+                        skipped += 1
+                        continue
+                    queued += 1
+                    _logger.info(
+                        '[EVALUACION] Grupo ENCOLADO id=%s mail=%s cliente=%s tecnico=%s fecha=%s tickets=%s',
+                        evaluation.id, mail_id, partner_id, tech_id, visit_day, eligible.ids,
+                    )
+            except Exception:
+                skipped += len(group_tickets)
+                _logger.exception(
+                    '[EVALUACION] Falló grupo cliente=%s tecnico=%s fecha=%s',
+                    partner_id, tech_id, visit_day,
+                )
+        _logger.info(
+            '[EVALUACION] Resumen creadas=%s vinculadas=%s en_cola=%s omitidas=%s',
+            created, linked, queued, skipped,
+        )
+        return True
 
     @api.model
     def _cron_send_pending_reminders(self):
-        """Busca respuestas pendientes y envía solo un correo >=24 h del inicio."""
-        _logger.info("[EVALUACION] Revisando recordatorios pendientes...")
+        """Solo un recordatorio de grupos recientes con correo inicial."""
+        ICP = self.env['ir.config_parameter'].sudo()
+        if ICP.get_param('sat.service_evaluation_notifications_enabled', 'True').lower() in ('false', '0', 'no'):
+            return True
         now = fields.Datetime.now()
-        cutoff = now - timedelta(hours=24)
-
-        domain = [
+        today = self._get_lima_today()
+        evaluations = self.search([
             ('state', '=', 'sent'),
+            ('email_sent', '=', True),
+            ('email_sent_date', '>=', now - timedelta(days=3)),
+            ('email_sent_date', '<=', now - timedelta(hours=24)),
+            ('visit_date', '>=', today - timedelta(days=2)),
+            ('visit_date', '<=', today),
             ('response_date', '=', False),
             ('reminder_count', '=', 0),
             ('last_reminder_date', '=', False),
             ('expiration_date', '>', now),
-            '|',
-            ('email_sent_date', '<=', cutoff),
-            ('whatsapp_sent_date', '<=', cutoff),
-        ]
-        pending_evaluations = self.search(domain)
-        sent_count = 0
-        skipped_count = 0
-
-        for evaluation in pending_evaluations:
+        ])
+        sent = 0
+        for evaluation in evaluations:
             try:
-                if evaluation._has_answered_evaluation():
-                    skipped_count += 1
-                    _logger.info(
-                        "[EVALUACION] Omitida %s: ya contiene respuestas",
-                        evaluation.name,
-                    )
-                    continue
-                if evaluation.action_send_reminder():
-                    sent_count += 1
-                else:
-                    skipped_count += 1
-                self.env.cr.commit()
+                with self.env.cr.savepoint():
+                    if evaluation.action_send_reminder():
+                        sent += 1
             except Exception:
-                self.env.cr.rollback()
-                skipped_count += 1
-                _logger.exception(
-                    "[EVALUACION] Error con recordatorio id=%s", evaluation.id
-                )
-
-        _logger.info(
-            "[EVALUACION] Recordatorios correo enviados=%s omitidos=%s candidatos=%s",
-            sent_count, skipped_count, len(pending_evaluations),
-        )
+                _logger.exception('[EVALUACION] Error recordatorio id=%s', evaluation.id)
+        _logger.info('[EVALUACION] Recordatorios enviados=%s candidatos=%s', sent, len(evaluations))
         return True

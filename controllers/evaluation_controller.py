@@ -1,128 +1,86 @@
-# controllers/evaluation_controller.py
+# -*- coding: utf-8 -*-
+"""Formulario público de evaluaciones de SAT - Odoo 19."""
+import logging
 from odoo import http, fields
 from odoo.http import request
-import logging
 
 _logger = logging.getLogger(__name__)
 
-# Valores permitidos por campo: se descarta cualquier valor manipulado en el POST
-# que no pertenezca a la selección, evitando errores de escritura o datos basura.
 ALLOWED_VALUES = {
     'solucion_problema': {'1', '2', '3', '4', '5'},
     'explicacion_trabajo': {'1', '2', '3', '4', '5'},
     'realizo_pruebas': {'si', 'no'},
     'consulto_suministros': {'si', 'no'},
 }
-
-# Preguntas obligatorias de la encuesta simplificada
-REQUIRED_FIELDS = [
-    'solucion_problema',
-    'explicacion_trabajo',
-    'realizo_pruebas',
-    'consulto_suministros',
-]
+REQUIRED_FIELDS = tuple(ALLOWED_VALUES)
 
 
 class EvaluationController(http.Controller):
 
-    def _get_evaluation_by_token(self, token):
-        if not token:
-            return request.env['client.service.evaluation'].sudo().browse()
+    def _find_evaluation(self, token):
+        Model = request.env['client.service.evaluation'].sudo()
+        if not token or not isinstance(token, str):
+            return Model.browse()
+        return Model.search([('token', '=', token)], limit=1)
 
-        return request.env['client.service.evaluation'].sudo().search([
-            ('token', '=', token),
-            ('state', '=', 'sent')
-        ], limit=1)
+    def _is_available(self, evaluation):
+        if not evaluation:
+            return False
+        if evaluation.state != 'sent' or evaluation._has_answered_evaluation():
+            return False
+        if not evaluation.expiration_date or evaluation.expiration_date <= fields.Datetime.now():
+            return False
+        return True
 
     @http.route(
         ['/evaluation/submit/<string:token>'],
-        type='http',
-        auth='public',
-        website=True
+        type='http', auth='public', website=True, methods=['GET'],
     )
     def evaluation_form(self, token, **kw):
-        evaluation = self._get_evaluation_by_token(token)
-
-        if not evaluation:
+        evaluation = self._find_evaluation(token)
+        if not self._is_available(evaluation):
             return request.render('sat.evaluation_expired', {})
-
-        # Registrar acceso al portal
         try:
-            evaluation.sudo()._register_portal_access(request=request)
-        except Exception as e:
-            _logger.warning(
-                "No se pudo registrar acceso al portal para evaluación token %s: %s",
-                token,
-                str(e)
-            )
-
+            evaluation._register_portal_access(request=request)
+        except Exception:
+            _logger.exception('Error registrando acceso evaluación id=%s', evaluation.id)
         return request.render('sat.evaluation_form_template', {
             'evaluation': evaluation,
+            'error_message': False,
         })
 
     @http.route(
         ['/evaluation/submit/process'],
-        type='http',
-        auth='public',
-        website=True,
-        methods=['POST'],
-        csrf=True
+        type='http', auth='public', website=True, methods=['POST'], csrf=True,
     )
     def process_evaluation(self, **post):
-        token = post.get('token')
-
-        if not token:
+        token = (post.get('token') or '').strip()
+        evaluation = self._find_evaluation(token)
+        if not self._is_available(evaluation):
             return request.render('sat.evaluation_expired', {})
 
-        evaluation = self._get_evaluation_by_token(token)
-
-        if not evaluation:
-            return request.render('sat.evaluation_expired', {})
+        vals = {}
+        for key, allowed in ALLOWED_VALUES.items():
+            raw = str(post.get(key) or '').strip()
+            vals[key] = raw if raw in allowed else False
+        if any(not vals[field] for field in REQUIRED_FIELDS):
+            return request.render('sat.evaluation_form_template', {
+                'evaluation': evaluation,
+                'error_message': 'Por favor responda todas las preguntas antes de enviar.',
+            })
+        vals['comentarios'] = str(post.get('comentarios') or '').strip()[:1000] or False
 
         try:
-            # Sanear: solo aceptar valores válidos de cada selección
-            values = {}
-            for field_name, allowed in ALLOWED_VALUES.items():
-                raw_value = (post.get(field_name) or '').strip()
-                values[field_name] = raw_value if raw_value in allowed else False
-
-            # Validación servidor: las 4 preguntas son obligatorias.
-            # El formulario ya las exige en el navegador, pero un POST
-            # incompleto no debe completar la evaluación a medias.
-            missing_fields = [
-                field_name for field_name in REQUIRED_FIELDS
-                if not values.get(field_name)
-            ]
-
-            if missing_fields:
-                _logger.warning(
-                    "POST incompleto para evaluación token %s. Faltan: %s",
-                    token,
-                    ', '.join(missing_fields)
-                )
-                return request.render('sat.evaluation_form_template', {
-                    'evaluation': evaluation,
-                    'error_message': 'Por favor responda todas las preguntas antes de enviar.',
-                })
-
-            comentarios = (post.get('comentarios') or '').strip()
-            values['comentarios'] = comentarios or False
-
-            # Completar desde portal: guarda respuestas, IP, navegador,
-            # fecha real de respuesta y fuente de completado.
-            evaluation.sudo().action_complete_from_portal(
-                vals=values,
-                request=request
+            # Bloqueo transaccional: impide dos respuestas simultáneas al mismo token.
+            request.env.cr.execute(
+                'SELECT id FROM client_service_evaluation WHERE id = %s FOR UPDATE',
+                (evaluation.id,),
             )
-
-            return request.render('sat.evaluation_thanks', {
-                'evaluation': evaluation
-            })
-
-        except Exception as e:
-            _logger.exception(
-                "Error al procesar evaluación con token %s: %s",
-                token,
-                str(e)
-            )
+            evaluation.invalidate_recordset()
+            if not self._is_available(evaluation):
+                return request.render('sat.evaluation_expired', {})
+            evaluation.action_complete_from_portal(vals=vals, request=request)
+        except Exception:
+            _logger.exception('Error guardando evaluación id=%s', evaluation.id)
             return request.render('sat.evaluation_error', {})
+        return request.render('sat.evaluation_thanks', {'evaluation': evaluation})
