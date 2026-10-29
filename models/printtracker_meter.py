@@ -1,6 +1,6 @@
 from odoo import models, fields, api
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 _logger = logging.getLogger(__name__)
 
@@ -398,27 +398,38 @@ class PrintTrackerMeter(models.Model):
             return False
 
     def write(self, vals):
-        """Override write para marcar como lectura actual"""
+        """Recalcular lectura vigente solo cuando cambie fecha o dispositivo."""
+        recalcular = 'reading_date' in vals or 'device_id' in vals
+        anteriores = set(self.mapped('device_id').ids) if 'device_id' in vals else set()
+        # Evita recalcular 237 veces cuando la API devuelve la misma fecha.
+        if recalcular and 'device_id' not in vals and 'reading_date' in vals:
+            nueva_fecha = fields.Datetime.to_datetime(vals['reading_date']) if vals['reading_date'] else False
+            recalcular = any(m.reading_date != nueva_fecha for m in self)
+
         result = super().write(vals)
-        if 'reading_date' in vals:
-            self._update_current_flag()
+        if recalcular:
+            self._update_current_flag(device_ids=anteriores | set(self.mapped('device_id').ids))
         return result
 
-    def _update_current_flag(self):
-        """Actualiza el flag is_current para el dispositivo"""
-        for meter in self:
-            if meter.device_id:
-                # Desmarcar todas las lecturas del dispositivo
-                all_meters = self.search([('device_id', '=', meter.device_id.id)])
-                all_meters.write({'is_current': False})
-                
-                # Marcar la más reciente como actual
-                latest_meter = self.search([
-                    ('device_id', '=', meter.device_id.id)
-                ], limit=1, order='reading_date desc')
-                
-                if latest_meter:
-                    latest_meter.write({'is_current': True})
+    def _update_current_flag(self, device_ids=None):
+        """Solo modifica lecturas cuyo indicador vigente realmente cambió."""
+        device_ids = set(device_ids if device_ids is not None else self.mapped('device_id').ids)
+        for device_id in sorted(device_ids):
+            if not device_id:
+                continue
+            latest_meter = self.search(
+                [('device_id', '=', device_id)],
+                limit=1,
+                order='reading_date desc, id desc',
+            )
+            vigentes_previos = self.search([
+                ('device_id', '=', device_id), ('is_current', '=', True),
+                ('id', '!=', latest_meter.id if latest_meter else 0),
+            ])
+            if vigentes_previos:
+                vigentes_previos.write({'is_current': False})
+            if latest_meter and not latest_meter.is_current:
+                latest_meter.write({'is_current': True})
 
     @api.model
     def get_latest_for_device(self, device_id):

@@ -351,6 +351,24 @@ class PrintTrackerDailyReading(models.Model):
                     return False
             
             equipo = lectura.equipo_id
+            # Una lectura antigua se conserva en el historial, pero no debe
+            # volver a modificar el estado actual cuando ya se aplicó una posterior.
+            posterior_aplicada = self.search([
+                ('serie', '=', lectura.serie),
+                ('fecha', '>', lectura.fecha),
+                ('aplicado_a_equipo', '=', True),
+                ('id', '!=', lectura.id),
+            ], order='fecha desc, id desc', limit=1)
+            if posterior_aplicada:
+                aviso = (
+                    f'Lectura histórica {lectura.fecha}: existe lectura posterior '
+                    f'aplicada ({posterior_aplicada.fecha}, ID {posterior_aplicada.id}). '
+                    'Se conserva sin actualizar el equipo.'
+                )
+                _logger.warning(aviso)
+                lectura.write({'mensaje_error': aviso})
+                return False
+
             _logger.info(f"🎯 Aplicando al equipo: {equipo.name} (ID: {equipo.id})")
             
             # Obtener valores actuales del equipo
