@@ -611,6 +611,11 @@
     <field name="code">ADF_CLUTCH_MOTORS</field>
     <field name="tipo_id" ref="comp_tipo_adf"/>
 </record>
+<record id="sub_adf_platen" model="componente.subparte">
+    <field name="name">Platen Cover PN2000</field>
+    <field name="code">ADF_PLATEN_COVER</field>
+    <field name="tipo_id" ref="comp_tipo_adf"/>
+</record>
 
 <!-- Extras ADF -->
 <record id="sub_adf_hinges" model="componente.subparte">

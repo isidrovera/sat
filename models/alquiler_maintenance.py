@@ -21,7 +21,7 @@ class UnidadAlquiler(models.Model):
     _inherit = 'alquiler'
 
     control_mantenimiento = fields.Boolean(
-        string="Mantenimiento mensual", default=True)
+        string="Mantenimiento mensual", default=False)
     fecha_inicio = fields.Date(
         string='Fecha de mantenimiento inicial',
         required=False,
