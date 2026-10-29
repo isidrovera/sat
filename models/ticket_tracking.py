@@ -1,2938 +1,1373 @@
-from odoo import _, models, fields, api
-
-from odoo.exceptions import UserError
-
-
-
-import requests
-
-import logging
-
-import time
-
+# -*- coding: utf-8 -*-
+"""
+Tracking GPS de técnicos en campo.
+Corrección: fechas por transición real de estado, diagnóstico persistente,
+fecha local de Lima y salida GPS separada del cierre del servicio.
+La salida física no reemplaza las validaciones de action_finalizar.
+"""
+import math
 import json
+import logging
+import requests
+from datetime import timedelta, datetime, timezone
 
-from datetime import datetime, timedelta
-
-from html import escape
-
-
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
+# Umbrales para confirmar salida física sin preguntar
+UMBRAL_MINUTOS_SITIO = 60   # minutos mínimos en sitio
+UMBRAL_METROS_SALIDA = 150  # radio mínimo para comprobar el retiro físico
 
 
-class PrintTrackerConfig(models.Model):
+# ═══════════════════════════════════════════════════════════════════
+#  MODELO: Vínculo Técnico ↔ Dispositivo Traccar
+# ═══════════════════════════════════════════════════════════════════
 
-    _name = 'printtracker.config'
+class TecnicoDispositivoGPS(models.Model):
+    _name = 'tecnico.dispositivo.gps'
+    _description = 'Vínculo Técnico - Dispositivo GPS'
+    _rec_name = 'user_id'
 
-    _description = 'Configuración API PrintTracker Pro'
-
-    _rec_name = 'name'
-
-
-
-    name = fields.Char('Nombre de Configuración', required=True, default='PrintTracker Pro Config')
-
-    api_url = fields.Char('URL Base API', required=True, 
-
-                         default='https://papi.printtrackerpro.com/v1',
-
-                         help='URL base de la API de PrintTracker Pro')
-
-    api_key = fields.Char('API Key', required=True,
-
-                         help='Token de autenticación para la API')
-
-    entity_bbbb_id = fields.Char('ID Entidad Principal', required=True,
-
-                                help='ID de la entidad BBBB en PrintTracker')
-
-
-
-    # Configuración de sincronización
-
-    sync_interval = fields.Integer('Intervalo de Sincronización (minutos)', default=60,
-
-                                  help='Cada cuántos minutos sincronizar con PrintTracker')
-
-    last_sync_date = fields.Datetime('Última Sincronización', readonly=True)
-
-    sync_enabled = fields.Boolean('Sincronización Activa', default=True)
-
-
-
-    # Configuración de filtros
-
-    incluir_entidades_hijas = fields.Boolean('Incluir Entidades Hijas', default=True,
-
-                                           help='Sincronizar todas las entidades bajo BBBB')
-
-    solo_equipos_gestionados = fields.Boolean('Solo Equipos Gestionados', default=True,
-
-                                            help='Sincronizar solo equipos con managed=True')
-
-
-
-    # Estado de conexión
-
-    connection_status = fields.Selection([
-
-        ('not_tested', 'No Probado'),
-
-        ('connected', 'Conectado'),
-
-        ('error', 'Error de Conexión')
-
-    ], string='Estado Conexión', default='not_tested', readonly=True)
-
-
-
-    last_error = fields.Text('Último Error', readonly=True)
-
-
-
-    # Resultado del diagnóstico integral. Se guarda en la propia configuración
-
-    # para no depender de un modelo transient adicional ni de ACLs extra.
-
-    diagnostic_status = fields.Selection([
-
-        ('ok', 'Correcto'),
-
-        ('warning', 'Con observaciones'),
-
-        ('error', 'Con errores'),
-
-    ], string='Estado diagnóstico', readonly=True, copy=False)
-
-    diagnostic_generated_at = fields.Datetime(
-
-        'Fecha diagnóstico', readonly=True, copy=False
-
+    user_id = fields.Many2one(
+        'res.users', string='Técnico', required=True, index=True,
     )
-
-    diagnostic_report_html = fields.Html(
-
-        'Resultado diagnóstico', readonly=True, sanitize=False, copy=False
-
+    traccar_device_id = fields.Integer(
+        string='Device ID (Traccar)', required=True,
+        help='ID del dispositivo en Traccar',
     )
+    traccar_unique_id = fields.Char(
+        string='Identificador único',
+        help='uniqueId del dispositivo en Traccar (ej: IMEI)',
+    )
+    nombre_dispositivo = fields.Char(
+        string='Nombre dispositivo',
+        help='Ej: "Celular Juan - Samsung A54"',
+    )
+    activo = fields.Boolean(string='Activo', default=True)
 
-    diagnostic_raw_events = fields.Text(
-
-        'Events API - JSON bruto', readonly=True, copy=False
-
+    
+    _traccar_device_unique = models.Constraint(
+        'UNIQUE(traccar_device_id)',
+        'Este dispositivo de Traccar ya está vinculado a otro técnico.',
     )
 
 
 
-    # Configuración avanzada
-
-    timeout_seconds = fields.Integer('Timeout (segundos)', default=30)
-
-    max_records_per_request = fields.Integer('Registros por Petición', default=100,
-
-                                           help='Máximo registros por petición API')
-
-    max_retries = fields.Integer('Reintentos Máximos', default=3)
-
-    retry_delay = fields.Integer('Delay entre Reintentos (seg)', default=5)
-
-
-
-    def _safe_int(self, value, default=0):
-
-        """Convierte un valor a entero de forma segura"""
-
-        try:
-
-            if value is None or value == '' or value == 'N/A':
-
-                return default
-
-            # Si es string, quitar caracteres no numéricos
-
-            if isinstance(value, str):
-
-                value = ''.join(filter(str.isdigit, value))
-
-                if not value:
-
-                    return default
-
-            return int(value)
-
-        except (ValueError, TypeError):
-
-            _logger.warning(f"⚠️ No se pudo convertir '{value}' a entero, usando {default}")
-
-            return default
-
-
-
-    def _retry_api_call(self, func, *args, **kwargs):
-
-        """
-
-        Wrapper para llamadas API con reintentos.
-
-
-
-        max_retries representa reintentos adicionales a la primera llamada.
-
-        Ejemplo: max_retries=3 -> hasta 4 intentos totales.
-
-        """
-
-        retries = max(int(self.max_retries or 0), 0)
-
-        attempts = retries + 1
-
-        last_error = None
-
-
-
-        for attempt in range(attempts):
-
-            try:
-
-                return func(*args, **kwargs)
-
-            except requests.exceptions.RequestException as error:
-
-                last_error = error
-
-                if attempt >= attempts - 1:
-
-                    raise
-
-
-
-                delay = max(int(self.retry_delay or 0), 0)
-
-                _logger.warning(
-
-                    "⚠️ Llamada API falló intento %s/%s: %s. Reintentando en %ss...",
-
-                    attempt + 1,
-
-                    attempts,
-
-                    error,
-
-                    delay,
-
-                )
-
-                if delay:
-
-                    time.sleep(delay)
-
-
-
-        if last_error:
-
-            raise last_error
-
-
-
-    def test_connection(self):
-
-        """Prueba la conexión con PrintTracker API"""
-
-        try:
-
-            _logger.info(f"🔍 Probando conexión a {self.api_url} con entidad {self.entity_bbbb_id}")
-
-
-
-            def _test_call():
-
-                return requests.get(
-
-                    f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}',
-
-                    headers=self.get_api_headers(),
-
-                    timeout=self.timeout_seconds
-
-                )
-
-
-
-            response = self._retry_api_call(_test_call)
-
-
-
-            _logger.info(f"📡 Respuesta API: {response.status_code}")
-
-
-
-            if response.status_code == 200:
-
-                data = response.json()
-
-                entity_name = data.get('name', 'Sin nombre')
-
-
-
-                self.write({
-
-                    'connection_status': 'connected',
-
-                    'last_error': False,
-
-                    'last_sync_date': fields.Datetime.now()
-
-                })
-
-
-
-                _logger.info(f"✅ Conexión exitosa con entidad: {entity_name}")
-
-
-
-                return {
-
-                    'type': 'ir.actions.client',
-
-                    'tag': 'display_notification',
-
-                    'params': {
-
-                        'message': f'✅ Conexión exitosa con PrintTracker Pro\nEntidad: {entity_name}',
-
-                        'type': 'success'
-
-                    }
-
-                }
-
-            else:
-
-                error_msg = f'Error HTTP {response.status_code}: {response.text}'
-
-                _logger.error(f"❌ Error de conexión: {error_msg}")
-
-
-
-                self.write({
-
-                    'connection_status': 'error',
-
-                    'last_error': error_msg
-
-                })
-
-                return {
-
-                    'type': 'ir.actions.client',
-
-                    'tag': 'display_notification',
-
-                    'params': {
-
-                        'message': f'❌ Error de conexión: {error_msg}',
-
-                        'type': 'danger'
-
-                    }
-
-                }
-
-
-
-        except Exception as e:
-
-            error_msg = str(e)
-
-            _logger.error(f"❌ Excepción en test_connection: {error_msg}")
-
-
-
-            self.write({
-
-                'connection_status': 'error',
-
-                'last_error': error_msg
-
-            })
-
-            return {
-
-                'type': 'ir.actions.client',
-
-                'tag': 'display_notification',
-
-                'params': {
-
-                    'message': f'❌ Error: {error_msg}',
-
-                    'type': 'danger'
-
-                }
-
-            }
-
-
-
-    def sync_all_entities(self):
-
-        """Sincroniza todas las entidades desde PrintTracker"""
-
-        try:
-
-            _logger.info(f"🔄 Iniciando sincronización de entidades...")
-
-
-
-            def _sync_call():
-
-                return requests.get(
-
-                    f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}',
-
-                    headers=self.get_api_headers(),
-
-                    params={'includeChildren': True},
-
-                    timeout=self.timeout_seconds
-
-                )
-
-
-
-            response = self._retry_api_call(_sync_call)
-
-
-
-            if response.status_code == 200:
-
-                data = response.json()
-
-
-
-                # Crear/actualizar entidad principal aislando errores SQL
-
-                with self.env.cr.savepoint():
-
-                    self._sync_entity(data)
-
-
-
-                # Sincronizar entidades hijas
-
-                children_synced = 0
-
-                if 'children' in data:
-
-                    for child in data['children']:
-
-                        def _child_call():
-
-                            return requests.get(
-
-                                f'{self.api_url.rstrip("/")}/entity/{child["id"]}',
-
-                                headers=self.get_api_headers(),
-
-                                timeout=self.timeout_seconds
-
-                            )
-
-
-
-                        child_response = self._retry_api_call(_child_call)
-
-
-
-                        if child_response.status_code == 200:
-
-                            child_data = child_response.json()
-
-                            try:
-
-                                with self.env.cr.savepoint():
-
-                                    self._sync_entity(
-
-                                        child_data,
-
-                                        parent_entity_id=data['id'],
-
-                                    )
-
-                                children_synced += 1
-
-                            except Exception:
-
-                                _logger.exception(
-
-                                    "❌ Error sincronizando entidad hija id=%s name=%s parent=%s",
-
-                                    child_data.get('id'),
-
-                                    child_data.get('name'),
-
-                                    data.get('id'),
-
-                                )
-
-
-
-                self.last_sync_date = fields.Datetime.now()
-
-
-
-                return {
-
-                    'type': 'ir.actions.client',
-
-                    'tag': 'display_notification',
-
-                    'params': {
-
-                        'message': f'✅ Sincronización completa: 1 entidad principal + {children_synced} entidades hijas',
-
-                        'type': 'success'
-
-                    }
-
-                }
-
-            else:
-
-                error_msg = f'Error HTTP {response.status_code}: {response.text}'
-
-                return {
-
-                    'type': 'ir.actions.client',
-
-                    'tag': 'display_notification',
-
-                    'params': {
-
-                        'message': f'❌ Error sincronizando entidades: {error_msg}',
-
-                        'type': 'danger'
-
-                    }
-
-                }
-
-
-
-        except Exception as e:
-
-            _logger.error(f"❌ Error sincronizando entidades: {e}")
-
-            return {
-
-                'type': 'ir.actions.client',
-
-                'tag': 'display_notification',
-
-                'params': {
-
-                    'message': f'❌ Error: {str(e)}',
-
-                    'type': 'danger'
-
-                }
-
-            }
-
-
-
-    def _sync_entity(self, entity_data, parent_entity_id=None):
-
-        """
-
-        Sincroniza una entidad individual.
-
-
-
-        No absorbe errores SQL: el llamador debe usar savepoint para aislarlos.
-
-        """
-
-        entity_id = entity_data.get('id')
-
-        entity_name = entity_data.get('name') or 'Sin nombre'
-
-
-
-        if not entity_id:
-
-            raise ValueError("PrintTracker devolvió una entidad sin campo 'id'.")
-
-
-
-        existing_entity = self.env['printtracker.entity'].search([
-
-            ('pt_entity_id', '=', entity_id)
-
-        ], limit=1)
-
-
-
-        parent_entity = self.env['printtracker.entity'].browse()
-
-        if parent_entity_id:
-
-            parent_entity = self.env['printtracker.entity'].search([
-
-                ('pt_entity_id', '=', parent_entity_id)
-
-            ], limit=1)
-
-
-
-        entity_values = {
-
-            'pt_entity_id': entity_id,
-
-            'name': entity_name,
-
-            'genealogy': str(entity_data.get('genealogy', [])),
-
-            'parent_id': parent_entity.id if parent_entity else False,
-
-            'last_sync': fields.Datetime.now(),
-
-            'sync_error': False,
-
-            'is_active': True,
-
+# ═══════════════════════════════════════════════════════════════════
+#  SERVICIO TRACCAR API
+# ═══════════════════════════════════════════════════════════════════
+
+class TraccarAPIService(models.AbstractModel):
+    _name = 'traccar.api.service'
+    _description = 'Servicio API Traccar'
+
+    def _get_config(self):
+        get = lambda k, d='': self.env['ir.config_parameter'].sudo().get_param(k, default=d)
+        return {
+            'url':      get('traccar.url', 'https://gps.andessolutioncopiers.com'),
+            'email':    get('traccar.email'),
+            'password': get('traccar.password'),
+            'timeout':  int(get('traccar.timeout', '10')),
         }
 
+    def _get_session(self):
+        cfg = self._get_config()
+        if not cfg['email'] or not cfg['password']:
+            raise UserError(
+                "Traccar no configurado.\n"
+                "Configure traccar.url, traccar.email y traccar.password "
+                "en Ajustes → Parámetros del sistema."
+            )
+        session = requests.Session()
+        resp = session.post(
+            f"{cfg['url']}/api/session",
+            data={'email': cfg['email'], 'password': cfg['password']},
+            timeout=cfg['timeout'],
+        )
+        if resp.status_code != 200:
+            raise UserError(
+                f"Error autenticando en Traccar: {resp.status_code} — {resp.text[:200]}"
+            )
+        _logger.info("[TRACCAR-API] Sesion iniciada como %s", cfg['email'])
+        return session, cfg
 
-
+    def get_all_positions(self):
+        """
+        Retorna dict {device_id: position_data} con todas las posiciones.
+        Una sola llamada para todos los devices — eficiente para crons.
+        """
         try:
-
-            if existing_entity:
-
-                existing_entity.write(entity_values)
-
-                entity = existing_entity
-
-                _logger.info("📝 Entidad actualizada: %s (%s)", entity_name, entity_id)
-
+            session, cfg = self._get_session()
+            resp = session.get(
+                f"{cfg['url']}/api/positions",
+                timeout=cfg['timeout'],
+            )
+            if resp.status_code == 200:
+                positions = resp.json()
+                return {p['deviceId']: p for p in positions}
             else:
-
-                entity = self.env['printtracker.entity'].create(entity_values)
-
-                _logger.info("🆕 Entidad creada: %s (%s)", entity_name, entity_id)
-
-
-
-            if 'addresses' in entity_data:
-
-                sync_addresses = getattr(entity, '_sync_addresses', None)
-
-                if callable(sync_addresses):
-
-                    sync_addresses(entity_data.get('addresses') or [])
-
-
-
-            if 'labels' in entity_data:
-
-                sync_labels = getattr(entity, '_sync_labels', None)
-
-                if callable(sync_labels):
-
-                    sync_labels(entity_data.get('labels') or {})
-
-
-
-            return entity
-
-        except Exception:
-
-            _logger.exception(
-
-                "❌ Error sincronizando entidad name=%s id=%s parent=%s",
-
-                entity_name,
-
-                entity_id,
-
-                parent_entity_id,
-
-            )
-
-            raise
-
-
-
-    def sync_all_devices(self):
-
-        """Sincroniza todos los dispositivos desde PrintTracker - CON PAGINACIÓN"""
-
-        try:
-
-            _logger.info(f"🔄 Iniciando sincronización de dispositivos...")
-
-
-
-            all_devices = []
-
-            page = 1
-
-            total_pages_processed = 0
-
-
-
-            # PAGINACIÓN COMPLETA: Obtener todos los dispositivos
-
-            while True:
-
-                _logger.info(f"📄 === PROCESANDO PÁGINA {page} ===")
-
-
-
-                params = {
-
-                    'includeChildren': True,
-
-                    'excludeDisabled': bool(self.solo_equipos_gestionados),
-
-                    'limit': self.max_records_per_request,
-
-                    'page': page  # ← ESTE PARÁMETRO FALTABA
-
-                }
-
-
-
-                def _devices_call():
-
-                    return requests.get(
-
-                        f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/device',
-
-                        headers=self.get_api_headers(),
-
-                        params=params,
-
-                        timeout=self.timeout_seconds
-
-                    )
-
-
-
-                response = self._retry_api_call(_devices_call)
-
-
-
-                _logger.info(f"📡 Respuesta API página {page}: Status {response.status_code}")
-
-
-
-                if response.status_code == 200:
-
-                    devices_page = response.json()
-
-
-
-                    if not isinstance(devices_page, list):
-
-                        raise ValueError(
-
-                            "PrintTracker /device devolvió un JSON no-lista "
-
-                            f"en página {page}: {type(devices_page).__name__}"
-
-                        )
-
-
-
-                    _logger.info(
-
-                        "📊 Página %s: %s dispositivos recibidos",
-
-                        page,
-
-                        len(devices_page),
-
-                    )
-
-
-
-                    if not devices_page:
-
-                        _logger.info(f"📄 Página {page} vacía - Fin de datos")
-
-                        break
-
-
-
-                    all_devices.extend(devices_page)
-
-                    total_pages_processed += 1
-
-
-
-                    # Si la página está incompleta, es la última
-
-                    if len(devices_page) < self.max_records_per_request:
-
-                        _logger.info(f"📄 Página {page} incompleta - Última página")
-
-                        break
-
-
-
-                    page += 1
-
-
-
-                    # Límite de seguridad
-
-                    if page > 50:
-
-                        _logger.warning(f"⚠️ Límite de seguridad alcanzado: {page-1} páginas")
-
-                        break
-
-
-
-                else:
-
-                    error_msg = f'Error HTTP {response.status_code} en página {page}: {response.text}'
-
-                    _logger.error(f"❌ Error de API: {error_msg}")
-
-
-
-                    if page == 1:
-
-                        return {
-
-                            'type': 'ir.actions.client',
-
-                            'tag': 'display_notification',
-
-                            'params': {
-
-                                'message': f'❌ Error sincronizando dispositivos: {error_msg}',
-
-                                'type': 'danger'
-
-                            }
-
-                        }
-
-                    else:
-
-                        _logger.warning(f"⚠️ Error en página {page}, continuando con {len(all_devices)} dispositivos")
-
-                        break
-
-
-
-            # PROCESAR TODOS LOS DISPOSITIVOS OBTENIDOS
-
-            _logger.info(f"🔄 === PROCESANDO {len(all_devices)} DISPOSITIVOS ===")
-
-
-
-            devices_synced = 0
-
-            devices_updated = 0
-
-            devices_not_in_odoo = 0
-
-            devices_invalid_serial = 0
-
-            devices_error = 0
-
-
-
-            for i, device_data in enumerate(all_devices):
-
-                serial_number = device_data.get('serialNumber')
-
-                device_key = device_data.get('id')
-
-
-
-                try:
-
-                    with self.env.cr.savepoint():
-
-                        result = self._sync_device(device_data)
-
-
-
-                    if result == 'created':
-
-                        devices_synced += 1
-
-                    elif result == 'updated':
-
-                        devices_updated += 1
-
-                    elif result == 'not_in_odoo':
-
-                        devices_not_in_odoo += 1
-
-                    elif result == 'invalid_serial':
-
-                        devices_invalid_serial += 1
-
-                    else:
-
-                        devices_error += 1
-
-
-
-                except Exception:
-
-                    devices_error += 1
-
-                    _logger.exception(
-
-                        "❌ Error procesando dispositivo %s/%s serial=%s pt_device_id=%s",
-
-                        i + 1,
-
-                        len(all_devices),
-
-                        serial_number,
-
-                        device_key,
-
-                    )
-
-
-
-                if (i + 1) % 10 == 0:
-
-                    _logger.info(
-
-                        "📊 Progreso: %s/%s dispositivos procesados",
-
-                        i + 1,
-
-                        len(all_devices),
-
-                    )
-
-
-
-            # RESULTADO FINAL DETALLADO
-
-            _logger.info(f"🎯 === RESUMEN FINAL ===")
-
-            _logger.info(f"📄 Páginas: {total_pages_processed}")
-
-            _logger.info(f"📊 Total: {len(all_devices)}")
-
-            _logger.info(f"✅ Creados: {devices_synced}")
-
-            _logger.info(f"📝 Actualizados: {devices_updated}")
-
-            _logger.info(f"❌ No en Odoo: {devices_not_in_odoo}")
-
-            _logger.info(f"⚠️ Series inválidas: {devices_invalid_serial}")
-
-            _logger.info(f"💥 Errores: {devices_error}")
-
-
-
-            total_processed = devices_synced + devices_updated
-
-
-
-            if total_processed > 0:
-
-                message_type = 'success'
-
-                if devices_not_in_odoo > 0:
-
-                    message = f'✅ Dispositivos procesados: {devices_synced} nuevos, {devices_updated} actualizados, {devices_not_in_odoo} no están en Odoo'
-
-                else:
-
-                    message = f'🎉 Sincronización completa: {devices_synced} nuevos, {devices_updated} actualizados'
-
-            else:
-
-                message_type = 'warning'
-
-                message = f'⚠️ No se pudo procesar ningún dispositivo. {devices_not_in_odoo} no están en Odoo, {devices_invalid_serial} series inválidas'
-
-
-
-            return {
-
-                'type': 'ir.actions.client',
-
-                'tag': 'display_notification',
-
-                'params': {
-
-                    'message': message,
-
-                    'type': message_type
-
-                }
-
-            }
-
-
-
-        except Exception as e:
-
-            _logger.exception("❌ Error sincronizando dispositivos: %s", e)
-
-            return {
-
-                'type': 'ir.actions.client',
-
-                'tag': 'display_notification',
-
-                'params': {
-
-                    'message': f'❌ Error: {str(e)}',
-
-                    'type': 'danger'
-
-                }
-
-            }
-
-    def _sync_device(self, device_data):
-
-        """
-
-        Sincroniza el mapeo de un dispositivo PrintTracker con alquiler.
-
-
-
-        No actualiza contadores. Los errores SQL se propagan para que el
-
-        savepoint del llamador revierta únicamente este dispositivo.
-
-        """
-
-        serial_number = str(device_data.get('serialNumber') or '').strip()
-
-        device_key = device_data.get('id')
-
-
-
-        if not serial_number or serial_number.lower() in ('notavailable', 'none'):
-
-            _logger.info("⏭️ Saltando dispositivo con serie inválida: %s", serial_number)
-
-            return 'invalid_serial'
-
-
-
-        existing_device = self.env['alquiler'].search([
-
-            ('serie', '=', serial_number)
-
-        ], limit=1)
-
-
-
-        if not existing_device:
-
-            _logger.info(
-
-                "📋 Equipo en PrintTracker no registrado en Odoo: serial=%s pt_device_id=%s",
-
-                serial_number,
-
-                device_key,
-
-            )
-
-            return 'not_in_odoo'
-
-
-
-        entity = self.env['printtracker.entity'].search([
-
-            ('pt_entity_id', '=', device_data.get('entityKey'))
-
-        ], limit=1)
-
-
-
-        update_values = {
-
-            'pt_device_id': device_key,
-
-            'pt_entity_id': entity.id if entity else False,
-
-            'pt_last_sync': fields.Datetime.now(),
-
-        }
-
-
-
-        if 'mac_address' in existing_device._fields:
-
-            update_values['mac_address'] = device_data.get('macAddress')
-
-        if 'ip_address' in existing_device._fields:
-
-            update_values['ip_address'] = device_data.get('ipAddress')
-
-        if 'custom_location' in existing_device._fields:
-
-            update_values['custom_location'] = device_data.get('customLocation')
-
-        if 'asset_id' in existing_device._fields:
-
-            update_values['asset_id'] = (
-
-                device_data.get('assetID')
-
-                if device_data.get('assetID') is not None
-
-                else device_data.get('assetId')
-
-            )
-
-        if 'is_managed' in existing_device._fields:
-
-            update_values['is_managed'] = device_data.get('managed', True)
-
-
-
-        try:
-
-            existing_device.sudo().write(update_values)
-
-            _logger.info(
-
-                "📝 Equipo mapeado con PrintTracker: serial=%s pt_device_id=%s entity=%s",
-
-                serial_number,
-
-                device_key,
-
-                device_data.get('entityKey'),
-
-            )
-
-            return 'updated'
-
-        except Exception:
-
-            _logger.exception(
-
-                "❌ Error sincronizando dispositivo serial=%s pt_device_id=%s entity=%s values=%s",
-
-                serial_number,
-
-                device_key,
-
-                device_data.get('entityKey'),
-
-                update_values,
-
-            )
-
-            raise
-
-
-
-    def sync_current_meters(self):
-
-        """
-
-        CORREGIDO: Sincroniza medidores actuales desde PrintTracker 
-
-        CAMBIO CRÍTICO: Usa estructura 'default' en lugar de 'life'
-
-        NO actualiza contadores de equipos (eso va al cron consolidador)
-
-        """
-
-        try:
-
-            # Excluye dos ejecuciones simultáneas de este mismo cron/configuración.
-            # El bloqueo se libera automáticamente al finalizar la transacción.
-            self.env.cr.execute(
-                "SELECT pg_try_advisory_xact_lock(%s, %s)", (781223, self.id)
-            )
-            if not self.env.cr.fetchone()[0]:
-                _logger.warning("PrintTracker: otra sincronización de medidores está activa (config=%s)", self.id)
-                return {
-                    'type': 'ir.actions.client',
-                    'tag': 'display_notification',
-                    'params': {
-                        'message': 'Sincronización omitida: ya hay otra ejecución activa.',
-                        'type': 'warning',
-                    },
-                }
-
-            _logger.info(f"🔄 Iniciando sincronización de medidores actuales...")
-
-
-
-            all_meters = []
-
-            page = 1
-
-            total_pages_processed = 0
-
-
-
-            # Paginación completa: Obtener todos los medidores
-
-            while True:
-
-                _logger.info(f"📄 === PROCESANDO PÁGINA {page} ===")
-
-
-
-                params = {
-
-                    'includeChildren': True,
-
-                    'excludeDisabled': bool(self.solo_equipos_gestionados),
-
-                    'limit': self.max_records_per_request,
-
-                    'page': page
-
-                }
-
-
-
-                def _meters_call():
-
-                    return requests.get(
-
-                        f'{self.api_url.rstrip("/")}/entity/{self.entity_bbbb_id}/currentMeter',
-
-                        headers=self.get_api_headers(),
-
-                        params=params,
-
-                        timeout=self.timeout_seconds
-
-                    )
-
-
-
-                response = self._retry_api_call(_meters_call)
-
-
-
-                _logger.info(f"📡 Respuesta API página {page}: Status {response.status_code}")
-
-
-
-                if response.status_code == 200:
-
-                    meters_page = response.json()
-
-
-
-                    if not isinstance(meters_page, list):
-
-                        raise ValueError(
-
-                            "PrintTracker /currentMeter devolvió un JSON no-lista "
-
-                            f"en página {page}: {type(meters_page).__name__}"
-
-                        )
-
-
-
-                    _logger.info(
-
-                        "📊 Página %s: %s medidores recibidos",
-
-                        page,
-
-                        len(meters_page),
-
-                    )
-
-
-
-                    if not meters_page:
-
-                        _logger.info(f"📄 Página {page} vacía - Fin de datos")
-
-                        break
-
-
-
-                    all_meters.extend(meters_page)
-
-                    total_pages_processed += 1
-
-
-
-                    if len(meters_page) < self.max_records_per_request:
-
-                        _logger.info(f"📄 Página {page} incompleta - Última página")
-
-                        break
-
-
-
-                    page += 1
-
-
-
-                    # Límite de seguridad
-
-                    if page > 50:
-
-                        _logger.warning(f"⚠️ Límite de seguridad alcanzado: {page-1} páginas")
-
-                        break
-
-
-
-                else:
-
-                    error_msg = f'Error HTTP {response.status_code} en página {page}: {response.text}'
-
-                    _logger.error(f"❌ Error de API: {error_msg}")
-
-
-
-                    if page == 1:
-
-                        return {
-
-                            'type': 'ir.actions.client',
-
-                            'tag': 'display_notification',
-
-                            'params': {
-
-                                'message': f'❌ Error sincronizando medidores: {error_msg}',
-
-                                'type': 'danger'
-
-                            }
-
-                        }
-
-                    else:
-
-                        _logger.warning(f"⚠️ Error en página {page}, continuando con {len(all_meters)} medidores")
-
-                        break
-
-
-
-            # Procesar todos los medidores obtenidos
-
-            _logger.info(f"🔄 === PROCESANDO {len(all_meters)} MEDIDORES ===")
-
-
-
-            meters_synced = 0
-
-            meters_failed = 0
-
-
-
-            for i, meter_data in enumerate(all_meters):
-
-                device_key = meter_data.get('deviceKey')
-
-                meter_id = meter_data.get('id')
-
-
-
-                try:
-
-                    with self.env.cr.savepoint():
-
-                        result = self._sync_meter(meter_data)
-
-
-
-                    if result:
-
-                        meters_synced += 1
-
-                    else:
-
-                        meters_failed += 1
-
-
-
-                except Exception:
-
-                    meters_failed += 1
-
-                    _logger.exception(
-
-                        "❌ Error procesando medidor %s/%s meter_id=%s deviceKey=%s",
-
-                        i + 1,
-
-                        len(all_meters),
-
-                        meter_id,
-
-                        device_key,
-
-                    )
-
-
-
-                if (i + 1) % 10 == 0:
-
-                    _logger.info(
-
-                        "📊 Progreso: %s/%s medidores procesados (ok=%s fallidos=%s)",
-
-                        i + 1,
-
-                        len(all_meters),
-
-                        meters_synced,
-
-                        meters_failed,
-
-                    )
-
-
-
-            # Resultado final
-
-            _logger.info(f"🎯 === RESUMEN FINAL ===")
-
-            _logger.info(f"📄 Páginas: {total_pages_processed}")
-
-            _logger.info(f"📊 Total: {len(all_meters)}")
-
-            _logger.info(f"✅ Exitosos: {meters_synced}")
-
-            _logger.info(f"❌ Fallidos: {meters_failed}")
-
-
-
-            if meters_synced > 0:
-
-                message_type = 'success'
-
-                if meters_failed > 0:
-
-                    message = f'✅ Sincronización parcial: {meters_synced} éxitos, {meters_failed} fallos'
-
-                else:
-
-                    message = f'🎉 Sincronización completa: {meters_synced} medidores procesados'
-
-            else:
-
-                message_type = 'warning'
-
-                message = f'⚠️ No se pudo procesar ningún medidor'
-
-
-
-            return {
-
-                'type': 'ir.actions.client',
-
-                'tag': 'display_notification',
-
-                'params': {
-
-                    'message': message,
-
-                    'type': message_type
-
-                }
-
-            }
-
-
-
-        except Exception as e:
-
-            _logger.exception("❌ Error sincronizando medidores: %s", e)
-
-            return {
-
-                'type': 'ir.actions.client',
-
-                'tag': 'display_notification',
-
-                'params': {
-
-                    'message': f'❌ Error: {str(e)}',
-
-                    'type': 'danger'
-
-                }
-
-            }
-
-
-
-    def _sync_meter(self, meter_data):
-
-        """
-
-        Sincroniza una lectura actual de PrintTracker en printtracker.meter.
-
-
-
-        La documentación actual de GET /currentMeter muestra pageCounts.life.
-
-        Para compatibilidad aceptamos: life -> default -> equiv.
-
-        Este método NO actualiza los contadores del equipo alquiler.
-
-        """
-
-        device_key = meter_data.get('deviceKey')
-
-        meter_id = meter_data.get('id')
-
-
-
-        if not device_key:
-
-            _logger.warning("⚠️ Medidor omitido: falta deviceKey meter_id=%s", meter_id)
-
-            return False
-
-
-
-        device = self.env['alquiler'].search([
-
-            ('pt_device_id', '=', device_key)
-
-        ], limit=1)
-
-
-
-        if not device:
-
-            _logger.warning(
-
-                "⚠️ Medidor omitido: no existe alquiler con pt_device_id=%s meter_id=%s",
-
-                device_key,
-
-                meter_id,
-
-            )
-
-            return False
-
-
-
-        page_counts = meter_data.get('pageCounts') or {}
-
-        if not isinstance(page_counts, dict):
-
-            _logger.warning(
-
-                "⚠️ Medidor omitido: pageCounts no es dict meter_id=%s deviceKey=%s type=%s",
-
-                meter_id,
-
-                device_key,
-
-                type(page_counts).__name__,
-
-            )
-
-            return False
-
-
-
-        counter_format = None
-
-        counts = {}
-
-        for candidate in ('life', 'default', 'equiv'):
-
-            candidate_counts = page_counts.get(candidate)
-
-            if isinstance(candidate_counts, dict) and candidate_counts:
-
-                counter_format = candidate
-
-                counts = candidate_counts
-
-                break
-
-
-
-        if not counts:
-
-            _logger.warning(
-
-                "⚠️ Medidor omitido: no existe pageCounts.life/default/equiv meter_id=%s deviceKey=%s keys=%s",
-
-                meter_id,
-
-                device_key,
-
-                list(page_counts.keys()),
-
-            )
-
-            return False
-
-
-
-        if counter_format != 'life':
-
-            _logger.info(
-
-                "ℹ️ Medidor usando formato alternativo pageCounts.%s meter_id=%s deviceKey=%s",
-
-                counter_format,
-
-                meter_id,
-
-                device_key,
-
-            )
-
-
-
-        def _counter(name):
-
-            raw = counts.get(name) or {}
-
-            if isinstance(raw, dict):
-
-                raw = raw.get('value', 0)
-
-            return self._safe_int(raw, 0)
-
-
-
-        meter_values = {
-
-            'pt_meter_id': meter_id,
-
-            'device_id': device.id,
-
-            'reading_date': self._parse_printtracker_datetime(meter_data.get('timestamp')),
-
-            'console_status': meter_data.get('console'),
-
-            'total_pages_life': _counter('total'),
-
-            'black_pages_life': _counter('totalBlack'),
-
-            'color_pages_life': _counter('totalColor'),
-
-            'scan_pages': _counter('totalScans'),
-
-            'copy_pages': _counter('totalCopies'),
-
-            'fax_pages': _counter('totalFaxes'),
-
-            'print_pages': _counter('totalPrints'),
-
-            'sync_source': 'api',
-
-            'last_sync': fields.Datetime.now(),
-
-        }
-
-
-
-        # El campo reading_date es obligatorio. Si la API omite timestamp
-        # o la fecha es inválida, preservar la fecha almacenada y no inventar
-        # una nueva lectura. Esto evita NotNullViolation durante el flush ORM.
-        if not meter_values['reading_date']:
-            existing_with_date = self.env['printtracker.meter'].search([
-                ('pt_meter_id', '=', meter_id)
-            ], limit=1)
-            if existing_with_date and existing_with_date.reading_date:
-                meter_values.pop('reading_date')
-                _logger.warning(
-                    "⚠️ Medidor %s sin timestamp válido; se conserva fecha anterior %s",
-                    meter_id, existing_with_date.reading_date,
+                _logger.error(
+                    "[TRACCAR-API] Error obteniendo posiciones: %s", resp.status_code
                 )
+                return {}
+        except Exception as e:
+            _logger.error("[TRACCAR-API] Excepcion obteniendo posiciones: %s", e)
+            return {}
+
+    def crear_geocerca(self, nombre, latitud, longitud, radio_metros=150):
+        try:
+            session, cfg = self._get_session()
+            payload = {
+                'name':       nombre,
+                'area':       f"CIRCLE({latitud} {longitud}, {radio_metros})",
+                'attributes': {},
+            }
+            resp = session.post(
+                f"{cfg['url']}/api/geofences",
+                json=payload,
+                timeout=cfg['timeout'],
+            )
+            if resp.status_code in (200, 201):
+                geofence = resp.json()
+                gid = geofence.get('id')
+                _logger.info(
+                    "[TRACCAR-API] Geocerca creada: '%s' ID=%s (%.6f, %.6f r=%dm)",
+                    nombre, gid, latitud, longitud, radio_metros
+                )
+                return gid
+            else:
+                _logger.error(
+                    "[TRACCAR-API] Error creando geocerca '%s': %s",
+                    nombre, resp.status_code
+                )
+                return None
+        except Exception as e:
+            _logger.error("[TRACCAR-API] Excepcion creando geocerca '%s': %s", nombre, e)
+            return None
+
+    def borrar_geocerca(self, geofence_id):
+        if not geofence_id:
+            return False
+        try:
+            session, cfg = self._get_session()
+            resp = session.delete(
+                f"{cfg['url']}/api/geofences/{geofence_id}",
+                timeout=cfg['timeout'],
+            )
+            if resp.status_code in (200, 204):
+                _logger.info("[TRACCAR-API] Geocerca ID=%s eliminada", geofence_id)
+                return True
             else:
                 _logger.warning(
-                    "⚠️ Medidor omitido: timestamp inválido o ausente; "
-                    "meter_id=%s deviceKey=%s timestamp=%r",
-                    meter_id, device_key, meter_data.get('timestamp'),
+                    "[TRACCAR-API] No se pudo borrar geocerca ID=%s: %s",
+                    geofence_id, resp.status_code
                 )
                 return False
+        except Exception as e:
+            _logger.error("[TRACCAR-API] Excepcion borrando geocerca %s: %s", geofence_id, e)
+            return False
 
+    def vincular_geocerca_dispositivo(self, geofence_id, device_id):
         try:
-
-            existing_meter = self.env['printtracker.meter'].search([
-
-                ('pt_meter_id', '=', meter_id)
-
-            ], limit=1)
-
-
-
-            if existing_meter:
-
-                # Solo escribir campos modificados. En particular, evitar
-                # disparar el cálculo de is_current si reading_date no cambia.
-                changed_values = {
-                    key: value for key, value in meter_values.items()
-                    if key == 'last_sync' or existing_meter[key] != value
-                }
-                if changed_values:
-                    existing_meter.write(changed_values)
-
+            session, cfg = self._get_session()
+            resp = session.post(
+                f"{cfg['url']}/api/permissions",
+                json={'deviceId': device_id, 'geofenceId': geofence_id},
+                timeout=cfg['timeout'],
+            )
+            if resp.status_code in (200, 204):
                 _logger.info(
-
-                    "📝 Medidor actualizado: serie=%s meter_id=%s deviceKey=%s format=%s total=%s bn=%s color=%s",
-
-                    device.serie,
-
-                    meter_id,
-
-                    device_key,
-
-                    counter_format,
-
-                    meter_values['total_pages_life'],
-
-                    meter_values['black_pages_life'],
-
-                    meter_values['color_pages_life'],
-
+                    "[TRACCAR-API] Geocerca %s vinculada a device %s",
+                    geofence_id, device_id
                 )
-
+                return True
             else:
-
-                self.env['printtracker.meter'].create(meter_values)
-
-                _logger.info(
-
-                    "🆕 Medidor creado: serie=%s meter_id=%s deviceKey=%s format=%s total=%s bn=%s color=%s",
-
-                    device.serie,
-
-                    meter_id,
-
-                    device_key,
-
-                    counter_format,
-
-                    meter_values['total_pages_life'],
-
-                    meter_values['black_pages_life'],
-
-                    meter_values['color_pages_life'],
-
+                _logger.warning(
+                    "[TRACCAR-API] Error vinculando geocerca %s device %s: %s",
+                    geofence_id, device_id, resp.status_code
                 )
+                return False
+        except Exception as e:
+            _logger.error(
+                "[TRACCAR-API] Excepcion vinculando geocerca %s device %s: %s",
+                geofence_id, device_id, e
+            )
+            return False
+
+    def desvincular_geocerca_dispositivo(self, geofence_id, device_id):
+        try:
+            session, cfg = self._get_session()
+            resp = session.delete(
+                f"{cfg['url']}/api/permissions",
+                json={'deviceId': device_id, 'geofenceId': geofence_id},
+                timeout=cfg['timeout'],
+            )
+            if resp.status_code in (200, 204):
+                _logger.info(
+                    "[TRACCAR-API] Geocerca %s desvinculada de device %s",
+                    geofence_id, device_id
+                )
+                return True
+            else:
+                _logger.warning(
+                    "[TRACCAR-API] Error desvinculando: %s", resp.status_code
+                )
+                return False
+        except Exception as e:
+            _logger.error("[TRACCAR-API] Excepcion desvinculando: %s", e)
+            return False
 
 
+# ═══════════════════════════════════════════════════════════════════
+#  HERENCIA: ticket.alquiler
+# ═══════════════════════════════════════════════════════════════════
 
+class TicketAlquilerTracking(models.Model):
+    _inherit = 'ticket.alquiler'
+
+    fecha_asignacion = fields.Datetime(
+        string='Fecha asignacion', readonly=True, tracking=True,
+    )
+    fecha_en_ruta = fields.Datetime(
+        string='Tecnico en ruta', readonly=True, tracking=True,
+    )
+    fecha_llegada = fields.Datetime(
+        string='Llegada al sitio', readonly=True, tracking=True,
+    )
+    fecha_inicio_revision = fields.Datetime(
+        string='Inicio revision', readonly=True, tracking=True,
+    )
+    fecha_salida_sitio = fields.Datetime(
+        string='Salida del sitio', readonly=True, tracking=True,
+    )
+    fecha_finalizacion = fields.Datetime(
+        string='Fecha finalizacion', readonly=True, tracking=True,
+    )
+    tiempo_traslado_minutos = fields.Float(
+        string='Tiempo traslado (min)',
+        compute='_compute_tiempos_tracking', store=True,
+    )
+    tiempo_en_sitio_minutos = fields.Float(
+        string='Tiempo en sitio (min)',
+        compute='_compute_tiempos_tracking', store=True,
+    )
+    tiempo_total_atencion_minutos = fields.Float(
+        string='Tiempo total atencion (min)',
+        compute='_compute_tiempos_tracking', store=True,
+    )
+    diferencia_puntualidad_minutos = fields.Float(
+        string='Puntualidad (min)',
+        compute='_compute_tiempos_tracking', store=True,
+        help='Negativo = llego antes, Positivo = llego tarde',
+    )
+    es_puntual = fields.Boolean(
+        string='Fue puntual?',
+        compute='_compute_tiempos_tracking', store=True,
+    )
+    gps_geofence_device_id = fields.Integer(string='Dispositivo vinculado a geocerca', readonly=True, copy=False)
+    gps_salida_detectada_utc = fields.Datetime(string='Detección GPS de retiro', readonly=True, copy=False)
+    gps_aviso_retiro_estado = fields.Selection([('pendiente', 'Pendiente'), ('solicitado', 'Solicitado al proveedor'), ('error', 'Error de envío')], string='Estado aviso de retiro', readonly=True, copy=False)
+    gps_aviso_retiro_error = fields.Text(string='Error aviso retiro', readonly=True, copy=False)
+    gps_salida_fuente = fields.Selection([('webhook', 'Evento Traccar'), ('cron', 'Observación GPS'), ('manual', 'Confirmación manual')], string='Fuente detección de retiro', readonly=True, copy=False)
+    gps_salida_latitud = fields.Float(string='Latitud última detección', digits=(10, 7), readonly=True, copy=False)
+    gps_salida_longitud = fields.Float(string='Longitud última detección', digits=(10, 7), readonly=True, copy=False)
+    traccar_geofence_id = fields.Integer(
+        string='Geocerca Traccar ID',
+        readonly=True,
+        help='ID de la geocerca creada automaticamente en Traccar para este ticket',
+    )
+    tracking_log = fields.Text(
+        string='Log de tracking GPS', readonly=True,
+    )
+
+    # ═══════════════════════════════════════════════════════════════
+    #  CREATE / WRITE
+    # ═══════════════════════════════════════════════════════════════
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        ahora = fields.Datetime.now()
+        for vals in vals_list:
+            if vals.get('responsable') and not vals.get('fecha_asignacion'):
+                vals['fecha_asignacion'] = ahora
+        records = super().create(vals_list)
+        for rec in records:
+            if rec.responsable and rec.fecha_asignacion:
+                rec._registrar_evento(
+                    f"Ticket creado y asignado a {rec.responsable.name}"
+                )
+            if rec.responsable and rec.equipo_tiene_coordenadas:
+                rec._geocerca_crear()
+        return records
+
+    def write(self, vals):
+        # Completar solo la fecha del estado que realmente se está registrando.
+        # No reconstruir horarios anteriores con la hora actual.
+        ahora = fields.Datetime.now()
+        campos_estado = {
+            'en_ruta': 'fecha_en_ruta',
+            'en_sitio': 'fecha_llegada',
+            'en_revision': 'fecha_inicio_revision',
+            'finalizado': 'fecha_finalizacion',
+        }
+        resultado = True
+        for rec in self:
+            anterior = rec.estado
+            tecnico_anterior = rec.responsable.id
+            valores = dict(vals)
+            nuevo_estado = valores.get('estado')
+            cambio_estado = 'estado' in valores and nuevo_estado != anterior
+            campo = campos_estado.get(nuevo_estado) if cambio_estado else None
+            if campo and not valores.get(campo) and not rec[campo]:
+                if nuevo_estado in ('en_ruta', 'en_sitio') and rec.gps_visita_id:
+                    origen = rec.gps_visita_id.fecha_en_ruta if nuevo_estado == 'en_ruta' else rec.gps_visita_id.fecha_llegada
+                    if not origen:
+                        raise UserError(_('La visita no tiene evento físico verificado para este estado.'))
+                    valores[campo] = origen
+                elif nuevo_estado not in ('en_ruta', 'en_sitio'):
+                    valores[campo] = ahora
+            if (valores.get('responsable') and not rec.fecha_asignacion
+                    and not valores.get('fecha_asignacion')):
+                valores['fecha_asignacion'] = ahora
+            resultado = super(TicketAlquilerTracking, rec).write(valores) and resultado
+            if cambio_estado:
+                rec._registrar_evento(
+                    f"Estado: {anterior} → {rec.estado}. "
+                    f"Registrado por: {self.env.user.name}"
+                )
+            if 'responsable' in vals:
+                tecnico_cambio = tecnico_anterior != rec.responsable.id
+                if tecnico_cambio:
+                    rec._registrar_evento(
+                        f"Responsable actualizado: {rec.responsable.name or 'Sin asignar'}"
+                    )
+                if tecnico_cambio and rec.responsable and rec.equipo_tiene_coordenadas:
+                    if not rec.traccar_geofence_id or rec._geocerca_borrar():
+                        rec._geocerca_crear()
+        return resultado
+
+    # ═══════════════════════════════════════════════════════════════
+    #  GEOCERCAS
+    # ═══════════════════════════════════════════════════════════════
+
+    def _geocerca_crear(self):
+        self.ensure_one()
+        if not self.equipo_latitud or not self.equipo_longitud:
+            self._registrar_evento('Geocerca pendiente: faltan coordenadas del equipo')
+            return False
+        if not self.responsable:
+            self._registrar_evento('Geocerca pendiente: falta asignar responsable')
+            return False
+        vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
+            ('user_id', '=', self.responsable.id),
+            ('activo', '=', True),
+        ], limit=1)
+        if not vinculo:
+            self._registrar_evento(
+                f"Geocerca pendiente: {self.responsable.name} no tiene dispositivo GPS activo vinculado"
+            )
+            _logger.warning("[GEO-AUTO] Tecnico %s sin dispositivo GPS", self.responsable.name)
+            return False
+        cliente = self.partner_id.name or 'Cliente'
+        nombre  = f"{self.name} - {cliente}"[:100]
+        radio   = int(
+            self.env['ir.config_parameter'].sudo().get_param(
+                'traccar.geocerca_radio_metros', '150'
+            )
+        )
+        traccar     = self.env['traccar.api.service']
+        geofence_id = traccar.crear_geocerca(
+            nombre=nombre,
+            latitud=self.equipo_latitud,
+            longitud=self.equipo_longitud,
+            radio_metros=radio,
+        )
+        if not geofence_id:
+            self._registrar_evento("No se pudo crear geocerca en Traccar")
+            return False
+        vinculado = traccar.vincular_geocerca_dispositivo(
+            geofence_id=geofence_id,
+            device_id=vinculo.traccar_device_id,
+        )
+        if not vinculado:
+            traccar.borrar_geocerca(geofence_id)
+            self._registrar_evento('Geocerca no vinculada; no se registró como activa')
+            return False
+        self.sudo().write({'traccar_geofence_id': geofence_id, 'gps_geofence_device_id': vinculo.traccar_device_id})
+        self._registrar_evento(
+            f"Geocerca Traccar creada automaticamente "
+            f"(ID:{geofence_id}, radio:{radio}m) - "
+            f"{self.equipo_latitud:.6f}, {self.equipo_longitud:.6f}"
+        )
+        return geofence_id
+
+    def _geocerca_borrar(self):
+        self.ensure_one()
+        if not self.traccar_geofence_id:
+            return False
+        gid = self.traccar_geofence_id
+        device_id = self.gps_geofence_device_id
+        api = self.env['traccar.api.service']
+        # Retener referencias si Traccar está inaccesible; evitar geocercas huérfanas.
+        if device_id and not api.desvincular_geocerca_dispositivo(gid, device_id):
+            self._registrar_evento('Geocerca no eliminada: falló desvinculación en Traccar')
+            return False
+        if not api.borrar_geocerca(gid):
+            self._registrar_evento('Geocerca pendiente de eliminación en Traccar')
+            return False
+        self.sudo().write({'traccar_geofence_id': 0, 'gps_geofence_device_id': 0})
+        self._registrar_evento(f'Geocerca Traccar ID:{gid} eliminada')
+        return True
+
+    def action_crear_geocerca_manual(self):
+        self.ensure_one()
+        if self.traccar_geofence_id and not self._geocerca_borrar():
+            raise UserError('No se pudo retirar la geocerca anterior en Traccar.')
+        result = self._geocerca_crear()
+        if result:
+            return {
+                'type': 'ir.actions.client',
+                'tag': 'display_notification',
+                'params': {
+                    'title':   'Geocerca creada',
+                    'message': f'Geocerca ID:{result} creada y vinculada en Traccar.',
+                    'type':    'success',
+                },
+            }
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title':   'Error',
+                'message': 'No se pudo crear la geocerca. Revise logs.',
+                'type':    'warning',
+            },
+        }
+
+    # ═══════════════════════════════════════════════════════════════
+    #  CALCULO DE TIEMPOS
+    # ═══════════════════════════════════════════════════════════════
+
+    @api.depends(
+        'fecha_en_ruta', 'fecha_llegada', 'fecha_salida_sitio',
+        'fecha_finalizacion', 'fecha_asignacion', 'agenda',
+    )
+    def _compute_tiempos_tracking(self):
+        for rec in self:
+            if rec.fecha_en_ruta and rec.fecha_llegada:
+                delta = rec.fecha_llegada - rec.fecha_en_ruta
+                rec.tiempo_traslado_minutos = round(delta.total_seconds() / 60, 1)
+            else:
+                rec.tiempo_traslado_minutos = 0
+            fin_sitio = rec.fecha_salida_sitio
+            if rec.fecha_llegada and fin_sitio:
+                delta = fin_sitio - rec.fecha_llegada
+                rec.tiempo_en_sitio_minutos = round(delta.total_seconds() / 60, 1)
+            else:
+                rec.tiempo_en_sitio_minutos = 0
+            if rec.fecha_asignacion and rec.fecha_finalizacion:
+                delta = rec.fecha_finalizacion - rec.fecha_asignacion
+                rec.tiempo_total_atencion_minutos = round(delta.total_seconds() / 60, 1)
+            else:
+                rec.tiempo_total_atencion_minutos = 0
+            if rec.fecha_llegada and rec.agenda:
+                delta = rec.fecha_llegada - rec.agenda
+                rec.diferencia_puntualidad_minutos = round(delta.total_seconds() / 60, 1)
+                rec.es_puntual = rec.diferencia_puntualidad_minutos <= 15
+            else:
+                rec.diferencia_puntualidad_minutos = 0
+                rec.es_puntual = False
+
+    # ═══════════════════════════════════════════════════════════════
+    #  HELPERS DE REGISTRO
+    # ═══════════════════════════════════════════════════════════════
+
+    def _chatter_tracking(self, mensaje):
+        try:
+            self.message_post(
+                body=mensaje,
+                message_type='comment',
+                subtype_xmlid='mail.mt_note',
+            )
+        except Exception as e:
+            _logger.error("[TRACKING] Error chatter en %s: %s", self.name, e)
+
+    def _append_tracking_log(self, mensaje):
+        from pytz import timezone as pytz_tz, UTC
+        ahora = fields.Datetime.now()
+        try:
+            local = UTC.localize(ahora).astimezone(pytz_tz('America/Lima'))
+            ts = local.strftime('%d/%m/%Y %H:%M:%S')
+        except Exception:
+            ts = ahora.strftime('%d/%m/%Y %H:%M:%S')
+        log_actual  = self.tracking_log or ''
+        nueva_linea = f"[{ts}] {mensaje}"
+        self.tracking_log = f"{log_actual}\n{nueva_linea}" if log_actual else nueva_linea
+
+    def _registrar_impedimento_tracking(self, mensaje):
+        for ticket in self:
+            ultima = (ticket.tracking_log or '').splitlines()
+            if not ultima or not ultima[-1].endswith(mensaje):
+                ticket._registrar_evento(mensaje)
+
+    def _registrar_evento(self, mensaje):
+        self._append_tracking_log(mensaje)
+        self._chatter_tracking(mensaje)
+
+    def _get_tickets_misma_visita(self, tickets_pool):
+        self.ensure_one()
+        if not self.agenda or not self.partner_id:
+            return self
+        ventana    = timedelta(minutes=30)
+        agenda_ini = self.agenda - ventana
+        agenda_fin = self.agenda + ventana
+        misma_visita = tickets_pool.filtered(lambda t: (
+            t.partner_id.id == self.partner_id.id
+            and t.responsable.id == self.responsable.id
+            and t.agenda
+            and agenda_ini <= t.agenda <= agenda_fin
+            and (not self.equipo_latitud or not self.equipo_longitud
+                 or (t.equipo_latitud and t.equipo_longitud
+                     and self._haversine_metros(self.equipo_latitud, self.equipo_longitud,
+                                                t.equipo_latitud, t.equipo_longitud) <= 200))
+        ))
+        return misma_visita if misma_visita else self
+
+    @staticmethod
+    def _gps_fecha_evento(datos):
+        """Solo devuelve una hora de evento explícita; nunca usa serverTime/fixTime como sustitutos."""
+        valor = (datos or {}).get('eventTime')
+        if not valor:
+            return None
+        try:
+            if isinstance(valor, datetime):
+                dt = valor
+            else:
+                dt = datetime.fromisoformat(str(valor).strip().replace('Z', '+00:00'))
+            if not dt.tzinfo:
+                return None
+            utc = dt.astimezone(timezone.utc).replace(tzinfo=None)
+            if utc > fields.Datetime.now() + timedelta(minutes=2):
+                return None
+            return utc
+        except (ValueError, TypeError, OverflowError):
+            return None
+
+    @staticmethod
+    def _gps_posicion_valida(pos, max_edad_min=10):
+        """Para crons: la antigüedad y validez de una posición son obligatorias."""
+        if not pos or pos.get('valid') is not True:
+            return False
+        valor = pos.get('fixTime')
+        if not valor:
+            return False
+        try:
+            dt = datetime.fromisoformat(str(valor).replace('Z', '+00:00'))
+            if not dt.tzinfo:
+                return False
+            edad = (datetime.now(timezone.utc) - dt.astimezone(timezone.utc)).total_seconds()
+            return -120 <= edad <= max_edad_min * 60
+        except (ValueError, TypeError, OverflowError):
+            return False
+
+    def _registrar_deteccion_salida(self, lat=None, lon=None, fecha_evento=None, fuente='cron'):
+        """Detección != salida confirmada, != ticket finalizado."""
+        self.ensure_one()
+        if self.fecha_salida_sitio:
+            return
+        if self.gps_salida_detectada_utc and fecha_evento and fecha_evento >= self.gps_salida_detectada_utc:
+            return
+        vals = {'gps_salida_fuente': fuente}
+        if fecha_evento:
+            vals['gps_salida_detectada_utc'] = fecha_evento
+        # Si falta hora de evento, no presentar 'ahora' como hora GPS.
+        if lat is not None:
+            vals['gps_salida_latitud'] = lat
+        if lon is not None:
+            vals['gps_salida_longitud'] = lon
+        self.sudo().write(vals)
+
+    # ═══════════════════════════════════════════════════════════════
+    #  LÓGICA DE RETIRO PENDIENTE (NUEVO v7)
+    #
+    #  Punto de entrada único: _evaluar_salida_geocerca()
+    #  Llamado SOLO desde _gps_procesar_salida y cron_gps_detectar_salida
+    #  en reemplazo de action_registrar_salida_sitio directo.
+    #
+    #  Reglas:
+    #   1. Ya tiene token pendiente → no hacer nada, ya se preguntó
+    #   2. Tiempo >= 60 min Y distancia >= 2 km → registrar salida física
+    #   3. Cualquier otro caso → crear token y enviar link al técnico
+    # ═══════════════════════════════════════════════════════════════
+
+    def _evaluar_salida_geocerca(self, lat_actual=None, lon_actual=None,
+                                fecha_evento=None, fuente='cron'):
+        """Un geofenceExit aislado NO solicita retiro ni genera tokens.
+
+        El cron 115 debe verificar posiciones GPS sucesivas a >150 m antes
+        de registrar una salida física. No se envían WhatsApp prematuros.
+        """
+        self.ensure_one()
+        if self.fecha_salida_sitio:
+            return 'salida_ya_registrada'
+        _logger.info(
+            '[RETIRO] ticket=%s aviso GPS preliminar (%s); '
+            'pendiente de doble comprobación fuera de 150m',
+            self.name, fuente,
+        )
+        return 'pendiente_verificacion_gps'
+
+    def action_reenviar_aviso_retiro(self):
+        """Reintento explícito si el proveedor falló, sin duplicar tokens."""
+        for ticket in self:
+            token = self.env['ticket.retiro.token'].sudo().search([
+                ('ticket_id', '=', ticket.id), ('estado', '=', 'pendiente')
+            ], limit=1)
+            if not token:
+                raise UserError('No existe solicitud de retiro pendiente para reenviar.')
+            base_url = self.env['ir.config_parameter'].sudo().get_param('web.base.url') or ''
+            url = f"{base_url.rstrip('/')}/sat/retiro/{token.token}"
+            minutos = max(0, (fields.Datetime.now() - ticket.fecha_llegada).total_seconds() / 60) if ticket.fecha_llegada else 0
+            try:
+                ticket.notificar_retiro_pendiente(link=url, tiempo_en_sitio=minutos)
+                ticket.sudo().write({'gps_aviso_retiro_estado': 'solicitado', 'gps_aviso_retiro_error': False})
+                ticket._registrar_evento('Reintento de aviso retiro solicitado al proveedor; entrega no verificada')
+            except Exception as exc:
+                ticket.sudo().write({'gps_aviso_retiro_estado': 'error', 'gps_aviso_retiro_error': str(exc)})
+                ticket._registrar_evento(f'Fallo reintento aviso retiro: {exc}')
+                raise UserError(f'No se pudo reenviar la notificación: {exc}') from exc
+        return True
+
+    def _cancelar_tokens_retiro_pendientes(self):
+        """
+        Cancela tokens pendientes del ticket cuando el técnico regresa a la geocerca.
+        """
+        self.ensure_one()
+        tokens = self.env['ticket.retiro.token'].sudo().search([
+            ('ticket_id', '=', self.id),
+            ('estado',    '=', 'pendiente'),
+        ])
+        if tokens:
+            for t in tokens:
+                t.cancelar()
+            self._registrar_evento(
+                "Técnico regresó a la geocerca — confirmación de retiro cancelada"
+            )
+            try:
+                self.notificar_retiro_cancelado()
+            except Exception as e:
+                _logger.error("[RETIRO] Error notificando cancelación: %s", e)
+
+    # ═══════════════════════════════════════════════════════════════
+    #  TRANSICIONES DE ESTADO
+    #  Sin cambios respecto a v6
+    # ═══════════════════════════════════════════════════════════════
+
+    def action_en_ruta(self, notificar=True):
+        """La ruta empieza en la visita; jamás por movimiento genérico."""
+        for ticket in self:
+            visita = ticket.gps_visita_id
+            if not visita:
+                raise UserError(_('Asigne una visita física antes de iniciar ruta.'))
+            if visita.estado != 'en_ruta':
+                raise UserError(_('Inicie el recorrido desde la visita física.'))
+            visita._validar_siguiente_ruta()
+            if ticket.estado == 'proceso':
+                # La visita es dueña del horario. No generar una segunda fecha.
+                ticket.write({'estado': 'en_ruta', 'fecha_en_ruta': visita.fecha_en_ruta})
+        return True
+
+    def action_en_sitio(self, notificar=True, fecha_evento=None):
+        """La llegada física se registra y notifica UNA VEZ en la visita."""
+        for ticket in self:
+            visita = ticket.gps_visita_id
+            if not visita:
+                raise UserError(_('El ticket no está asociado a una visita física.'))
+            if not visita.fecha_llegada:
+                raise UserError(_('La visita no tiene llegada física confirmada.'))
+            if ticket.estado in ('proceso', 'en_ruta'):
+                ticket.write({'estado': 'en_sitio', 'fecha_llegada': visita.fecha_llegada})
+            ticket._cancelar_tokens_retiro_pendientes()
+        return True
+
+    def action_en_revision(self):
+        ahora = fields.Datetime.now()
+        for ticket in self:
+            if ticket.estado not in ('en_sitio',):
+                raise UserError(_(
+                    "Solo se puede iniciar revision cuando el tecnico esta en sitio.\n"
+                    "Estado actual: %s"
+                ) % ticket.estado)
+            vals = {'estado': 'en_revision'}
+            if not ticket.fecha_inicio_revision:
+                vals['fecha_inicio_revision'] = ahora
+            ticket.write(vals)
+            ticket._registrar_evento(
+                f"Tecnico {ticket.responsable.name or 'N/A'} inicio revision"
+            )
+            try:
+                ticket.notificar_en_revision()
+            except Exception as e:
+                _logger.error("[TRACKING] Error notificando en_revision: %s", e)
+
+    def action_registrar_salida_sitio(self, notificar=True, fecha_salida=None, fuente='manual'):
+        """La visita confirma la salida; este método no finaliza servicios."""
+        for ticket in self:
+            visita = ticket.gps_visita_id
+            if not visita:
+                raise UserError(_('Vincule el ticket a una visita física.'))
+            if visita.fecha_salida:
+                if not ticket.fecha_salida_sitio:
+                    ticket.write({'fecha_salida_sitio': visita.fecha_salida})
+                continue
+            # No se permite inventar fechas GPS a partir de la hora de Odoo.
+            if fuente.lower() not in ('manual', 'confirmacion_manual', 'traccar'):
+                raise UserError(_('Fuente de salida no reconocida.'))
+            if fuente.lower() == 'traccar' and not fecha_salida:
+                raise UserError(_('La salida GPS requiere fecha original del evento.'))
+            fecha = fecha_salida or fields.Datetime.now()
+            referencia = 'odoo-user:%s' % self.env.uid if fuente.lower() != 'traccar' else self.env.context.get('traccar_event_reference')
+            if not referencia:
+                raise UserError(_('Falta referencia verificable del evento GPS.'))
+            visita.registrar_salida_confirmada(fecha, 'traccar' if fuente.lower() == 'traccar' else 'manual', referencia)
+        return True
+
+    def action_proceso(self):
+        ahora = fields.Datetime.now()
+        for ticket in self:
+            if not ticket.fecha_asignacion:
+                ticket.fecha_asignacion = ahora
+            ticket._registrar_evento(
+                f"Ticket asignado a {ticket.responsable.name or 'N/A'}"
+            )
+        return super().action_proceso()
+
+    def _registrar_finalizacion_tracking(self):
+        self = self.filtered(lambda ticket: ticket.estado == 'finalizado')
+        ahora = fields.Datetime.now()
+        for ticket in self:
+            vals = {}
+            if not ticket.fecha_finalizacion:
+                vals['fecha_finalizacion'] = ahora
+            if vals:
+                ticket.write(vals)
+            ticket._registrar_evento("Ticket finalizado")
+            if not ticket.gps_visita_id or ticket.gps_visita_id.estado in ('salida_confirmada', 'cancelada'):
+                ticket._geocerca_borrar()
+            try:
+                ticket.notificar_finalizado()
+            except Exception as e:
+                _logger.error("[TRACKING] Error notificando finalizado: %s", e)
+
+    # ═══════════════════════════════════════════════════════════════
+    #  CRONS — RED DE SEGURIDAD GPS
+    # ═══════════════════════════════════════════════════════════════
+
+    @api.model
+    def cron_gps_detectar_movimiento(self):
+        """Inicia una visita tras desplazamiento GPS desde un punto fijo.
+
+        Conserva la primera observación durante hasta 10 minutos para que
+        tramos cortos (p. ej. 100 + 190 + 150 m) puedan superar el umbral.
+        No exige acercamiento lineal: el técnico puede tomar cualquier ruta.
+        No inicia otra visita mientras haya una visita física anterior abierta.
+        """
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            _logger.warning('[CRON-MOVIMIENTO] Traccar no devolvió posiciones')
             return True
 
-        except Exception:
-
-            # No consultar records/fields aquí: una excepción de PostgreSQL
-            # deja el cursor inutilizable hasta que salga del savepoint externo.
-            _logger.exception(
-
-                "❌ Error SQL/ORM sincronizando medidor serie=%s meter_id=%s deviceKey=%s format=%s values=%s",
-
-                device_key,
-
-                meter_id,
-
-                device_key,
-
-                counter_format,
-
-                meter_values,
-
-            )
-
-            raise
-
-
-
-    def _parse_printtracker_datetime(self, datetime_str):
-        """Convierte fechas ISO 8601 de PrintTracker a UTC sin zona para Odoo 19.
-
-        No inventa fechas cuando PrintTracker no proporciona un timestamp válido.
-        """
-        if not datetime_str:
-            return False
-        try:
-            from datetime import datetime, timezone
-
-            if isinstance(datetime_str, datetime):
-                parsed = datetime_str
-            else:
-                value = str(datetime_str).strip()
-                if not value:
-                    return False
-                # ISO 8601: Z, fracciones de segundo y desplazamientos horarios.
-                value = value.replace('Z', '+00:00').replace('z', '+00:00')
-                parsed = datetime.fromisoformat(value)
-
-            if parsed.tzinfo is not None:
-                parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
-            return fields.Datetime.to_string(parsed)
-        except (ValueError, TypeError, OverflowError) as error:
-            _logger.warning(
-                "⚠️ Fecha inválida devuelta por PrintTracker: %r (%s)",
-                datetime_str, error,
-            )
-            return False
-
-
-    def sync_all_data(self):
-
-        """Sincroniza todos los datos: entidades, dispositivos y medidores"""
-
-        try:
-
-            _logger.info(f"🔄 === SINCRONIZACIÓN COMPLETA INICIADA ===")
-
-
-
-            # 1. Sincronizar entidades
-
-            entities_result = self.sync_all_entities()
-
-            if entities_result['params']['type'] != 'success':
-
-                return entities_result
-
-
-
-            # 2. Sincronizar dispositivos
-
-            devices_result = self.sync_all_devices()
-
-            if devices_result['params']['type'] != 'success':
-
-                return devices_result
-
-
-
-            # 3. Sincronizar medidores
-
-            meters_result = self.sync_current_meters()
-
-
-
-            return {
-
-                'type': 'ir.actions.client',
-
-                'tag': 'display_notification',
-
-                'params': {
-
-                    'message': '🎉 Sincronización completa finalizada exitosamente\nRevisa los menús de PrintTracker para ver los datos.',
-
-                    'type': 'success'
-
-                }
-
-            }
-
-
-
-        except Exception as e:
-
-            _logger.error(f"❌ Error en sincronización completa: {e}")
-
-            return {
-
-                'type': 'ir.actions.client',
-
-                'tag': 'display_notification',
-
-                'params': {
-
-                    'message': f'❌ Error en sincronización completa: {str(e)}',
-
-                    'type': 'danger'
-
-                }
-
-            }
-
-
-
-    # ============================================================
-
-    # DIAGNÓSTICO INTEGRAL PRINTTRACKER - SOLO LECTURA
-
-    # ============================================================
-
-
-
-    def _diagnostic_request(self, endpoint, params=None, timeout=None):
-
-        """GET de diagnóstico. No escribe datos operativos en Odoo ni en PrintTracker."""
-
-        self.ensure_one()
-
-
-
-        url = f'{self.api_url.rstrip("/")}/{endpoint.lstrip("/")}'
-
-        started = time.monotonic()
-
-
-
-        try:
-
-            response = requests.get(
-
-                url,
-
-                headers=self.get_api_headers(),
-
-                params=params or {},
-
-                timeout=(timeout or self.timeout_seconds),
-
-            )
-
-            elapsed = time.monotonic() - started
-
-
-
+        ahora = fields.Datetime.now()
+        Config = self.env['ir.config_parameter'].sudo()
+        Vinculo = self.env['tecnico.dispositivo.gps'].sudo()
+        Visita = self.env['sat.visita.tecnica'].sudo()
+        for vinculo in Vinculo.search([('activo', '=', True)]):
             try:
-
-                payload = response.json()
-
-            except Exception:
-
-                payload = None
-
-
-
-            return {
-
-                'ok': response.status_code == 200,
-
-                'status_code': response.status_code,
-
-                'elapsed': elapsed,
-
-                'url': response.url,
-
-                'payload': payload,
-
-                'text': response.text or '',
-
-            }
-
-
-
-        except requests.exceptions.Timeout as error:
-
-            return {
-
-                'ok': False,
-
-                'status_code': 0,
-
-                'elapsed': time.monotonic() - started,
-
-                'url': url,
-
-                'payload': None,
-
-                'text': f'Timeout: {error}',
-
-            }
-
-        except requests.exceptions.RequestException as error:
-
-            return {
-
-                'ok': False,
-
-                'status_code': 0,
-
-                'elapsed': time.monotonic() - started,
-
-                'url': url,
-
-                'payload': None,
-
-                'text': str(error),
-
-            }
-
-        except Exception as error:
-
-            _logger.exception("❌ Error inesperado en diagnóstico API")
-
-            return {
-
-                'ok': False,
-
-                'status_code': 0,
-
-                'elapsed': time.monotonic() - started,
-
-                'url': url,
-
-                'payload': None,
-
-                'text': str(error),
-
-            }
-
-
-
-    @staticmethod
-
-    def _diagnostic_normalize_serial(value):
-
-        return str(value or '').strip().upper()
-
-
-
-    @staticmethod
-
-    def _diagnostic_sample_text(value, max_length=180):
-
-        text = str(value or '').replace('\n', ' ').replace('\r', ' ').strip()
-
-        if len(text) > max_length:
-
-            return text[:max_length - 3] + '...'
-
-        return text
-
-
-
-    def _diagnostic_classify_event(self, event):
-
-        """
-
-        Usa el clasificador REAL de printtracker.alert cuando está disponible.
-
-        Si el módulo no está cargado o el método falta, no inventa clasificación.
-
-        """
-
-        try:
-
-            Alert = self.env['printtracker.alert'].sudo()
-
-            classifier = getattr(Alert, '_clasificar_event_api', None)
-
-            if classifier:
-
-                result = classifier(event)
-
-                if isinstance(result, dict):
-
-                    return result
-
-        except Exception as error:
-
-            _logger.warning(
-
-                "⚠️ Diagnóstico: no se pudo ejecutar clasificador de alertas: %s",
-
-                error,
-
-            )
-
-
-
-        return {
-
-            'tipo': 'NO_DISPONIBLE',
-
-            'prioridad': '-',
-
-            'titulo': 'Clasificador no disponible',
-
-        }
-
-
-
-    def _diagnostic_get_cron_status(self):
-
-        """Busca el cron de alertas sin depender de un XML ID concreto."""
-
-        self.ensure_one()
-
-
-
-        Cron = self.env['ir.cron'].sudo()
-
-        cron = Cron.search([
-
-            ('code', 'ilike', 'ejecutar_revision_automatica'),
-
-        ], limit=1)
-
-
-
-        if not cron:
-
-            try:
-
-                model = self.env['ir.model'].sudo().search([
-
-                    ('model', '=', 'printtracker.alert.manager'),
-
-                ], limit=1)
-
-                if model:
-
-                    cron = Cron.search([
-
-                        ('model_id', '=', model.id),
-
-                    ], limit=1)
-
-            except Exception:
-
-                cron = Cron.browse()
-
-
-
-        if not cron:
-
-            return {
-
-                'found': False,
-
-                'active': False,
-
-                'name': '-',
-
-                'nextcall': False,
-
-                'lastcall': False,
-
-                'interval': '-',
-
-            }
-
-
-
-        interval = '%s %s' % (
-
-            getattr(cron, 'interval_number', '') or '',
-
-            getattr(cron, 'interval_type', '') or '',
-
-        )
-
-
-
-        return {
-
-            'found': True,
-
-            'active': bool(getattr(cron, 'active', False)),
-
-            'name': cron.name or '-',
-
-            'nextcall': getattr(cron, 'nextcall', False),
-
-            'lastcall': getattr(cron, 'lastcall', False),
-
-            'interval': interval.strip() or '-',
-
-        }
-
-
-
-    def action_check_all_processes(self):
-
-        """
-
-        Diagnóstico integral SOLO LECTURA.
-
-
-
-        Comprueba conexión, devices, currentMeter, supplies, events de las
-
-        últimas 24 horas, coincidencia con equipos alquilados, clasificación
-
-        real de printtracker.alert, alertas existentes, correo y cron.
-
-
-
-        NO crea alertas, NO envía correos, NO cambia stock, NO crea solicitudes
-
-        y NO modifica historial de tóner.
-
-        """
-
-        self.ensure_one()
-
-
-
-        now_utc = datetime.utcnow()
-
-        start_24h = now_utc - timedelta(hours=24)
-
-        start_30d = now_utc - timedelta(days=30)
-
-
-
-        start_24h_str = start_24h.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-
-        start_30d_str = start_30d.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-
-        end_str = now_utc.strftime('%Y-%m-%dT%H:%M:%S.000Z')
-
-
-
-        include_children = bool(self.incluir_entidades_hijas)
-
-        exclude_disabled = bool(self.solo_equipos_gestionados)
-
-        large_limit = 50000
-
-
-
-        report = []
-
-        warnings = []
-
-        errors = []
-
-        raw_events = []
-
-
-
-        def add(title, value='', status='info'):
-
-            icon = {
-
-                'ok': '✅',
-
-                'warn': '⚠️',
-
-                'error': '❌',
-
-                'info': 'ℹ️',
-
-            }.get(status, 'ℹ️')
-
-            report.append(f'{icon} {title}: {value}')
-
-
-
-        report.append('=== DIAGNÓSTICO INTEGRAL PRINTTRACKER ===')
-
-        report.append('Fecha UTC: %s' % now_utc.strftime('%Y-%m-%d %H:%M:%S'))
-
-        report.append('Modo: SOLO LECTURA - no crea alertas, stock, solicitudes ni correos')
-
-        report.append('')
-
-
-
-        # 1. ENTIDAD / CONEXIÓN
-
-        report.append('--- 1. CONEXIÓN / ENTIDAD ---')
-
-        entity = self._diagnostic_request(
-
-            f'entity/{self.entity_bbbb_id}',
-
-            {'includeChildren': include_children},
-
-        )
-
-
-
-        if entity['ok'] and isinstance(entity['payload'], dict):
-
-            entity_name = entity['payload'].get('name') or 'Sin nombre'
-
-            children = entity['payload'].get('children') or []
-
-            add('API entidad', f"HTTP {entity['status_code']} - {entity_name} ({entity['elapsed']:.2f}s)", 'ok')
-
-            add('Entidades hijas visibles', len(children), 'ok')
-
-        else:
-
-            message = self._diagnostic_sample_text(entity['text'], 300)
-
-            add('API entidad', f"HTTP {entity['status_code']} - {message}", 'error')
-
-            errors.append('Falló la conexión con la entidad principal.')
-
-
-
-        report.append('')
-
-
-
-        # 2. DISPOSITIVOS
-
-        report.append('--- 2. DISPOSITIVOS ---')
-
-        devices = self._diagnostic_request(
-
-            f'entity/{self.entity_bbbb_id}/device',
-
-            {
-
-                'includeChildren': include_children,
-
-                'excludeDisabled': exclude_disabled,
-
-                'limit': large_limit,
-
-                'page': 1,
-
-            },
-
-        )
-
-        device_rows = devices['payload'] if isinstance(devices['payload'], list) else []
-
-
-
-        if devices['ok']:
-
-            add('Devices API', f"HTTP {devices['status_code']} - {len(device_rows)} registros ({devices['elapsed']:.2f}s)", 'ok')
-
-        else:
-
-            add('Devices API', f"HTTP {devices['status_code']} - {self._diagnostic_sample_text(devices['text'], 250)}", 'error')
-
-            errors.append('Falló la consulta de dispositivos.')
-
-
-
-        device_serials = {
-
-            self._diagnostic_normalize_serial(row.get('serialNumber'))
-
-            for row in device_rows
-
-            if self._diagnostic_normalize_serial(row.get('serialNumber'))
-
-        }
-
-        add('Series válidas recibidas', len(device_serials), 'info')
-
-        report.append('')
-
-
-
-        # 3. MEDIDORES
-
-        report.append('--- 3. MEDIDORES ACTUALES ---')
-
-        meters = self._diagnostic_request(
-
-            f'entity/{self.entity_bbbb_id}/currentMeter',
-
-            {
-
-                'includeChildren': include_children,
-
-                'excludeDisabled': exclude_disabled,
-
-                'limit': large_limit,
-
-                'page': 1,
-
-            },
-
-        )
-
-        meter_rows = meters['payload'] if isinstance(meters['payload'], list) else []
-
-
-
-        if meters['ok']:
-
-            add('CurrentMeter API', f"HTTP {meters['status_code']} - {len(meter_rows)} registros ({meters['elapsed']:.2f}s)", 'ok')
-
-            with_default = 0
-
-            with_life = 0
-
-            for row in meter_rows:
-
-                page_counts = row.get('pageCounts') or {}
-
-                if isinstance(page_counts, dict):
-
-                    if page_counts.get('default'):
-
-                        with_default += 1
-
-                    if page_counts.get('life'):
-
-                        with_life += 1
-
-            add('Medidores con pageCounts.default', with_default, 'info')
-
-            add('Medidores con pageCounts.life', with_life, 'info')
-
-        else:
-
-            add('CurrentMeter API', f"HTTP {meters['status_code']} - {self._diagnostic_sample_text(meters['text'], 250)}", 'error')
-
-            errors.append('Falló la consulta de medidores.')
-
-
-
-        report.append('')
-
-
-
-        # 4. CONSUMIBLES
-
-        report.append('--- 4. CONSUMIBLES / SUPPLIES ---')
-
-        supplies = self._diagnostic_request(
-
-            f'entity/{self.entity_bbbb_id}/supplies',
-
-            {
-
-                'includeChildren': include_children,
-
-                'replaced': False,
-
-                # Diagnóstico: basta una muestra reciente; no intentamos
-
-                # descargar todo el histórico de suministros.
-
-                'start': start_30d_str,
-
-                'end': end_str,
-
-                'limit': min(int(self.max_records_per_request or 100), 200),
-
-                'page': 1,
-
-            },
-
-            timeout=max(int(self.timeout_seconds or 30), 45),
-
-        )
-
-        supply_rows = supplies['payload'] if isinstance(supplies['payload'], list) else []
-
-
-
-        if supplies['ok']:
-
-            add('Supplies API', f"HTTP {supplies['status_code']} - {len(supply_rows)} registros ({supplies['elapsed']:.2f}s)", 'ok')
-
-            supply_types = {}
-
-            for row in supply_rows:
-
-                key = row.get('supply') or 'sin_identificar'
-
-                supply_types[key] = supply_types.get(key, 0) + 1
-
-            if supply_types:
-
-                top_supplies = sorted(supply_types.items(), key=lambda item: (-item[1], item[0]))[:10]
-
-                add('Tipos principales', ', '.join(f'{key}={count}' for key, count in top_supplies), 'info')
-
-        else:
-
-            add(
-
-                'Supplies API',
-
-                f"HTTP {supplies['status_code']} - {self._diagnostic_sample_text(supplies['text'], 250)}",
-
-                'warn',
-
-            )
-
-            warnings.append(
-
-                'La consulta de supplies no respondió dentro del tiempo esperado. '
-
-                'Esto no bloquea la detección de alerts/events.'
-
-            )
-
-
-
-        report.append('')
-
-
-
-        # 5. EVENTS / ALERTAS
-
-        report.append('--- 5. EVENTS / ALERTAS (ÚLTIMAS 24 HORAS) ---')
-
-        events = self._diagnostic_request(
-
-            f'entity/{self.entity_bbbb_id}/events',
-
-            {
-
-                'excludeDisabled': exclude_disabled,
-
-                'includeChildren': include_children,
-
-                'start': start_24h_str,
-
-                'end': end_str,
-
-            },
-
-        )
-
-        event_rows = events['payload'] if isinstance(events['payload'], list) else []
-
-        raw_events = event_rows
-
-
-
-        if events['ok']:
-
-            add('Events API', f"HTTP {events['status_code']} - {len(event_rows)} eventos ({events['elapsed']:.2f}s)", 'ok' if event_rows else 'warn')
-
-            add('Rango consultado', f'{start_24h_str} → {end_str}', 'info')
-
-            if not event_rows:
-
-                warnings.append('La API respondió correctamente pero no devolvió events en las últimas 24 horas.')
-
-        else:
-
-            add('Events API', f"HTTP {events['status_code']} - {self._diagnostic_sample_text(events['text'], 300)}", 'error')
-
-            errors.append('Falló la consulta de events.')
-
-
-
-        # 6. EQUIPOS ALQUILADOS / COINCIDENCIAS
-
-        rented_serials = set()
-
-        try:
-
-            rented = self.env['alquiler'].sudo().search([
-
-                ('estado_alquiler_id', '=', 'alquilada'),
-
-            ])
-
-            rented_serials = {
-
-                self._diagnostic_normalize_serial(value)
-
-                for value in rented.mapped('serie')
-
-                if self._diagnostic_normalize_serial(value)
-
-            }
-
-            add('Equipos alquilados en Odoo', len(rented_serials), 'ok')
-
-        except Exception as error:
-
-            add('Equipos alquilados en Odoo', str(error), 'error')
-
-            errors.append('No se pudo consultar equipos alquilados.')
-
-
-
-        relevant_events = []
-
-        outside_events = []
-
-        for event in event_rows:
-
-            serial = self._diagnostic_normalize_serial(event.get('deviceSerialNumber'))
-
-            if serial and serial in rented_serials:
-
-                relevant_events.append(event)
-
-            else:
-
-                outside_events.append(event)
-
-
-
-        add('Events de equipos alquilados', len(relevant_events), 'ok' if relevant_events else 'warn')
-
-        add('Events fuera del filtro de alquiler', len(outside_events), 'info')
-
-
-
-        # 7. CLASIFICACIÓN REAL DE ODOO
-
-        report.append('')
-
-        report.append('--- 6. CLASIFICACIÓN ODOO ---')
-
-        class_counts = {}
-
-        classification_errors = 0
-
-        for event in event_rows:
-
-            try:
-
-                classification = self._diagnostic_classify_event(event)
-
-                alert_kind = classification.get('tipo') or 'sin_tipo'
-
-                class_counts[alert_kind] = class_counts.get(alert_kind, 0) + 1
-
-            except Exception:
-
-                classification_errors += 1
-
-
-
-        if class_counts:
-
-            for alert_kind, count in sorted(class_counts.items(), key=lambda item: (-item[1], item[0])):
-
-                add(alert_kind, count, 'info')
-
-        elif events['ok']:
-
-            add('Clasificación', 'Sin events para clasificar', 'warn')
-
-
-
-        if classification_errors:
-
-            add('Errores clasificando', classification_errors, 'error')
-
-            errors.append('Existen events que no pudieron clasificarse.')
-
-
-
-        # 8. DEDUPLICACIÓN / ALERTAS EXISTENTES
-
-        report.append('')
-
-        report.append('--- 7. REGISTROS DE ALERTA ODOO ---')
-
-        try:
-
-            event_ids = [str(event.get('id')) for event in event_rows if event.get('id')]
-
-            existing_alerts = self.env['printtracker.alert'].sudo().search([
-
-                ('api_event_id', 'in', event_ids),
-
-            ]) if event_ids else self.env['printtracker.alert'].browse()
-
-            add('Events del rango ya registrados', len(existing_alerts), 'info')
-
-            add('Events del rango aún no registrados', max(0, len(event_ids) - len(existing_alerts)), 'info')
-
-        except Exception as error:
-
-            add('Modelo printtracker.alert', str(error), 'error')
-
-            errors.append('No se pudo comprobar printtracker.alert.')
-
-
-
-        # 9. CORREO
-
-        report.append('')
-
-        report.append('--- 8. NOTIFICACIONES POR CORREO ---')
-
-        try:
-
-            cp = self.env['ir.config_parameter'].sudo()
-
-            destination = cp.get_param('printtracker.alert.email_destino', 'soporte@andescopiers.com.pe')
-
-            mail_servers = self.env['ir.mail_server'].sudo().search([])
-
-            add('Correo destino', destination or 'NO CONFIGURADO', 'ok' if destination else 'warn')
-
-            add('Servidores salientes configurados', len(mail_servers), 'ok' if mail_servers else 'warn')
-
-            if not mail_servers:
-
-                warnings.append('No se encontró un servidor de correo saliente en Odoo. No se envió ningún correo durante este diagnóstico.')
-
-        except Exception as error:
-
-            add('Configuración de correo', str(error), 'error')
-
-            errors.append('No se pudo comprobar configuración de correo.')
-
-
-
-        # 10. CRON
-
-        report.append('')
-
-        report.append('--- 9. CRON DE ALERTAS ---')
-
-        cron = self._diagnostic_get_cron_status()
-
-        if cron['found']:
-
-            add('Cron', cron['name'], 'ok')
-
-            add('Activo', 'Sí' if cron['active'] else 'No', 'ok' if cron['active'] else 'error')
-
-            add('Intervalo', cron['interval'], 'info')
-
-            add('Próxima ejecución', cron['nextcall'] or '-', 'info')
-
-            add('Última ejecución', cron['lastcall'] or '-', 'info')
-
-            if not cron['active']:
-
-                errors.append('El cron de alertas está desactivado.')
-
-        else:
-
-            add('Cron', 'No encontrado', 'error')
-
-            errors.append('No se encontró un ir.cron relacionado con ejecutar_revision_automatica.')
-
-
-
-        # 11. MUESTRA DE EVENTS
-
-        report.append('')
-
-        report.append('--- 10. MUESTRA DE EVENTS DEVUELTOS ---')
-
-        if event_rows:
-
-            for index, event in enumerate(event_rows[:25], start=1):
-
-                classification = self._diagnostic_classify_event(event)
-
-                report.append(
-
-                    '#%s | serie=%s | alertType=%s | supplyKey=%s | status=%s | Odoo=%s/%s | %s'
-
-                    % (
-
-                        index,
-
-                        event.get('deviceSerialNumber') or '-',
-
-                        event.get('alertType') or '-',
-
-                        event.get('supplyKey') or '-',
-
-                        event.get('resolutionStatus') or '-',
-
-                        classification.get('tipo') or '-',
-
-                        classification.get('prioridad') or '-',
-
-                        self._diagnostic_sample_text(event.get('description') or '-', 140),
-
+                pos = posiciones.get(vinculo.traccar_device_id)
+                if not self._gps_posicion_valida(pos, max_edad_min=5):
+                    _logger.info('[CRON-MOVIMIENTO] device=%s sin posición reciente válida', vinculo.traccar_device_id)
+                    continue
+                lat, lon = float(pos['latitude']), float(pos['longitude'])
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
+                    continue
+                precision = pos.get('accuracy')
+                if precision is None:
+                    precision = (pos.get('attributes') or {}).get('accuracy')
+                if precision is not None and float(precision) > 100:
+                    continue
+                dt = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
+                instante = dt.astimezone(timezone.utc).replace(tzinfo=None)
+                if instante > ahora + timedelta(minutes=2):
+                    continue
+
+                visitas = Visita.search([
+                    ('tecnico_id', '=', vinculo.user_id.id),
+                    ('estado', '=', 'programada'),
+                    ('agenda', '>=', ahora - timedelta(hours=2)),
+                    ('agenda', '<=', ahora + timedelta(hours=4)),
+                ])
+                # Solo una visita programada con tickets EN PROCESO y geocerca.
+                candidatas = visitas.filtered(lambda v: (
+                    v.ticket_ids
+                    and any(t.estado == 'proceso' and t.traccar_geofence_id for t in v.ticket_ids)
+                    and v._coordenadas_validas(v.latitud, v.longitud)
+                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) >= 150
+                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) <= 20000
+                ))
+                clave = 'sat.gps.movimiento.%s' % vinculo.traccar_device_id
+                if len(candidatas) != 1:
+                    Config.set_param(clave, '')
+                    _logger.info('[CRON-MOVIMIENTO] device=%s visitas candidatas=%s; sin cambio', vinculo.traccar_device_id, len(candidatas))
+                    continue
+                visita = candidatas[0]
+                # No inferir nuevo inicio si el técnico mantiene otra visita abierta.
+                if visita._otra_visita_activa():
+                    Config.set_param(clave, '')
+                    continue
+                actual = {'visita': visita.id, 'lat': lat, 'lon': lon, 'ts': instante.isoformat(), 'pos_id': pos.get('id')}
+                previo_txt = Config.get_param(clave, default='')
+                try:
+                    previo = json.loads(previo_txt) if previo_txt else None
+                except (ValueError, TypeError):
+                    previo = None
+                if not previo or previo.get('visita') != visita.id:
+                    Config.set_param(clave, json.dumps(actual))
+                    continue
+                anterior = datetime.fromisoformat(previo['ts'])
+                segundos = (instante - anterior).total_seconds()
+                if segundos <= 0:
+                    continue
+                # El mismo fix de Traccar no es una segunda observación.
+                if str(previo.get('pos_id')) == str(actual['pos_id']):
+                    continue
+                if segundos > 600:
+                    Config.set_param(clave, json.dumps(actual))
+                    continue
+                if segundos < 30:
+                    continue
+                desplazamiento = self._haversine_metros(previo['lat'], previo['lon'], lat, lon)
+                distancia_antes = self._haversine_metros(previo['lat'], previo['lon'], visita.latitud, visita.longitud)
+                distancia_ahora = self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
+                # Una ruta urbana puede comenzar alejándose del cliente.
+                # Detectar desplazamiento real, no dirección hacia el destino.
+                # 300 m reduce activaciones por ruido GPS o movimientos mínimos.
+                if desplazamiento < 300:
+                    # NO reemplazar el punto inicial: el movimiento se mide
+                    # de forma acumulada respecto a este anclaje válido.
+                    _logger.info(
+                        '[CRON-MOVIMIENTO] device=%s visita=%s desde_inicio=%.0fm '                         '(<300m) ventana=%.0fs; conserva anclaje',
+                        vinculo.traccar_device_id, visita.id, desplazamiento, segundos,
                     )
-
+                    continue
+                _logger.info(
+                    '[CRON-MOVIMIENTO] device=%s visita=%s desplazamiento=%.0fm acercamiento=%.0fm; movimiento válido sin exigir dirección',
+                    vinculo.traccar_device_id, visita.id, desplazamiento, distancia_antes - distancia_ahora,
                 )
+                referencia = 'traccar-movement:%s@%s' % (vinculo.traccar_device_id, instante.isoformat())
+                if visita.registrar_inicio_ruta_gps(instante, referencia, ubicacion_actual={'latitude': lat, 'longitude': lon}):
+                    _logger.info('[CRON-MOVIMIENTO] Ruta automática visita=%s técnico=%s', visita.id, vinculo.user_id.id)
+                Config.set_param(clave, '')
+            except Exception:
+                _logger.exception('[CRON-MOVIMIENTO] Falló evaluación device=%s', vinculo.traccar_device_id)
+        return True
 
-        else:
+    @api.model
+    def cron_gps_detectar_llegada(self):
+        """Detecta presencia confirmada mediante DOS posiciones recientes distintas.
 
-            report.append('Sin events en el rango consultado.')
+        Si el webhook geofenceEnter no llegó (p.ej. técnico ya estaba dentro),
+        permite registrar el instante de la segunda observación, NUNCA la hora
+        histórica de entrada. No altera tickets sin visita vinculada o ante
+        varias visitas candidatas. No usa coordenadas de otra geocerca.
+        """
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            return True
+        ahora = fields.Datetime.now()
+        parametros = self.env['ir.config_parameter'].sudo()
+        Vinculo = self.env['tecnico.dispositivo.gps'].sudo()
+        Visita = self.env['sat.visita.tecnica'].sudo()
+        for vinculo in Vinculo.search([('activo', '=', True)]):
+            try:
+                pos = posiciones.get(vinculo.traccar_device_id)
+                if not self._gps_posicion_valida(pos, max_edad_min=5):
+                    continue
+                lat = pos.get('latitude')
+                lon = pos.get('longitude')
+                if lat is None or lon is None:
+                    continue
+                lat, lon = float(lat), float(lon)
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                    continue
+                precision = pos.get('accuracy')
+                if precision is None:
+                    precision = (pos.get('attributes') or {}).get('accuracy')
+                if precision is not None and float(precision) > 100:
+                    continue
+                fix = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
+                fix_utc = fix.astimezone(timezone.utc).replace(tzinfo=None)
+                if fix_utc > ahora + timedelta(minutes=2):
+                    continue
+                visitas = Visita.search([
+                    ('tecnico_id', '=', vinculo.user_id.id),
+                    ('estado', 'in', ['programada', 'en_ruta']),
+                    ('agenda', '>=', ahora - timedelta(days=1)),
+                    ('agenda', '<=', ahora + timedelta(days=1)),
+                ])
+                candidatos = visitas.filtered(lambda v: (
+                    v.ticket_ids and v.latitud and v.longitud
+                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) <= 100
+                    and any(t.traccar_geofence_id for t in v.ticket_ids)
+                ))
+                if len(candidatos) != 1:
+                    if visitas and not candidatos:
+                        _logger.info('[CRON-LLEGADA] Técnico %s: ninguna visita coincide con GPS actual', vinculo.user_id.id)
+                    continue
+                visita = candidatos[0]
+                # Verificar además la geocerca efectiva del ticket (no otro círculo).
+                gids = (pos.get('geofenceIds') if isinstance(pos.get('geofenceIds'), list) else None)
+                ids_visita = {t.traccar_geofence_id for t in visita.ticket_ids if t.traccar_geofence_id}
+                if gids is not None and not ids_visita.intersection(set(gids)):
+                    continue
+                clave = 'sat.gps.presencia.%s.%s' % (vinculo.traccar_device_id, visita.id)
+                anterior = parametros.get_param(clave, default='')
+                # Los puntos deben ser distintos y separados al menos 20 segundos.
+                if not anterior:
+                    parametros.set_param(clave, fix_utc.isoformat())
+                    continue
+                try:
+                    primera = datetime.fromisoformat(anterior)
+                except (ValueError, TypeError):
+                    primera = False
+                if not primera or (fix_utc - primera).total_seconds() > 300 or fix_utc < primera:
+                    parametros.set_param(clave, fix_utc.isoformat())
+                    continue
+                if (fix_utc - primera).total_seconds() < 20:
+                    continue
+                if visita.fecha_en_ruta and fix_utc < visita.fecha_en_ruta:
+                    continue
+                referencia = 'traccar-position:%s@%s' % (pos.get('id'), fix_utc.isoformat())
+                if visita.registrar_llegada_verificada(fix_utc, referencia, 'traccar'):
+                    visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(notificar=False, fecha_evento=fix_utc)
+                    _logger.info('[CRON-LLEGADA] Llegada observada por doble posición: visita=%s tecnico=%s', visita.id, vinculo.user_id.id)
+                parametros.set_param(clave, '')
+            except Exception:
+                _logger.exception('[CRON-LLEGADA] Error verificando técnico %s; no se modificó llegada por esta observación', vinculo.user_id.id)
+        return True
 
+    @api.model
+    def cron_gps_detectar_salida(self):
+        """Comprueba salidas GPS reales de visitas en sitio o pendientes.
 
+        Evento geofenceExit: se requieren dos posiciones externas posteriores.
+        Sin webhook: se exigen tres posiciones externas verificadas: dos
+        para detectar el retiro y una tercera para confirmarlo.
+        Nunca depende del estado administrativo de los tickets.
+        """
+        Visita = self.env['sat.visita.tecnica'].sudo()
+        Config = self.env['ir.config_parameter'].sudo()
+        visitas = Visita.search([
+            ('estado', 'in', ['en_sitio', 'salida_pendiente']),
+            ('fecha_llegada', '!=', False),
+            ('fecha_salida', '=', False),
+        ], order='id asc')
+        _logger.info('[CRON-SALIDA] visitas_abiertas=%s', len(visitas))
+        if not visitas:
+            return True
+        posiciones = self.env['traccar.api.service'].get_all_positions()
+        if not posiciones:
+            _logger.warning('[CRON-SALIDA] Sin posiciones Traccar; no se confirma nada')
+            return True
+        confirmadas = 0
+        for visita in visitas:
+            clave = 'sat.gps.salida.verificacion.%s' % visita.id
+            try:
+                vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
+                    ('user_id', '=', visita.tecnico_id.id),
+                    ('activo', '=', True),
+                ], limit=1)
+                if not vinculo:
+                    _logger.info('[CRON-SALIDA] visita=%s sin dispositivo asignado', visita.id)
+                    continue
+                pos = posiciones.get(vinculo.traccar_device_id)
+                if not self._gps_posicion_valida(pos, max_edad_min=5):
+                    _logger.info('[CRON-SALIDA] visita=%s sin posición GPS reciente', visita.id)
+                    continue
+                lat, lon = float(pos['latitude']), float(pos['longitude'])
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
+                    continue
+                precision = pos.get('accuracy')
+                if precision is None:
+                    precision = (pos.get('attributes') or {}).get('accuracy')
+                if precision is not None and float(precision) > 100:
+                    continue
+                if not visita._coordenadas_validas(visita.latitud, visita.longitud):
+                    _logger.warning('[CRON-SALIDA] visita=%s sin destino GPS válido', visita.id)
+                    continue
+                fix = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
+                if fix.tzinfo is None:
+                    continue
+                instante = fix.astimezone(timezone.utc).replace(tzinfo=None)
+                if instante <= visita.fecha_llegada or instante > fields.Datetime.now():
+                    continue
+                metros = visita._distancia_metros(lat, lon, visita.latitud, visita.longitud)
+                # La zona de permanencia es de 150 m; se respetan también
+                # los márgenes de precisión de las lecturas GPS.
+                margen_precision = max(0.0, float(precision or 0.0))
+                if metros <= UMBRAL_METROS_SALIDA + margen_precision:
+                    Config.set_param(clave, '')
+                    if visita.estado == 'salida_pendiente':
+                        referencia_regreso = 'traccar-position:%s@%s' % (
+                            pos.get('id'), instante.isoformat())
+                        # Sólo revertir ante una posición posterior a la detección.
+                        eventos_regreso = visita.evento_ids.filtered(
+                            lambda e: e.tipo == 'salida_detectada')
+                        ultima_salida = (eventos_regreso.sorted('id', reverse=True)[0]
+                                         if eventos_regreso else False)
+                        fecha_detectada = ((ultima_salida.fecha_evento or ultima_salida.fecha_recepcion)
+                                           if ultima_salida else visita.fecha_llegada)
+                        if instante > fecha_detectada and visita.registrar_regreso(
+                                instante, referencia_regreso):
+                            for ticket in visita.ticket_ids:
+                                ticket._cancelar_tokens_retiro_pendientes()
+                            _logger.info('[CRON-SALIDA] visita=%s regreso GPS confirmado a %.0fm',
+                                         visita.id, metros)
+                    _logger.info('[CRON-SALIDA] visita=%s a %.0fm de la sede '
+                                 '(radio=150m, precisión=%sm); aún en zona',
+                                 visita.id, metros, margen_precision)
+                    continue
+                eventos = visita.evento_ids.filtered(lambda e: e.tipo in ('salida_detectada', 'regreso'))
+                ultimo = eventos.sorted('id', reverse=True)[0] if eventos else False
+                # Un regreso no bloquea futuros retiros: reinicia la
+                # comprobación y exige posiciones posteriores al regreso.
+                limite = (ultimo.fecha_evento or ultimo.fecha_recepcion) if ultimo else visita.fecha_llegada
+                if instante <= limite:
+                    continue
+                actual = {
+                    'lat': lat, 'lon': lon, 'ts': instante.isoformat(),
+                    'position_id': str(pos.get('id') or ''),
+                    'evento_id': ultimo.id if ultimo else 0,
+                    'visita_id': visita.id,
+                }
+                anterior_txt = Config.get_param(clave) or ''
+                try:
+                    anterior = json.loads(anterior_txt) if anterior_txt else None
+                except (ValueError, TypeError):
+                    anterior = None
+                if (not anterior or anterior.get('visita_id') != visita.id
+                        or anterior.get('evento_id') != actual['evento_id']):
+                    Config.set_param(clave, json.dumps(actual))
+                    _logger.info('[CRON-SALIDA] visita=%s primera posición externa %.0fm', visita.id, metros)
+                    continue
+                transcurrido = (instante - datetime.fromisoformat(anterior['ts'])).total_seconds()
+                if transcurrido <= 0 or anterior['position_id'] == actual['position_id']:
+                    continue
+                if transcurrido > 1800:
+                    Config.set_param(clave, json.dumps(actual))
+                    continue
+                if transcurrido < 120:
+                    continue
+                # Si no llegó el webhook, las dos observaciones externas generan
+                # una detección fechada, y una tercera confirma el retiro.
+                if visita.estado == 'en_sitio':
+                    ref_detectada = 'traccar-posiciones:%s,%s' % (anterior['position_id'], actual['position_id'])
+                    if visita.registrar_salida_detectada(referencia=ref_detectada, fecha_evento=instante):
+                        Config.set_param(clave, json.dumps({
+                            **actual, 'evento_id': visita.evento_ids.sorted('id', reverse=True)[0].id,
+                        }))
+                        _logger.info('[CRON-SALIDA] visita=%s retiro detectado por GPS sin webhook; requiere tercera posición', visita.id)
+                    continue
+                if visita.estado != 'salida_pendiente':
+                    continue
+                # En espera tras la detección por cron, la referencia guarda
+                # como evidencia la fecha de las dos primeras posiciones.
+                if ultimo and instante <= (ultimo.fecha_evento or ultimo.fecha_recepcion):
+                    continue
+                ref = 'traccar-posiciones:%s,%s@%s' % (
+                    anterior['position_id'], actual['position_id'], instante.isoformat())
+                with self.env.cr.savepoint():
+                    if visita.registrar_salida_confirmada(
+                        instante, 'traccar', ref,
+                        ubicacion_actual={'latitude': lat, 'longitude': lon},
+                    ):
+                        confirmadas += 1
+                        Config.set_param(clave, '')
+                        _logger.info('[CRON-SALIDA] Confirmada visita=%s a %.0fm', visita.id, metros)
+            except Exception:
+                _logger.exception('[CRON-SALIDA] Error procesando visita=%s', visita.id)
+        _logger.info('[CRON-SALIDA] abiertas=%s confirmadas=%s', len(visitas), confirmadas)
+        return True
 
-        # RESULTADO GENERAL
+    @api.model
+    def cron_actualizar_en_revision(self):
+        """Pasar de en_sitio a en_revision tras 10 min de llegada confirmada.
 
-        report.append('')
+        Es una regla administrativa de SAT: el tiempo transcurrido no demuestra
+        que el técnico haya empezado físicamente una revisión. No se cambia el
+        estado de la visita ni se inventan eventos GPS.
+        """
+        ahora = fields.Datetime.now()
+        umbral = ahora - timedelta(minutes=10)
+        tickets = self.sudo().search([
+            ('estado', '=', 'en_sitio'),
+            ('gps_visita_id', '!=', False),
+            ('fecha_llegada', '!=', False),
+            ('fecha_llegada', '<=', umbral),
+        ], order='fecha_llegada asc', limit=200)
+        actualizados = 0
+        omitidos = 0
+        for ticket in tickets:
+            visita = ticket.gps_visita_id
+            # Si se detectó salida o la visita ya está cerrada, no iniciar revisión.
+            if (not visita or visita.estado != 'en_sitio'
+                    or not visita.fecha_llegada
+                    or visita.fecha_llegada > umbral
+                    or visita.fecha_salida):
+                omitidos += 1
+                continue
+            try:
+                with self.env.cr.savepoint():
+                    # Reutiliza la acción existente: registra fecha, evento
+                    # y notifica una sola vez cuando cambia el estado.
+                    ticket.action_en_revision()
+                    actualizados += 1
+                    _logger.info(
+                        '[CRON-REVISION] ticket=%s visita=%s '
+                        'en_sitio -> en_revision tras %.1f min',
+                        ticket.name, visita.id,
+                        (ahora - visita.fecha_llegada).total_seconds() / 60.0,
+                    )
+            except Exception:
+                _logger.exception(
+                    '[CRON-REVISION] Falló ticket=%s visita=%s',
+                    ticket.name, visita.id,
+                )
+        _logger.info(
+            '[CRON-REVISION] candidatos=%s actualizados=%s omitidos=%s',
+            len(tickets), actualizados, omitidos,
+        )
+        return True
 
-        report.append('=== RESULTADO GENERAL ===')
+    @api.model
+    def api_actualizar_estado_gps(self, tecnico_traccar_device_id, evento_tipo, datos=None):
+        datos = datos or {}
+        datos['_fecha_evento_validada'] = self._gps_fecha_evento(datos)
+        _logger.info(
+            "[GPS-API] device=%s tipo=%s lat=%s lon=%s geofence_id=%s",
+            tecnico_traccar_device_id, evento_tipo,
+            datos.get('latitude'), datos.get('longitude'),
+            datos.get('geofenceId'),
+        )
+        vinculo = self.env['tecnico.dispositivo.gps'].sudo().search([
+            ('traccar_device_id', '=', tecnico_traccar_device_id),
+            ('activo', '=', True),
+        ], limit=1)
+        if not vinculo:
+            _logger.warning("[GPS-API] Sin tecnico para device_id=%s", tecnico_traccar_device_id)
+            return {'success': False, 'error': f'Sin tecnico para dispositivo {tecnico_traccar_device_id}'}
 
-        if errors:
+        tecnico    = vinculo.user_id
+        hoy_inicio, hoy_fin = self._get_rango_hoy()
 
-            overall = 'error'
+        tickets_hoy = self.sudo().search([
+            ('responsable', '=', tecnico.id),
+            ('estado', 'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
+            ('agenda', '>=', hoy_inicio),
+            ('agenda', '<=', hoy_fin),
+        ], order='agenda asc')
 
-            report.append('❌ Se encontraron problemas que requieren revisión:')
+        _logger.info("[GPS-API] Tickets HOY para %s: %d", tecnico.name, len(tickets_hoy))
 
-            for item in errors:
+        if not tickets_hoy:
+            tickets_otros = self.sudo().search([
+                ('responsable', '=', tecnico.id),
+                ('estado', 'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
+            ], limit=5)
+            if tickets_otros:
+                detalle = ', '.join(f"{t.name}(agenda:{t.agenda})" for t in tickets_otros)
+                return {
+                    'success': True,
+                    'message': f'Sin tickets HOY. Ignorados: {detalle}',
+                    'tickets_actualizados': [],
+                }
+            return {
+                'success': True,
+                'message': f'Sin tickets activos para {tecnico.name}',
+                'tickets_actualizados': [],
+            }
 
-                report.append(f'   - {item}')
-
-        elif warnings:
-
-            overall = 'warning'
-
-            report.append('⚠️ Los procesos principales responden, con observaciones:')
-
-            for item in warnings:
-
-                report.append(f'   - {item}')
-
-        else:
-
-            overall = 'ok'
-
-            report.append('✅ Todas las comprobaciones ejecutadas respondieron correctamente.')
-
-
-
-        report_text = '\n'.join(str(line) for line in report)
-
-        _logger.info("🔎 === DIAGNÓSTICO PRINTTRACKER ===\n%s", report_text)
-
-
-
-        html_report = '<pre style="white-space: pre-wrap; font-family: monospace;">%s</pre>' % escape(report_text)
-
-        raw_events_text = json.dumps(raw_events, ensure_ascii=False, indent=2, default=str)
-
-
-
-        self.sudo().write({
-
-            'diagnostic_status': overall,
-
-            'diagnostic_generated_at': fields.Datetime.now(),
-
-            'diagnostic_report_html': html_report,
-
-            'diagnostic_raw_events': raw_events_text,
-
-        })
-
-
-
-        action = {
-
-            'type': 'ir.actions.act_window',
-
-            'name': 'Diagnóstico PrintTracker',
-
-            'res_model': 'printtracker.config',
-
-            'res_id': self.id,
-
-            'view_mode': 'form',
-
-            'target': 'new',
-
-            'context': dict(self.env.context, printtracker_diagnostic_mode=True),
-
-        }
-
-
-
-        # Usar la vista moderna dedicada si está cargada. Si por alguna razón
-
-        # no existe todavía, Odoo abrirá el formulario normal sin romper la prueba.
-
+        actualizados = self.env['ticket.alquiler']
         try:
-
-            diagnostic_view = self.env.ref(
-
-                'sat.view_printtracker_config_diagnostic_form',
-
-                raise_if_not_found=False,
-
-            )
-
-            if diagnostic_view:
-
-                action['view_id'] = diagnostic_view.id
-
-                action['views'] = [(diagnostic_view.id, 'form')]
-
-        except Exception:
-
-            _logger.exception(
-
-                '⚠️ No se pudo resolver la vista moderna de diagnóstico PrintTracker'
-
-            )
-
-
-
-        return action
-
-
-
-    def get_api_headers(self):
-
-        """Retorna headers para requests a la API"""
+            if evento_tipo == 'geofenceEnter':
+                actualizados = self._gps_procesar_llegada(tickets_hoy, datos)
+            elif evento_tipo == 'geofenceExit':
+                actualizados = self._gps_procesar_salida(tickets_hoy, datos)
+            elif evento_tipo == 'deviceMoving':
+                actualizados = self._gps_procesar_movimiento(tickets_hoy, datos)
+        except Exception as e:
+            _logger.exception("[GPS-API] Error: %s", e)
+            for t in tickets_hoy:
+                t.sudo()._registrar_evento(f"Error GPS [{evento_tipo}]: {str(e)}")
+            return {'success': False, 'error': str(e), 'tickets_actualizados': []}
 
         return {
-
-            'x-api-key': self.api_key,
-
-            'Content-Type': 'application/json'
-
+            'success': True,
+            'tecnico': tecnico.name,
+            'evento':  evento_tipo,
+            'tickets_actualizados': [
+                {'id': t.id, 'name': t.name, 'estado': t.estado}
+                for t in actualizados
+            ],
         }
 
+    def _gps_procesar_llegada(self, tickets_hoy, datos):
+        """Solo geofenceEnter explícito con visita y geocerca correspondiente."""
+        resultado = self.env['ticket.alquiler']
+        gid = datos.get('geofenceId')
+        fecha = datos.get('_fecha_evento_validada')
+        if not gid or not fecha:
+            return resultado
+        # Regreso a la geocerca durante una salida pendiente.
+        regresos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
+            t.gps_visita_id.estado == 'salida_pendiente' and
+            t.traccar_geofence_id == gid).mapped('gps_visita_id')
+        if len(regresos) == 1:
+            visita_regreso = regresos[0]
+            if fecha >= visita_regreso.fecha_llegada:
+                referencia_regreso = ('traccar-event:%s' % datos.get('eventId')
+                                      if datos.get('eventId') else
+                                      'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha)))
+                if visita_regreso.registrar_regreso(fecha, referencia_regreso):
+                    self.env['ir.config_parameter'].sudo().set_param(
+                        'sat.gps.salida.verificacion.%s' % visita_regreso.id, '')
+                    _logger.info('[GPS] Regreso geocerca confirmado visita=%s', visita_regreso.id)
+                    return visita_regreso.ticket_ids
+        candidatos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
+            t.gps_visita_id.estado in ('programada', 'en_ruta') and
+            t.traccar_geofence_id == gid)
+        visitas = candidatos.mapped('gps_visita_id')
+        if len(visitas) != 1:
+            _logger.warning('[GPS] geofenceEnter no corresponde a visita única device/geofence=%s', gid)
+            return resultado
+        visita = visitas[0]
+        ref = 'traccar-event:%s' % datos.get('eventId') if datos.get('eventId') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
+        if visita.registrar_llegada_verificada(fecha, ref, 'traccar'):
+            visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(
+                notificar=False, fecha_evento=fecha)
+            resultado = visita.ticket_ids
+            if resultado:
+                try:
+                    aceptado = resultado[0].notificar_en_sitio(
+                        tickets_grupo=resultado, ubicacion_actual={
+                            'latitude': datos.get('latitude'), 'longitude': datos.get('longitude')})
+                    visita._registrar_evento('aviso', 'whatsapp', detalle='Solicitud aceptada' if aceptado else 'Envío rechazado')
+                except Exception:
+                    _logger.exception('[GPS] Error avisando llegada visita %s', visita.id)
+        return resultado
 
+    def _gps_procesar_salida(self, tickets_hoy, datos):
+        """geofenceExit aislado: señal preliminar; no cambia visita ni envía WA.
 
-    @api.model
-
-    def get_active_config(self):
-
-        """Obtiene la configuración activa"""
-
-        config = self.search([('sync_enabled', '=', True)], limit=1)
-
-        if not config:
-
-            raise ValueError("No hay configuración activa de PrintTracker")
-
-        return config
-
-
-
-
-
-    @api.model
-
-    def run_consolidation(self):
-
+        La salida se detecta por el cron 115 con dos lecturas fuera de 150m
+        y se confirma con una tercera, evitando los falsos retiros por jitter.
         """
+        resultado = self.env['ticket.alquiler']
+        gid = datos.get('geofenceId')
+        fecha = datos.get('_fecha_evento_validada')
+        if not gid or not fecha:
+            return resultado
+        candidatos = tickets_hoy.filtered(
+            lambda t: t.gps_visita_id
+            and t.gps_visita_id.estado in ('en_sitio', 'salida_pendiente')
+            and t.traccar_geofence_id == gid
+        )
+        visitas = candidatos.mapped('gps_visita_id')
+        if len(visitas) != 1:
+            return resultado
+        visita = visitas[0]
+        if visita.fecha_llegada and fecha < visita.fecha_llegada:
+            return resultado
+        _logger.info(
+            '[GPS-SALIDA] geofenceExit preliminar visita=%s geocerca=%s '
+            'evento=%s; sin token ni cambio de estado (cron 115 verificará >150m)',
+            visita.id, gid, datos.get('eventId'),
+        )
+        return resultado
 
-        Server Action entrypoint: busca la config activa y corre la sincronización completa.
+    def _gps_procesar_movimiento(self, tickets_hoy, datos):
+        """deviceMoving no permite determinar a cuál cliente se dirige el técnico."""
+        return self.env['ticket.alquiler']
 
-        Debe devolver un dict de ir.actions.client (notificación).
+    @staticmethod
+    def _get_rango_hoy():
+        from pytz import timezone as pytz_tz, UTC as pytz_UTC
+        lima     = pytz_tz('America/Lima')
+        hoy_lima = fields.Datetime.now().replace(tzinfo=pytz_UTC).astimezone(lima).date()
+        inicio_lima = lima.localize(fields.Datetime.from_string(f"{hoy_lima} 00:00:00"))
+        fin_lima    = lima.localize(fields.Datetime.from_string(f"{hoy_lima} 23:59:59"))
+        return (
+            inicio_lima.astimezone(pytz_UTC).replace(tzinfo=None),
+            fin_lima.astimezone(pytz_UTC).replace(tzinfo=None),
+        )
 
-        """
+    @staticmethod
+    def _haversine_metros(lat1, lon1, lat2, lon2):
+        R    = 6371000
+        phi1, phi2 = math.radians(lat1), math.radians(lat2)
+        d_phi      = math.radians(lat2 - lat1)
+        d_lambda   = math.radians(lon2 - lon1)
+        a = (math.sin(d_phi / 2) ** 2
+             + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2)
+        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-        config = self.get_active_config()  # ya lo tienes implementado
+    # ═══════════════════════════════════════════════════════════════
+    #  RESUMEN WhatsApp
+    # ═══════════════════════════════════════════════════════════════
 
-        # Asegura que sea un único registro
+    def get_tracking_summary(self):
+        self.ensure_one()
+        from pytz import timezone as pytz_tz, UTC
 
-        if not config or len(config) != 1:
+        def fmt_min(mins):
+            if not mins:
+                return '--'
+            h, m = int(mins // 60), int(mins % 60)
+            return f"{h}h {m}min" if h else f"{m} min"
 
-            raise UserError(_("No se encontró una configuración activa única de PrintTracker."))
+        def fmt_hora(dt):
+            if not dt:
+                return '--'
+            try:
+                return UTC.localize(dt).astimezone(pytz_tz('America/Lima')).strftime('%H:%M')
+            except Exception:
+                return dt.strftime('%H:%M')
 
+        lines = [
+            f"Resumen — {self.name}",
+            f"Tecnico: {self.responsable.name or 'N/A'}",
+            f"Cliente: {self.partner_id.name or 'N/A'}",
+            "",
+            f"Asignado:  {fmt_hora(self.fecha_asignacion)}",
+            f"Agendado:  {fmt_hora(self.agenda)}",
+            f"En ruta:   {fmt_hora(self.fecha_en_ruta)}",
+            f"Llegada:   {fmt_hora(self.fecha_llegada)}",
+            f"Revision:  {fmt_hora(self.fecha_inicio_revision)}",
+            f"Salida:    {fmt_hora(self.fecha_salida_sitio)}",
+            f"Finalizado:{fmt_hora(self.fecha_finalizacion)}",
+            "",
+            f"Traslado:  {fmt_min(self.tiempo_traslado_minutos)}",
+            f"En sitio:  {fmt_min(self.tiempo_en_sitio_minutos)}",
+            f"Total:     {fmt_min(self.tiempo_total_atencion_minutos)}",
+        ]
 
+        if self.fecha_llegada and self.agenda:
+            if self.es_puntual:
+                lines.append("Puntualidad: A tiempo")
+            elif self.diferencia_puntualidad_minutos > 0:
+                lines.append(f"Llego {fmt_min(self.diferencia_puntualidad_minutos)} tarde")
+            else:
+                lines.append(f"Llego {fmt_min(abs(self.diferencia_puntualidad_minutos))} antes")
 
-        # Ejecuta tu pipeline completo (ya devuelve notificación)
-
-        return config.sync_all_data()
+        return '\n'.join(lines)

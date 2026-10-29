@@ -1652,6 +1652,27 @@ class PrintTrackerConfig(models.Model):
 
 
 
+        # El campo reading_date es obligatorio. Si la API omite timestamp
+        # o la fecha es inválida, preservar la fecha almacenada y no inventar
+        # una nueva lectura. Esto evita NotNullViolation durante el flush ORM.
+        if not meter_values['reading_date']:
+            existing_with_date = self.env['printtracker.meter'].search([
+                ('pt_meter_id', '=', meter_id)
+            ], limit=1)
+            if existing_with_date and existing_with_date.reading_date:
+                meter_values.pop('reading_date')
+                _logger.warning(
+                    "⚠️ Medidor %s sin timestamp válido; se conserva fecha anterior %s",
+                    meter_id, existing_with_date.reading_date,
+                )
+            else:
+                _logger.warning(
+                    "⚠️ Medidor omitido: timestamp inválido o ausente; "
+                    "meter_id=%s deviceKey=%s timestamp=%r",
+                    meter_id, device_key, meter_data.get('timestamp'),
+                )
+                return False
+
         try:
 
             existing_meter = self.env['printtracker.meter'].search([
@@ -1746,57 +1767,34 @@ class PrintTrackerConfig(models.Model):
 
 
     def _parse_printtracker_datetime(self, datetime_str):
+        """Convierte fechas ISO 8601 de PrintTracker a UTC sin zona para Odoo 19.
 
-        """Convierte fecha de PrintTracker (ISO 8601) a formato Odoo"""
-
+        No inventa fechas cuando PrintTracker no proporciona un timestamp válido.
+        """
+        if not datetime_str:
+            return False
         try:
+            from datetime import datetime, timezone
 
-            if not datetime_str:
+            if isinstance(datetime_str, datetime):
+                parsed = datetime_str
+            else:
+                value = str(datetime_str).strip()
+                if not value:
+                    return False
+                # ISO 8601: Z, fracciones de segundo y desplazamientos horarios.
+                value = value.replace('Z', '+00:00').replace('z', '+00:00')
+                parsed = datetime.fromisoformat(value)
 
-                return None
-
-
-
-            from datetime import datetime
-
-            import re
-
-
-
-            # PrintTracker: '2025-08-07T14:31:02.011Z'
-
-            # Odoo: '2025-08-07 14:31:02'
-
-
-
-            clean_datetime = re.sub(r'**\.**\d+Z?$', '', datetime_str)
-
-            clean_datetime = clean_datetime.replace('T', ' ')
-
-            clean_datetime = clean_datetime.replace('Z', '')
-
-
-
-            try:
-
-                parsed_dt = datetime.strptime(clean_datetime, '%Y-%m-%d %H:%M:%S')
-
-                return parsed_dt.strftime('%Y-%m-%d %H:%M:%S')
-
-            except ValueError:
-
-                _logger.error(f"❌ Formato de fecha inválido: {datetime_str}")
-
-                return None
-
-
-
-        except Exception as e:
-
-            _logger.error(f"❌ Error parseando fecha: {e}")
-
-            return None
-
+            if parsed.tzinfo is not None:
+                parsed = parsed.astimezone(timezone.utc).replace(tzinfo=None)
+            return fields.Datetime.to_string(parsed)
+        except (ValueError, TypeError, OverflowError) as error:
+            _logger.warning(
+                "⚠️ Fecha inválida devuelta por PrintTracker: %r (%s)",
+                datetime_str, error,
+            )
+            return False
 
 
     def sync_all_data(self):
