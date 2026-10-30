@@ -1213,23 +1213,33 @@ class MantenimientoTecnicoAusencia(models.Model):
         return phone
 
     def _whatsapp_get_user_phone(self, user):
+        """Obtiene un teléfono sin asumir que mobile existe en res.users/res.partner.
+
+        Compatible con Odoo 19 y bases donde los campos móviles opcionales
+        no están registrados. Se prioriza móvil sobre teléfono fijo.
+        """
         if not user:
             return False
 
         partner = user.partner_id
+        possible_numbers = []
 
-        possible_numbers = [
-            getattr(user, 'mobile', False),
-            getattr(user, 'phone', False),
-            partner.mobile if partner else False,
-            partner.phone if partner else False,
-        ]
+        for record in (user, partner):
+            if not record:
+                continue
+            for field_name in ('mobile', 'phone'):
+                if field_name in record._fields:
+                    possible_numbers.append(record[field_name])
 
         for phone in possible_numbers:
             phone_clean = self._whatsapp_clean_phone(phone)
             if phone_clean:
                 return phone_clean
 
+        _logger.warning(
+            "[Ausencias][WhatsApp] No se encontró teléfono para el usuario ID=%s",
+            user.id,
+        )
         return False
 
     def _whatsapp_get_numero_nueva_solicitud(self):
