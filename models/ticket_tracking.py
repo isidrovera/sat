@@ -106,14 +106,16 @@ class TraccarAPIService(models.AbstractModel):
             )
             if resp.status_code == 200:
                 positions = resp.json()
-                return {p['deviceId']: p for p in positions}
+                resultado = {p['deviceId']: p for p in positions}
+                _logger.info('[GPS-API] posiciones recibidas=%s devices=%s', len(positions), sorted(resultado))
+                return resultado
             else:
                 _logger.error(
                     "[TRACCAR-API] Error obteniendo posiciones: %s", resp.status_code
                 )
                 return {}
         except Exception as e:
-            _logger.error("[TRACCAR-API] Excepcion obteniendo posiciones: %s", e)
+            _logger.exception('[GPS-API] Error solicitando posiciones de Traccar: %s', e)
             return {}
 
     def crear_geocerca(self, nombre, latitud, longitud, radio_metros=150):
@@ -333,6 +335,8 @@ class TicketAlquilerTracking(models.Model):
                 valores['fecha_asignacion'] = ahora
             resultado = super(TicketAlquilerTracking, rec).write(valores) and resultado
             if cambio_estado:
+                _logger.info('[GPS-TRANSICION] write ticket=%s anterior=%s nuevo=%s visita=%s usuario=%s',
+                             rec.name, anterior, rec.estado, rec.gps_visita_id.id, self.env.uid)
                 rec._registrar_evento(
                     f"Estado: {anterior} → {rec.estado}. "
                     f"Registrado por: {self.env.user.name}"
@@ -669,14 +673,25 @@ class TicketAlquilerTracking(models.Model):
         """La ruta empieza en la visita; jamás por movimiento genérico."""
         for ticket in self:
             visita = ticket.gps_visita_id
+            _logger.info('[GPS-TRANSICION] action_en_ruta ticket=%s estado=%s visita=%s estado_visita=%s',
+                         ticket.name, ticket.estado, visita.id if visita else None,
+                         visita.estado if visita else None)
             if not visita:
+                _logger.warning('[GPS-BLOQUEO] ticket=%s razon=sin_gps_visita', ticket.name)
                 raise UserError(_('Asigne una visita física antes de iniciar ruta.'))
             if visita.estado != 'en_ruta':
+                _logger.warning('[GPS-BLOQUEO] ticket=%s visita=%s razon=visita_no_en_ruta estado=%s',
+                                ticket.name, visita.id, visita.estado)
                 raise UserError(_('Inicie el recorrido desde la visita física.'))
             visita._validar_siguiente_ruta()
             if ticket.estado == 'proceso':
                 # La visita es dueña del horario. No generar una segunda fecha.
                 ticket.write({'estado': 'en_ruta', 'fecha_en_ruta': visita.fecha_en_ruta})
+                _logger.info('[GPS-TRANSICION] ticket=%s estado_final=%s fecha_en_ruta=%s',
+                             ticket.name, ticket.estado, ticket.fecha_en_ruta)
+            else:
+                _logger.info('[GPS-DIAG] ticket=%s sin transicion action_en_ruta estado_actual=%s',
+                             ticket.name, ticket.estado)
         return True
 
     def action_en_sitio(self, notificar=True, fecha_evento=None):
@@ -767,110 +782,190 @@ class TicketAlquilerTracking(models.Model):
 
     @api.model
     def cron_gps_detectar_movimiento(self):
-        """Inicia una visita tras desplazamiento GPS desde un punto fijo.
+        """Diagnóstico integral del cron 113 sin modificar reglas de elegibilidad.
 
-        Conserva la primera observación durante hasta 10 minutos para que
-        tramos cortos (p. ej. 100 + 190 + 150 m) puedan superar el umbral.
-        No exige acercamiento lineal: el técnico puede tomar cualquier ruta.
-        No inicia otra visita mientras haya una visita física anterior abierta.
+        Cada rechazo deja una causa concreta en el log de Odoo. No escribe
+        reiteradamente en chatter ni altera la evidencia GPS.
         """
+        ahora = fields.Datetime.now()
+        _logger.info('[CRON-MOVIMIENTO] INICIO cron=113 utc=%s', ahora)
         posiciones = self.env['traccar.api.service'].get_all_positions()
         if not posiciones:
-            _logger.warning('[CRON-MOVIMIENTO] Traccar no devolvió posiciones')
+            _logger.warning('[GPS-BLOQUEO] cron=113 razon=sin_posiciones_traccar')
             return True
 
-        ahora = fields.Datetime.now()
         Config = self.env['ir.config_parameter'].sudo()
         Vinculo = self.env['tecnico.dispositivo.gps'].sudo()
         Visita = self.env['sat.visita.tecnica'].sudo()
-        for vinculo in Vinculo.search([('activo', '=', True)]):
+        vinculos = Vinculo.search([('activo', '=', True)])
+        _logger.info('[GPS-DIAG] cron=113 vinculos_activos=%s devices_con_posicion=%s',
+                     len(vinculos), sorted(posiciones))
+        contadores = {'evaluados': 0, 'candidatas': 0, 'inicios': 0, 'errores': 0}
+
+        for vinculo in vinculos:
+            contadores['evaluados'] += 1
+            device = vinculo.traccar_device_id
+            tecnico = vinculo.user_id
             try:
-                pos = posiciones.get(vinculo.traccar_device_id)
+                pos = posiciones.get(device)
+                _logger.info('[GPS-DIAG] device=%s tecnico_id=%s tecnico=%s pos_id=%s '
+                             'valid=%s fixTime=%s accuracy=%s',
+                             device, tecnico.id, tecnico.name,
+                             pos.get('id') if pos else None,
+                             pos.get('valid') if pos else None,
+                             pos.get('fixTime') if pos else None,
+                             (pos.get('accuracy', (pos.get('attributes') or {}).get('accuracy'))
+                              if pos else None))
                 if not self._gps_posicion_valida(pos, max_edad_min=5):
-                    _logger.info('[CRON-MOVIMIENTO] device=%s sin posición reciente válida', vinculo.traccar_device_id)
+                    _logger.warning('[GPS-BLOQUEO] device=%s razon=posicion_invalida_o_antigua '
+                                    'fixTime=%s valid=%s limite_min=5', device,
+                                    pos.get('fixTime') if pos else None,
+                                    pos.get('valid') if pos else None)
                     continue
+
                 lat, lon = float(pos['latitude']), float(pos['longitude'])
                 if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
+                    _logger.warning('[GPS-BLOQUEO] device=%s razon=coordenadas_invalidas lat=%s lon=%s', device, lat, lon)
                     continue
                 precision = pos.get('accuracy')
                 if precision is None:
                     precision = (pos.get('attributes') or {}).get('accuracy')
                 if precision is not None and float(precision) > 100:
+                    _logger.warning('[GPS-BLOQUEO] device=%s razon=precision_insuficiente accuracy=%sm max=100m', device, precision)
                     continue
                 dt = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
                 instante = dt.astimezone(timezone.utc).replace(tzinfo=None)
                 if instante > ahora + timedelta(minutes=2):
+                    _logger.warning('[GPS-BLOQUEO] device=%s razon=fix_futuro fix=%s ahora=%s', device, instante, ahora)
                     continue
 
+                agenda_desde = ahora - timedelta(hours=2)
+                agenda_hasta = ahora + timedelta(hours=4)
                 visitas = Visita.search([
-                    ('tecnico_id', '=', vinculo.user_id.id),
+                    ('tecnico_id', '=', tecnico.id),
                     ('estado', '=', 'programada'),
-                    ('agenda', '>=', ahora - timedelta(hours=2)),
-                    ('agenda', '<=', ahora + timedelta(hours=4)),
+                    ('agenda', '>=', agenda_desde),
+                    ('agenda', '<=', agenda_hasta),
                 ])
-                # Solo una visita programada con tickets EN PROCESO y geocerca.
-                candidatas = visitas.filtered(lambda v: (
-                    v.ticket_ids
-                    and any(t.estado == 'proceso' and t.traccar_geofence_id for t in v.ticket_ids)
-                    and v._coordenadas_validas(v.latitud, v.longitud)
-                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) >= 150
-                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) <= 20000
-                ))
-                clave = 'sat.gps.movimiento.%s' % vinculo.traccar_device_id
+                # Diagnóstico de visitas fuera del filtro, sin cambiar la selección.
+                visitas_abiertas = Visita.search([
+                    ('tecnico_id', '=', tecnico.id),
+                    ('estado', 'in', ['programada', 'en_ruta', 'en_sitio', 'salida_pendiente']),
+                ], order='agenda desc', limit=30)
+                _logger.info('[GPS-DIAG] device=%s visitas_en_ventana=%s visitas_abiertas_muestra=%s '
+                             'agenda_desde=%s agenda_hasta=%s', device, len(visitas),
+                             len(visitas_abiertas), agenda_desde, agenda_hasta)
+                ids_en_ventana = set(visitas.ids)
+                for fuera in visitas_abiertas:
+                    if fuera.id not in ids_en_ventana:
+                        _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=fuera_filtro_visita '
+                                     'estado=%s agenda=%s tickets=%s', device, fuera.id,
+                                     fuera.estado, fuera.agenda, [(t.name, t.estado) for t in fuera.ticket_ids])
+                candidatas = Visita.browse()
+                for visita in visitas:
+                    tickets = visita.ticket_ids
+                    tickets_elegibles = tickets.filtered(lambda t: t.estado == 'proceso' and t.traccar_geofence_id)
+                    destino_valido = visita._coordenadas_validas(visita.latitud, visita.longitud)
+                    metros = (self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
+                              if destino_valido else None)
+                    motivos = []
+                    if not tickets:
+                        motivos.append('visita_sin_tickets')
+                    if not tickets_elegibles:
+                        motivos.append('sin_ticket_proceso_con_geocerca')
+                    if not destino_valido:
+                        motivos.append('destino_sin_coordenadas_validas')
+                    if metros is not None and metros < 150:
+                        motivos.append('distancia_menor_150m')
+                    if metros is not None and metros > 20000:
+                        motivos.append('distancia_mayor_20km')
+                    _logger.info('[GPS-DIAG] device=%s visita=%s estado_visita=%s agenda=%s '
+                                 'distancia_m=%s tickets=%s motivos=%s',
+                                 device, visita.id, visita.estado, visita.agenda,
+                                 round(metros, 1) if metros is not None else None,
+                                 [(t.name, t.estado, t.traccar_geofence_id, t.gps_visita_id.id) for t in tickets],
+                                 motivos or ['elegible'])
+                    if not motivos:
+                        candidatas |= visita
+                    else:
+                        _logger.warning('[GPS-BLOQUEO] device=%s visita=%s razones=%s',
+                                        device, visita.id, ','.join(motivos))
+
+                clave = 'sat.gps.movimiento.%s' % device
                 if len(candidatas) != 1:
                     Config.set_param(clave, '')
-                    _logger.info('[CRON-MOVIMIENTO] device=%s visitas candidatas=%s; sin cambio', vinculo.traccar_device_id, len(candidatas))
+                    _logger.warning('[GPS-BLOQUEO] device=%s razon=candidatas_no_unicas '
+                                    'cantidad=%s ids=%s anclaje_reiniciado=si',
+                                    device, len(candidatas), candidatas.ids)
                     continue
+                contadores['candidatas'] += 1
                 visita = candidatas[0]
-                # No inferir nuevo inicio si el técnico mantiene otra visita abierta.
                 if visita._otra_visita_activa():
                     Config.set_param(clave, '')
+                    _logger.warning('[GPS-BLOQUEO] device=%s visita=%s razon=otra_visita_activa '
+                                    'anclaje_reiniciado=si', device, visita.id)
                     continue
-                actual = {'visita': visita.id, 'lat': lat, 'lon': lon, 'ts': instante.isoformat(), 'pos_id': pos.get('id')}
+
+                actual = {'visita': visita.id, 'lat': lat, 'lon': lon,
+                          'ts': instante.isoformat(), 'pos_id': pos.get('id')}
                 previo_txt = Config.get_param(clave, default='')
                 try:
                     previo = json.loads(previo_txt) if previo_txt else None
                 except (ValueError, TypeError):
                     previo = None
+                    _logger.warning('[GPS-DIAG] device=%s visita=%s anclaje_json_invalido', device, visita.id)
                 if not previo or previo.get('visita') != visita.id:
                     Config.set_param(clave, json.dumps(actual))
+                    _logger.info('[GPS-DIAG] device=%s visita=%s primera_observacion pos_id=%s fix=%s',
+                                 device, visita.id, pos.get('id'), instante)
                     continue
                 anterior = datetime.fromisoformat(previo['ts'])
                 segundos = (instante - anterior).total_seconds()
                 if segundos <= 0:
+                    _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=tiempo_no_avanza segundos=%.0f',
+                                 device, visita.id, segundos)
                     continue
-                # El mismo fix de Traccar no es una segunda observación.
                 if str(previo.get('pos_id')) == str(actual['pos_id']):
+                    _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=misma_posicion pos_id=%s',
+                                 device, visita.id, actual['pos_id'])
                     continue
                 if segundos > 600:
                     Config.set_param(clave, json.dumps(actual))
+                    _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=ventana_supera_600s '
+                                 'segundos=%.0f anclaje_reiniciado=si', device, visita.id, segundos)
                     continue
                 if segundos < 30:
+                    _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=intervalo_inferior_30s segundos=%.0f',
+                                 device, visita.id, segundos)
                     continue
                 desplazamiento = self._haversine_metros(previo['lat'], previo['lon'], lat, lon)
                 distancia_antes = self._haversine_metros(previo['lat'], previo['lon'], visita.latitud, visita.longitud)
                 distancia_ahora = self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
-                # Una ruta urbana puede comenzar alejándose del cliente.
-                # Detectar desplazamiento real, no dirección hacia el destino.
-                # 300 m reduce activaciones por ruido GPS o movimientos mínimos.
                 if desplazamiento < 300:
-                    # NO reemplazar el punto inicial: el movimiento se mide
-                    # de forma acumulada respecto a este anclaje válido.
-                    _logger.info(
-                        '[CRON-MOVIMIENTO] device=%s visita=%s desde_inicio=%.0fm '                         '(<300m) ventana=%.0fs; conserva anclaje',
-                        vinculo.traccar_device_id, visita.id, desplazamiento, segundos,
-                    )
+                    _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=desplazamiento_menor_300m '
+                                 'desplazamiento=%.0fm segundos=%.0f anclaje_conservado=si',
+                                 device, visita.id, desplazamiento, segundos)
                     continue
-                _logger.info(
-                    '[CRON-MOVIMIENTO] device=%s visita=%s desplazamiento=%.0fm acercamiento=%.0fm; movimiento válido sin exigir dirección',
-                    vinculo.traccar_device_id, visita.id, desplazamiento, distancia_antes - distancia_ahora,
-                )
-                referencia = 'traccar-movement:%s@%s' % (vinculo.traccar_device_id, instante.isoformat())
-                if visita.registrar_inicio_ruta_gps(instante, referencia, ubicacion_actual={'latitude': lat, 'longitude': lon}):
-                    _logger.info('[CRON-MOVIMIENTO] Ruta automática visita=%s técnico=%s', visita.id, vinculo.user_id.id)
+
+                referencia = 'traccar-movement:%s@%s' % (device, instante.isoformat())
+                _logger.info('[GPS-TRANSICION] INICIO device=%s visita=%s tickets=%s '
+                             'desplazamiento=%.0fm acercamiento=%.0fm referencia=%s',
+                             device, visita.id, [(t.name, t.estado) for t in visita.ticket_ids],
+                             desplazamiento, distancia_antes - distancia_ahora, referencia)
+                if visita.registrar_inicio_ruta_gps(
+                        instante, referencia, ubicacion_actual={'latitude': lat, 'longitude': lon}):
+                    contadores['inicios'] += 1
+                    _logger.info('[GPS-TRANSICION] EXITO device=%s visita=%s estado_visita=%s '
+                                 'tickets_despues=%s', device, visita.id, visita.estado,
+                                 [(t.name, t.estado) for t in visita.ticket_ids])
+                else:
+                    _logger.warning('[GPS-TRANSICION] RECHAZADO device=%s visita=%s '
+                                    'registrar_inicio_ruta_gps devolvio False', device, visita.id)
                 Config.set_param(clave, '')
             except Exception:
-                _logger.exception('[CRON-MOVIMIENTO] Falló evaluación device=%s', vinculo.traccar_device_id)
+                contadores['errores'] += 1
+                _logger.exception('[GPS-ERROR] cron=113 device=%s tecnico=%s', device, tecnico.id)
+        _logger.info('[CRON-MOVIMIENTO] FIN cron=113 resumen=%s', contadores)
         return True
 
     @api.model
@@ -884,8 +979,10 @@ class TicketAlquilerTracking(models.Model):
         """
         posiciones = self.env['traccar.api.service'].get_all_positions()
         if not posiciones:
+            _logger.warning('[CRON-LLEGADA] sin posiciones GPS')
             return True
         ahora = fields.Datetime.now()
+        _logger.info('[CRON-LLEGADA] INICIO devices_posiciones=%s', sorted(posiciones))
         parametros = self.env['ir.config_parameter'].sudo()
         Vinculo = self.env['tecnico.dispositivo.gps'].sudo()
         Visita = self.env['sat.visita.tecnica'].sudo()
@@ -893,6 +990,8 @@ class TicketAlquilerTracking(models.Model):
             try:
                 pos = posiciones.get(vinculo.traccar_device_id)
                 if not self._gps_posicion_valida(pos, max_edad_min=5):
+                    _logger.info('[GPS-BLOQUEO] llegada device=%s razon=posicion_invalida_o_antigua fix=%s',
+                                 vinculo.traccar_device_id, pos.get('fixTime') if pos else None)
                     continue
                 lat = pos.get('latitude')
                 lon = pos.get('longitude')
@@ -921,7 +1020,13 @@ class TicketAlquilerTracking(models.Model):
                     and self._haversine_metros(lat, lon, v.latitud, v.longitud) <= 100
                     and any(t.traccar_geofence_id for t in v.ticket_ids)
                 ))
+                _logger.info('[GPS-DIAG] llegada device=%s visitas=%s candidatas=%s detalle=%s',
+                             vinculo.traccar_device_id, len(visitas), len(candidatos),
+                             [(v.id, v.estado, v.agenda, [(t.name, t.estado, t.traccar_geofence_id) for t in v.ticket_ids])
+                              for v in visitas])
                 if len(candidatos) != 1:
+                    _logger.info('[GPS-BLOQUEO] llegada device=%s razon=candidatas_no_unicas cantidad=%s',
+                                 vinculo.traccar_device_id, len(candidatos))
                     if visitas and not candidatos:
                         _logger.info('[CRON-LLEGADA] Técnico %s: ninguna visita coincide con GPS actual', vinculo.user_id.id)
                     continue
@@ -930,12 +1035,15 @@ class TicketAlquilerTracking(models.Model):
                 gids = (pos.get('geofenceIds') if isinstance(pos.get('geofenceIds'), list) else None)
                 ids_visita = {t.traccar_geofence_id for t in visita.ticket_ids if t.traccar_geofence_id}
                 if gids is not None and not ids_visita.intersection(set(gids)):
+                    _logger.info('[GPS-BLOQUEO] llegada visita=%s razon=geocerca_no_corresponde gps_ids=%s visita_ids=%s',
+                                 visita.id, gids, sorted(ids_visita))
                     continue
                 clave = 'sat.gps.presencia.%s.%s' % (vinculo.traccar_device_id, visita.id)
                 anterior = parametros.get_param(clave, default='')
                 # Los puntos deben ser distintos y separados al menos 20 segundos.
                 if not anterior:
                     parametros.set_param(clave, fix_utc.isoformat())
+                    _logger.info('[GPS-DIAG] llegada visita=%s primera_observacion=%s', visita.id, fix_utc)
                     continue
                 try:
                     primera = datetime.fromisoformat(anterior)
@@ -945,16 +1053,21 @@ class TicketAlquilerTracking(models.Model):
                     parametros.set_param(clave, fix_utc.isoformat())
                     continue
                 if (fix_utc - primera).total_seconds() < 20:
+                    _logger.info('[GPS-BLOQUEO] llegada visita=%s razon=segunda_observacion_menor_20s', visita.id)
                     continue
                 if visita.fecha_en_ruta and fix_utc < visita.fecha_en_ruta:
+                    _logger.info('[GPS-BLOQUEO] llegada visita=%s razon=fix_anterior_inicio_ruta', visita.id)
                     continue
                 referencia = 'traccar-position:%s@%s' % (pos.get('id'), fix_utc.isoformat())
+                _logger.info('[GPS-TRANSICION] llegada intento visita=%s fecha=%s referencia=%s',
+                             visita.id, fix_utc, referencia)
                 if visita.registrar_llegada_verificada(fix_utc, referencia, 'traccar'):
                     visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(notificar=False, fecha_evento=fix_utc)
                     _logger.info('[CRON-LLEGADA] Llegada observada por doble posición: visita=%s tecnico=%s', visita.id, vinculo.user_id.id)
                 parametros.set_param(clave, '')
             except Exception:
                 _logger.exception('[CRON-LLEGADA] Error verificando técnico %s; no se modificó llegada por esta observación', vinculo.user_id.id)
+        _logger.info('[CRON-LLEGADA] FIN')
         return True
 
     @api.model
@@ -1178,7 +1291,11 @@ class TicketAlquilerTracking(models.Model):
             ('agenda', '<=', hoy_fin),
         ], order='agenda asc')
 
-        _logger.info("[GPS-API] Tickets HOY para %s: %d", tecnico.name, len(tickets_hoy))
+        _logger.info('[GPS-DIAG] webhook device=%s tecnico=%s ventana_hoy_utc=%s..%s '
+                     'tickets_hoy=%s detalle=%s', tecnico_traccar_device_id, tecnico.id,
+                     hoy_inicio, hoy_fin, len(tickets_hoy),
+                     [(t.name, t.estado, t.agenda, t.gps_visita_id.id, t.traccar_geofence_id)
+                      for t in tickets_hoy])
 
         if not tickets_hoy:
             tickets_otros = self.sudo().search([
@@ -1206,12 +1323,18 @@ class TicketAlquilerTracking(models.Model):
                 actualizados = self._gps_procesar_salida(tickets_hoy, datos)
             elif evento_tipo == 'deviceMoving':
                 actualizados = self._gps_procesar_movimiento(tickets_hoy, datos)
+            else:
+                _logger.warning('[GPS-BLOQUEO] webhook evento_desconocido tipo=%s device=%s',
+                                evento_tipo, tecnico_traccar_device_id)
         except Exception as e:
             _logger.exception("[GPS-API] Error: %s", e)
             for t in tickets_hoy:
                 t.sudo()._registrar_evento(f"Error GPS [{evento_tipo}]: {str(e)}")
             return {'success': False, 'error': str(e), 'tickets_actualizados': []}
 
+        _logger.info('[GPS-TRANSICION] webhook device=%s tipo=%s tickets_actualizados=%s',
+                     tecnico_traccar_device_id, evento_tipo,
+                     [(t.name, t.estado) for t in actualizados])
         return {
             'success': True,
             'tecnico': tecnico.name,
@@ -1228,6 +1351,7 @@ class TicketAlquilerTracking(models.Model):
         gid = datos.get('geofenceId')
         fecha = datos.get('_fecha_evento_validada')
         if not gid or not fecha:
+            _logger.warning('[GPS-BLOQUEO] geofenceEnter razon=geocerca_o_fecha_faltante gid=%s fecha=%s', gid, fecha)
             return resultado
         # Regreso a la geocerca durante una salida pendiente.
         regresos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
@@ -1249,7 +1373,9 @@ class TicketAlquilerTracking(models.Model):
             t.traccar_geofence_id == gid)
         visitas = candidatos.mapped('gps_visita_id')
         if len(visitas) != 1:
-            _logger.warning('[GPS] geofenceEnter no corresponde a visita única device/geofence=%s', gid)
+            _logger.warning('[GPS-BLOQUEO] geofenceEnter gid=%s razon=visita_no_unica cantidad=%s '
+                            'tickets=%s', gid, len(visitas),
+                            [(t.name, t.estado, t.gps_visita_id.id, t.traccar_geofence_id) for t in tickets_hoy])
             return resultado
         visita = visitas[0]
         ref = 'traccar-event:%s' % datos.get('eventId') if datos.get('eventId') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
@@ -1277,6 +1403,7 @@ class TicketAlquilerTracking(models.Model):
         gid = datos.get('geofenceId')
         fecha = datos.get('_fecha_evento_validada')
         if not gid or not fecha:
+            _logger.warning('[GPS-BLOQUEO] geofenceExit razon=geocerca_o_fecha_faltante gid=%s fecha=%s', gid, fecha)
             return resultado
         candidatos = tickets_hoy.filtered(
             lambda t: t.gps_visita_id
@@ -1285,9 +1412,11 @@ class TicketAlquilerTracking(models.Model):
         )
         visitas = candidatos.mapped('gps_visita_id')
         if len(visitas) != 1:
+            _logger.info('[GPS-BLOQUEO] geofenceExit gid=%s razon=visita_no_unica cantidad=%s', gid, len(visitas))
             return resultado
         visita = visitas[0]
         if visita.fecha_llegada and fecha < visita.fecha_llegada:
+            _logger.info('[GPS-BLOQUEO] geofenceExit visita=%s razon=evento_anterior_llegada', visita.id)
             return resultado
         _logger.info(
             '[GPS-SALIDA] geofenceExit preliminar visita=%s geocerca=%s '
@@ -1298,6 +1427,8 @@ class TicketAlquilerTracking(models.Model):
 
     def _gps_procesar_movimiento(self, tickets_hoy, datos):
         """deviceMoving no permite determinar a cuál cliente se dirige el técnico."""
+        _logger.info('[GPS-DIAG] webhook deviceMoving solo informativo; '
+                     'el cron=113 valida movimiento y visita; tickets=%s', tickets_hoy.mapped('name'))
         return self.env['ticket.alquiler']
 
     @staticmethod
