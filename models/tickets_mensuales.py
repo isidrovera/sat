@@ -221,12 +221,16 @@ class EquipmentVisitReport(models.Model):
         last_day = calendar.monthrange(today.year, today.month)[1]
         return today.replace(day=last_day)
     
-    @api.model
-    def create(self, vals):
-        """Sobreescribe create para asignar nombre secuencial"""
-        if vals.get('name', _('Nuevo')) == _('Nuevo'):
-            vals['name'] = self.env['ir.sequence'].next_by_code('equipment.visit.report') or _('Nuevo')
-        return super(EquipmentVisitReport, self).create(vals)
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Asigna un nombre secuencial a cada informe (compatible con Odoo 19)."""
+        for vals in vals_list:
+            if vals.get('name', _('Nuevo')) == _('Nuevo'):
+                vals['name'] = (
+                    self.env['ir.sequence'].next_by_code('equipment.visit.report')
+                    or _('Nuevo')
+                )
+        return super().create(vals_list)
 
     def _get_report_base_filename(self):
         self.ensure_one()
