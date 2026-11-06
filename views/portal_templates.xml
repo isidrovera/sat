@@ -1888,7 +1888,6 @@
 </template>
 
 
- 
 <template id="portal_my_tickets" name="Mis Tickets">
     <t t-call="portal.portal_layout">
         <t t-set="breadcrumbs_searchbar" t-value="True"/>
@@ -2231,9 +2230,7 @@
 
                 <!-- FILTROS -->
                 <div class="sat-panel">
-                    <form method="get"
-                          action="/my/tickets"
-                          id="sat-ticket-filters">
+                    <form method="get" action="/my/tickets" id="sat-ticket-filters">
 
                         <div class="sat-form-grid">
 
@@ -2242,15 +2239,12 @@
                                 <label for="sat-company">
                                     Empresa / cliente
                                 </label>
-                                <select id="sat-company"
-                                        name="company_id"
-                                        class="sat-control">
+                                <select id="sat-company" name="company_id" class="sat-control">
                                     <option value="">
                                         Todas mis empresas
                                     </option>
                                     <t t-foreach="empresas" t-as="emp">
-                                        <option t-att-value="emp.id"
-                                                t-att-selected="company_id == emp.id and 'selected' or None">
+                                        <option t-att-value="emp.id" t-att-selected="company_id == emp.id and 'selected' or None">
                                             <t t-esc="emp.name"/>
                                         </option>
                                     </t>
@@ -2262,15 +2256,12 @@
                                 <label for="sat-equipment">
                                     Equipo / serie
                                 </label>
-                                <select id="sat-equipment"
-                                        name="equipment_id"
-                                        class="sat-control">
+                                <select id="sat-equipment" name="equipment_id" class="sat-control">
                                     <option value="">
                                         Todos mis equipos
                                     </option>
                                     <t t-foreach="available_equipment" t-as="eq">
-                                        <option t-att-value="eq.id"
-                                                t-att-selected="equipment_id == eq.id and 'selected' or None">
+                                        <option t-att-value="eq.id" t-att-selected="equipment_id == eq.id and 'selected' or None">
                                             <t t-esc="eq.display_name"/>
                                             —
                                             <t t-esc="eq.serie or ''"/>
@@ -2284,18 +2275,14 @@
                                 <label for="sat-type">
                                     Tipo de servicio
                                 </label>
-                                <select id="sat-type"
-                                        name="tipo_servicio"
-                                        class="sat-control">
+                                <select id="sat-type" name="tipo_servicio" class="sat-control">
                                     <option value="">Todos</option>
                                     <t t-foreach="tipo_selection.items()" t-as="it">
-                                        <option t-att-value="it[0]"
-                                                t-att-selected="tipo_servicio == it[0] and 'selected' or None">
+                                        <option t-att-value="it[0]" t-att-selected="tipo_servicio == it[0] and 'selected' or None">
                                             <t t-esc="it[1]"/>
                                         </option>
                                     </t>
-                                    <option value="__sin_tipo__"
-                                            t-att-selected="tipo_servicio == '__sin_tipo__' and 'selected' or None">
+                                    <option value="__sin_tipo__" t-att-selected="tipo_servicio == '__sin_tipo__' and 'selected' or None">
                                         Sin especificar
                                     </option>
                                 </select>
@@ -2306,18 +2293,14 @@
                                 <label for="sat-technician">
                                     Técnico
                                 </label>
-                                <select id="sat-technician"
-                                        name="tecnico_id"
-                                        class="sat-control">
+                                <select id="sat-technician" name="tecnico_id" class="sat-control">
                                     <option value="">Todos</option>
                                     <t t-foreach="available_technicians" t-as="tecnico">
-                                        <option t-att-value="tecnico.id"
-                                                t-att-selected="tecnico_id == tecnico.id and 'selected' or None">
+                                        <option t-att-value="tecnico.id" t-att-selected="tecnico_id == tecnico.id and 'selected' or None">
                                             <t t-esc="tecnico.name"/>
                                         </option>
                                     </t>
-                                    <option value="-1"
-                                            t-att-selected="tecnico_id == -1 and 'selected' or None">
+                                    <option value="-1" t-att-selected="tecnico_id == -1 and 'selected' or None">
                                         Sin asignar
                                     </option>
                                 </select>
@@ -2328,13 +2311,10 @@
                                 <label for="sat-status">
                                     Estado
                                 </label>
-                                <select id="sat-status"
-                                        name="estado"
-                                        class="sat-control">
+                                <select id="sat-status" name="estado" class="sat-control">
                                     <option value="">Todos</option>
                                     <t t-foreach="estado_selection.items()" t-as="it">
-                                        <option t-att-value="it[0]"
-                                                t-att-selected="estado == it[0] and 'selected' or None">
+                                        <option t-att-value="it[0]" t-att-selected="estado == it[0] and 'selected' or None">
                                             <t t-esc="it[1]"/>
                                         </option>
                                     </t>
@@ -2346,19 +2326,9 @@
                                 <label for="sat-period">
                                     Periodo
                                 </label>
-                                <select id="sat-period"
-                                        name="periodo"
-                                        class="sat-control">
-                                    <t t-foreach="[
-                                        ('todos','Todo el historial'),
-                                        ('hoy','Hoy'),
-                                        ('7dias','Últimos 7 días'),
-                                        ('mes','Mes'),
-                                        ('anio','Año'),
-                                        ('personalizado','Fechas personalizadas')
-                                    ]" t-as="period">
-                                        <option t-att-value="period[0]"
-                                                t-att-selected="periodo == period[0] and 'selected' or None">
+                                <select id="sat-period" name="periodo" class="sat-control">
+                                    <t t-foreach="[                                         ('todos','Todo el historial'),                                         ('hoy','Hoy'),                                         ('7dias','Últimos 7 días'),                                         ('mes','Mes'),                                         ('anio','Año'),                                         ('personalizado','Fechas personalizadas')                                     ]" t-as="period">
+                                        <option t-att-value="period[0]" t-att-selected="periodo == period[0] and 'selected' or None">
                                             <t t-esc="period[1]"/>
                                         </option>
                                     </t>
@@ -2368,12 +2338,9 @@
                             <!-- AÑO -->
                             <div>
                                 <label for="sat-year">Año</label>
-                                <select id="sat-year"
-                                        name="anio"
-                                        class="sat-control">
+                                <select id="sat-year" name="anio" class="sat-control">
                                     <t t-foreach="available_years" t-as="y">
-                                        <option t-att-value="y"
-                                                t-att-selected="anio == y and 'selected' or None">
+                                        <option t-att-value="y" t-att-selected="anio == y and 'selected' or None">
                                             <t t-esc="y"/>
                                         </option>
                                     </t>
@@ -2383,25 +2350,9 @@
                             <!-- MES -->
                             <div>
                                 <label for="sat-month">Mes</label>
-                                <select id="sat-month"
-                                        name="mes"
-                                        class="sat-control">
-                                    <t t-foreach="[
-                                        (1,'Enero'),
-                                        (2,'Febrero'),
-                                        (3,'Marzo'),
-                                        (4,'Abril'),
-                                        (5,'Mayo'),
-                                        (6,'Junio'),
-                                        (7,'Julio'),
-                                        (8,'Agosto'),
-                                        (9,'Septiembre'),
-                                        (10,'Octubre'),
-                                        (11,'Noviembre'),
-                                        (12,'Diciembre')
-                                    ]" t-as="month">
-                                        <option t-att-value="month[0]"
-                                                t-att-selected="mes == month[0] and 'selected' or None">
+                                <select id="sat-month" name="mes" class="sat-control">
+                                    <t t-foreach="[                                         (1,'Enero'),                                         (2,'Febrero'),                                         (3,'Marzo'),                                         (4,'Abril'),                                         (5,'Mayo'),                                         (6,'Junio'),                                         (7,'Julio'),                                         (8,'Agosto'),                                         (9,'Septiembre'),                                         (10,'Octubre'),                                         (11,'Noviembre'),                                         (12,'Diciembre')                                     ]" t-as="month">
+                                        <option t-att-value="month[0]" t-att-selected="mes == month[0] and 'selected' or None">
                                             <t t-esc="month[1]"/>
                                         </option>
                                     </t>
@@ -2411,20 +2362,12 @@
                             <!-- FECHAS -->
                             <div>
                                 <label for="sat-from">Fecha inicio</label>
-                                <input id="sat-from"
-                                       class="sat-control"
-                                       type="date"
-                                       name="date_begin"
-                                       t-att-value="date_begin"/>
+                                <input id="sat-from" class="sat-control" type="date" name="date_begin" t-att-value="date_begin"/>
                             </div>
 
                             <div>
                                 <label for="sat-to">Fecha fin</label>
-                                <input id="sat-to"
-                                       class="sat-control"
-                                       type="date"
-                                       name="date_end"
-                                       t-att-value="date_end"/>
+                                <input id="sat-to" class="sat-control" type="date" name="date_end" t-att-value="date_end"/>
                             </div>
 
                             <!-- BUSQUEDA -->
@@ -2432,23 +2375,15 @@
                                 <label for="sat-query">
                                     Buscar ticket, serie, modelo o cliente
                                 </label>
-                                <input id="sat-query"
-                                       class="sat-control"
-                                       type="search"
-                                       name="search"
-                                       t-att-value="search"
-                                       placeholder="Ticket / Serie / Modelo"/>
+                                <input id="sat-query" class="sat-control" type="search" name="search" t-att-value="search" placeholder="Ticket / Serie / Modelo"/>
                             </div>
 
                             <!-- ORDEN -->
                             <div>
                                 <label for="sat-sort">Ordenar</label>
-                                <select id="sat-sort"
-                                        name="sortby"
-                                        class="sat-control">
+                                <select id="sat-sort" name="sortby" class="sat-control">
                                     <t t-foreach="searchbar_sortings.items()" t-as="s">
-                                        <option t-att-value="s[0]"
-                                                t-att-selected="sortby == s[0] and 'selected' or None">
+                                        <option t-att-value="s[0]" t-att-selected="sortby == s[0] and 'selected' or None">
                                             <t t-esc="s[1]['label']"/>
                                         </option>
                                     </t>
@@ -2462,8 +2397,7 @@
                                 <i class="fa fa-filter me-1"/>
                                 Aplicar filtros
                             </button>
-                            <a class="sat-btn sat-btn-alt"
-                               href="/my/tickets">
+                            <a class="sat-btn sat-btn-alt" href="/my/tickets">
                                 Limpiar
                             </a>
                         </div>
@@ -2471,15 +2405,8 @@
 
                     <!-- FILTROS RAPIDOS -->
                     <div class="sat-periods">
-                        <t t-foreach="[
-                            ('hoy','Hoy'),
-                            ('7dias','7 días'),
-                            ('mes','Mes'),
-                            ('anio','Año'),
-                            ('todos','Todo')
-                        ]" t-as="p">
-                            <a t-att-href="dashboard_link(periodo=p[0])"
-                               t-att-class="'sat-chip sat-selected' if periodo == p[0] else 'sat-chip'">
+                        <t t-foreach="[                             ('hoy','Hoy'),                             ('7dias','7 días'),                             ('mes','Mes'),                             ('anio','Año'),                             ('todos','Todo')                         ]" t-as="p">
+                            <a t-att-href="dashboard_link(periodo=p[0])" t-att-class="'sat-chip sat-selected' if periodo == p[0] else 'sat-chip'">
                                 <t t-esc="p[1]"/>
                             </a>
                         </t>
@@ -2548,16 +2475,14 @@
 
                         <t t-if="types_chart">
                             <t t-foreach="types_chart" t-as="r">
-                                <a class="sat-graph-row"
-                                   t-att-href="r['url']">
+                                <a class="sat-graph-row" t-att-href="r['url']">
 
                                     <span>
                                         <t t-esc="r['label']"/>
                                     </span>
 
                                     <span class="sat-track">
-                                        <span class="sat-fill sat-fill-blue"
-                                              t-att-style="'width:' + str(r['pct']) + '%'"/>
+                                        <span class="sat-fill sat-fill-blue" t-att-style="'width:' + str(r['pct']) + '%'"/>
                                     </span>
 
                                     <strong>
@@ -2583,22 +2508,19 @@
 
                         <t t-if="ranking">
                             <t t-foreach="ranking" t-as="r">
-                                <a class="sat-graph-row"
-                                   t-att-href="r['url']">
+                                <a class="sat-graph-row" t-att-href="r['url']">
 
                                     <span>
                                         <strong>
                                             <t t-esc="r['model']"/>
                                         </strong>
-                                        <span class="sat-muted"
-                                              style="display:block">
+                                        <span class="sat-muted" style="display:block">
                                             <t t-esc="r['serie']"/>
                                         </span>
                                     </span>
 
                                     <span class="sat-track">
-                                        <span class="sat-fill"
-                                              t-att-style="'width:' + str(r['pct']) + '%'"/>
+                                        <span class="sat-fill" t-att-style="'width:' + str(r['pct']) + '%'"/>
                                     </span>
 
                                     <strong>
@@ -2634,16 +2556,13 @@
 
                         <div class="sat-months">
                             <t t-foreach="months_chart" t-as="r">
-                                <a class="sat-month"
-                                   t-att-href="r['url']"
-                                   t-att-title="'%s: %s servicios' % (r['label'], r['value'])">
+                                <a class="sat-month" t-att-href="r['url']" t-att-title="'%s: %s servicios' % (r['label'], r['value'])">
 
                                     <strong>
                                         <t t-esc="r['value']"/>
                                     </strong>
 
-                                    <span class="sat-monthbar"
-                                          t-att-style="'height:%s%%' % r['pct']"/>
+                                    <span class="sat-monthbar" t-att-style="'height:' + str(r['pct']) + '%'"/>
 
                                     <span>
                                         <t t-esc="r['label']"/>
@@ -2662,16 +2581,14 @@
 
                         <t t-if="tech_chart">
                             <t t-foreach="tech_chart" t-as="r">
-                                <a class="sat-graph-row"
-                                   t-att-href="r['url']">
+                                <a class="sat-graph-row" t-att-href="r['url']">
 
                                     <span>
                                         <t t-esc="r['label']"/>
                                     </span>
 
                                     <span class="sat-track">
-                                        <span class="sat-fill sat-fill-teal"
-                                              t-att-style="'width:' + str(r['pct']) + '%'"/>
+                                        <span class="sat-fill sat-fill-teal" t-att-style="'width:' + str(r['pct']) + '%'"/>
                                     </span>
 
                                     <strong>
@@ -2697,16 +2614,14 @@
 
                         <t t-if="companies_chart">
                             <t t-foreach="companies_chart" t-as="r">
-                                <a class="sat-graph-row"
-                                   t-att-href="r['url']">
+                                <a class="sat-graph-row" t-att-href="r['url']">
 
                                     <span>
                                         <t t-esc="r['label']"/>
                                     </span>
 
                                     <span class="sat-track">
-                                        <span class="sat-fill sat-fill-orange"
-                                              t-att-style="'width:' + str(r['pct']) + '%'"/>
+                                        <span class="sat-fill sat-fill-orange" t-att-style="'width:' + str(r['pct']) + '%'"/>
                                     </span>
 
                                     <strong>
@@ -2726,8 +2641,7 @@
                 </div>
 
                 <!-- LISTADO DE TICKETS -->
-                <section class="sat-panel"
-                         id="sat-ticket-list">
+                <section class="sat-panel" id="sat-ticket-list">
 
                     <div class="sat-head">
                         <h3>
@@ -2752,7 +2666,7 @@
                                     <th>Servicio</th>
                                     <th>Técnico</th>
                                     <th>Estado</th>
-                                    <th></th>
+                                    <th/>
                                 </tr>
                             </thead>
 
@@ -2807,8 +2721,7 @@
 
                                 <t t-if="not tickets">
                                     <tr>
-                                        <td colspan="9"
-                                            class="sat-empty">
+                                        <td colspan="9" class="sat-empty">
                                             No se encontraron tickets con estos filtros.
                                         </td>
                                     </tr>
@@ -2830,6 +2743,10 @@
 
     </t>
 </template>
+
+
+        
+
 
 
         <!-- ===================================================== -->
