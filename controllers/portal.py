@@ -4,7 +4,8 @@ from odoo import http, _
 from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
 from odoo.exceptions import AccessError, MissingError
-from collections import OrderedDict
+from collections import OrderedDict, Counter, defaultdict
+from urllib.parse import urlencode
 from operator import itemgetter
 from datetime import datetime, time, timedelta
 from pytz import UTC, timezone
@@ -908,153 +909,245 @@ class PortalAlquiler(CustomerPortal):
 
     @http.route(
         ["/my/tickets", "/my/tickets/page/<int:page>"],
-        type="http",
-        auth="user",
-        website=True,
+        type="http", auth="user", website=True,
     )
-    def portal_my_tickets(
-        self,
-        page=1,
-        date_begin=None,
-        date_end=None,
-        sortby=None,
-        filterby=None,
-        search=None,
-        **kw,
-    ):
-        """
-        Lista de tickets del cliente autenticado.
-
-        Incluye:
-        - empresa principal;
-        - empresas agregadas en whatsapp_company_ids.
-        """
-
+    def portal_my_tickets(self, page=1, date_begin=None, date_end=None,
+                          sortby=None, filterby=None, search=None, **kw):
+        """Dashboard de tickets del portal, limitado por ACL y empresas autorizadas."""
         values = self._prepare_portal_layout_values()
-
         company_ids = self._get_portal_company_ids()
+        Ticket = request.env["ticket.alquiler"]  # Sin sudo: conservar ACL / reglas.
+        Partner = request.env["res.partner"].sudo()  # Solo nombres de empresas previamente autorizadas.
+        company_domain = [("partner_id", "in", company_ids)]
 
-        Ticket = request.env["ticket.alquiler"]
+        def integer(value, default=0):
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return default
 
-        domain = [
-            ("partner_id", "in", company_ids)
-        ]
+        def parse_date(value):
+            try:
+                return datetime.strptime(value, "%Y-%m-%d").date() if value else None
+            except (TypeError, ValueError):
+                return None
 
-        _logger.info(
-            "🎫 Portal Tickets - Usuario: %s - "
-            "Empresas IDs: %s",
-            request.env.user.name,
-            company_ids,
-        )
+        user_tz = timezone(request.env.user.tz or "America/Lima")
+        local_now = datetime.now(user_tz)
+        today = local_now.date()
 
-        searchbar_sortings = {
-            "date": {
-                "label": _("Fecha más reciente"),
-                "order": "create_date desc",
-            },
-            "name": {
-                "label": _("Número"),
-                "order": "name",
-            },
-            "estado": {
-                "label": _("Estado"),
-                "order": "estado",
-            },
-            "agenda": {
-                "label": _("Fecha de visita"),
-                "order": "agenda desc",
-            },
+        def start_utc(day):
+            # El campo agenda es datetime UTC almacenado sin zona por Odoo.
+            local_dt = user_tz.localize(datetime.combine(day, time.min))
+            return local_dt.astimezone(UTC).replace(tzinfo=None)
+
+        company_id = integer(kw.get("company_id"))
+        if company_id not in company_ids:
+            company_id = 0  # Parámetro manipulado no amplía acceso.
+        equipment_id = integer(kw.get("equipment_id"))
+        tecnico_id = integer(kw.get("tecnico_id"))
+        tipo = (kw.get("tipo_servicio") or "").strip()
+        estado = (kw.get("estado") or "").strip()
+        periodo = (kw.get("periodo") or "todos").strip()
+        if periodo not in ("todos", "hoy", "7dias", "mes", "anio", "personalizado"):
+            periodo = "todos"
+        anio = integer(kw.get("anio"), today.year)
+        mes = integer(kw.get("mes"), today.month)
+        if not 2000 <= anio <= 2100:
+            anio = today.year
+        if not 1 <= mes <= 12:
+            mes = today.month
+
+        tipo_selection = dict(Ticket._fields["tipo_servicio_id"].selection)
+        estado_selection = dict(Ticket._fields["estado"].selection)
+        if tipo not in tipo_selection and tipo != "__sin_tipo__":
+            tipo = ""
+        if estado not in estado_selection:
+            estado = ""
+        sortings = {
+            "date": {"label": _("Más recientes"), "order": "create_date desc"},
+            "agenda": {"label": _("Fecha de visita"), "order": "agenda desc, create_date desc"},
+            "name": {"label": _("Número"), "order": "name"},
+            "estado": {"label": _("Estado"), "order": "estado, create_date desc"},
         }
+        sortby = sortby if sortby in sortings else "date"
+        # Compatibilidad con los enlaces existentes /my/tickets?filterby=...
+        if not estado and filterby in ("nuevo", "proceso", "finalizado"):
+            estado = filterby
+        search = (search or "").strip()[:120]
 
-        searchbar_filters = {
-            "all": {
-                "label": _("Todos"),
-                "domain": [],
-            },
-            "nuevo": {
-                "label": _("Nuevos"),
-                "domain": [
-                    ("estado", "=", "nuevo")
-                ],
-            },
-            "proceso": {
-                "label": _("En Proceso"),
-                "domain": [
-                    ("estado", "=", "proceso")
-                ],
-            },
-            "finalizado": {
-                "label": _("Finalizados"),
-                "domain": [
-                    ("estado", "=", "finalizado")
-                ],
-            },
-        }
+        # El universo de opciones procede únicamente de tickets accesibles.
+        authorized_tickets = Ticket.search(company_domain)
+        available_equipment = authorized_tickets.mapped("product_alquiler").sorted(
+            key=lambda r: (r.display_name or "").lower())
+        available_technicians = authorized_tickets.mapped("responsable").sorted(
+            key=lambda r: (r.name or "").lower())
+        equipment_ids = set(available_equipment.ids)
+        technician_ids = set(available_technicians.ids)
+        if equipment_id not in equipment_ids:
+            equipment_id = 0
+        if tecnico_id not in technician_ids and tecnico_id != -1:
+            tecnico_id = 0
 
-        if not sortby:
-            sortby = "date"
-
-        if not filterby:
-            filterby = "all"
-
-        order = searchbar_sortings[sortby]["order"]
-
-        domain += searchbar_filters[filterby]["domain"]
-
+        domain = list(company_domain)
+        if company_id:
+            domain.append(("partner_id", "=", company_id))
+        if equipment_id:
+            domain.append(("product_alquiler", "=", equipment_id))
+        if tecnico_id:
+            domain.append(("responsable", "=", tecnico_id if tecnico_id > 0 else False))
+        if tipo:
+            domain.append(("tipo_servicio_id", "=", tipo if tipo != "__sin_tipo__" else False))
+        if estado:
+            domain.append(("estado", "=", estado))
         if search:
-            domain += [
-                "|",
-                ("name", "ilike", search),
-                ("serie_id_r", "ilike", search),
-            ]
+            domain.extend(["|", "|", "|",
+                           ("name", "ilike", search),
+                           ("serie_id_r", "ilike", search),
+                           ("product_alquiler.name.name", "ilike", search),
+                           ("partner_id.name", "ilike", search)])
 
-        ticket_count = Ticket.search_count(domain)
+        date_start = date_end_value = None
+        if periodo == "hoy":
+            date_start = date_end_value = today
+        elif periodo == "7dias":
+            date_start, date_end_value = today - timedelta(days=6), today
+        elif periodo == "mes":
+            date_start = datetime(anio, mes, 1).date()
+            date_end_value = (datetime(anio + 1, 1, 1).date() if mes == 12
+                              else datetime(anio, mes + 1, 1).date()) - timedelta(days=1)
+        elif periodo == "anio":
+            date_start = datetime(anio, 1, 1).date()
+            date_end_value = datetime(anio, 12, 31).date()
+        elif periodo == "personalizado":
+            date_start, date_end_value = parse_date(date_begin), parse_date(date_end)
+            if date_start and date_end_value and date_start > date_end_value:
+                date_start, date_end_value = date_end_value, date_start
+        if date_start:
+            domain.append(("agenda", ">=", start_utc(date_start)))
+        if date_end_value:
+            domain.append(("agenda", "<", start_utc(date_end_value + timedelta(days=1))))
 
-        _logger.info(
-            "📊 Total tickets encontrados: %s",
-            ticket_count,
-        )
+        # Estadísticas siempre sobre todo el resultado filtrado; paginación solo tabla.
+        stats = Ticket.search(domain, order=sortings[sortby]["order"])
+        total = len(stats)
+        type_counts = Counter(t.tipo_servicio_id or "sin_tipo" for t in stats)
+        state_counts = Counter(t.estado or "sin_estado" for t in stats)
+        tech_counts = Counter((t.responsable.id, t.responsable.name)
+                              if t.responsable else (0, "Sin asignar") for t in stats)
+        company_counts = Counter((t.partner_id.id, t.partner_id.name)
+                                 for t in stats if t.partner_id)
+        machines = defaultdict(lambda: {"model": "", "serie": "", "total": 0,
+                                        "incidencias": 0, "id": 0})
+        # Definición operativa visible, no se considera instalación o preventiva como falla.
+        incident_type_keys = {"mantenimiento_correctivo", "cambio_repuestos"}
+        incident_total = 0
+        for t in stats:
+            if not t.product_alquiler:
+                continue
+            info = machines[t.product_alquiler.id]
+            info["id"] = t.product_alquiler.id
+            info["model"] = str(t.modelo_id_r or t.product_alquiler.display_name or "Equipo")
+            info["serie"] = str(t.serie_id_r or "Sin serie")
+            info["total"] += 1
+            if t.tipo_servicio_id in incident_type_keys:
+                info["incidencias"] += 1
+                incident_total += 1
+        # Se incluyen correctivos sin equipo en el KPI, aunque no en el ranking.
+        incident_total = sum(t.tipo_servicio_id in incident_type_keys for t in stats)
+        ranking = sorted((i for i in machines.values() if i["incidencias"]),
+                         key=lambda x: (-x["incidencias"], x["model"]))[:8]
+        ranking_max = max([i["incidencias"] for i in ranking] or [1])
+        types_chart = [{"key": key, "label": tipo_selection.get(key, "Sin especificar"),
+                        "value": value} for key, value in type_counts.most_common()]
+        types_max = max(list(type_counts.values()) or [1])
+        for item in types_chart:
+            item["pct"] = round(item["value"] / types_max * 100, 2)
+        for item in ranking:
+            item["pct"] = round(item["incidencias"] / ranking_max * 100, 2)
+        tech_chart = [{"id": key[0], "label": key[1], "value": value,
+                       "pct": round(value / total * 100, 1) if total else 0}
+                      for key, value in tech_counts.most_common()[:8]]
+        companies_chart = [{"id": key[0], "label": key[1], "value": value}
+                           for key, value in company_counts.most_common()[:8]]
+        company_max = max([r["value"] for r in companies_chart] or [1])
+        for item in companies_chart:
+            item["pct"] = round(item["value"] / company_max * 100, 2)
+
+        month_counts = Counter()
+        for t in stats:
+            if t.agenda:
+                dt = t.agenda.replace(tzinfo=UTC).astimezone(user_tz)
+                month_counts[(dt.year, dt.month)] += 1
+        if periodo == "anio":
+            month_keys = [(anio, m) for m in range(1, 13)]
+        elif periodo == "mes":
+            month_keys = [(anio, mes)]
+        elif month_counts:
+            last = max(month_counts)
+            month_keys = []
+            y, m = last
+            for _ in range(12):
+                month_keys.append((y, m))
+                y, m = (y-1, 12) if m == 1 else (y, m-1)
+            month_keys.reverse()
+        else:
+            month_keys = [(today.year, m) for m in range(1, 13)]
+        month_max = max([month_counts.get(k, 0) for k in month_keys] or [1]) or 1
+        months_chart = [{"label": "%02d/%s" % (m, str(y)[-2:]),
+                         "value": month_counts.get((y, m), 0),
+                         "pct": round(month_counts.get((y, m), 0) / month_max * 100, 2),
+                         "year": y, "month": m} for y, m in month_keys]
+
+        # URL con filtros actuales; los gráficos actúan como filtros navegables.
+        params = {"company_id": company_id or "", "equipment_id": equipment_id or "",
+                  "tecnico_id": tecnico_id or "", "tipo_servicio": tipo,
+                  "estado": estado, "periodo": periodo, "anio": anio, "mes": mes,
+                  "date_begin": date_begin or "", "date_end": date_end or "",
+                  "sortby": sortby, "search": search}
+        def dashboard_link(**changes):
+            current = dict(params)
+            current.update(changes)
+            return "/my/tickets?" + urlencode({k: v for k, v in current.items()
+                                                 if v is not None and v != ""})
+        for item in types_chart:
+            item["url"] = dashboard_link(tipo_servicio=item["key"] if item["key"] != "sin_tipo" else "__sin_tipo__")
+        for item in ranking:
+            item["url"] = dashboard_link(equipment_id=item["id"])
+        for item in tech_chart:
+            item["url"] = dashboard_link(tecnico_id=item["id"] or -1)
+        for item in companies_chart:
+            item["url"] = dashboard_link(company_id=item["id"])
+        for item in months_chart:
+            item["url"] = dashboard_link(periodo="mes", anio=item["year"], mes=item["month"])
 
         pager = portal_pager(
-            url="/my/tickets",
-            url_args={
-                "date_begin": date_begin,
-                "date_end": date_end,
-                "sortby": sortby,
-                "filterby": filterby,
-                "search": search,
-            },
-            total=ticket_count,
-            page=page,
-            step=self._items_per_page,
-        )
-
-        tickets = Ticket.search(
-            domain,
-            order=order,
-            limit=self._items_per_page,
-            offset=pager["offset"],
-        )
-
+            url="/my/tickets", url_args={k: v for k, v in params.items() if v != ""},
+            total=total, page=page, step=self._items_per_page)
+        tickets = stats[pager["offset"]:pager["offset"] + self._items_per_page]
+        empresas = Partner.browse(company_ids).exists().sorted(key=lambda x: (x.name or "").lower())
+        available_years = sorted({today.year} | {t.agenda.replace(tzinfo=UTC).astimezone(user_tz).year
+                                                   for t in authorized_tickets if t.agenda}, reverse=True)
         values.update({
-            "date": date_begin,
-            "tickets": tickets,
-            "page_name": "ticket",
-            "default_url": "/my/tickets",
-            "pager": pager,
-            "searchbar_sortings": searchbar_sortings,
-            "searchbar_filters": OrderedDict(
-                sorted(searchbar_filters.items())
-            ),
-            "sortby": sortby,
-            "filterby": filterby,
-            "search": search,
+            "tickets": tickets, "ticket_total": total, "page_name": "ticket",
+            "default_url": "/my/tickets", "pager": pager,
+            "searchbar_sortings": sortings, "sortby": sortby,
+            "search": search, "periodo": periodo, "anio": anio, "mes": mes,
+            "date_begin": date_begin or "", "date_end": date_end or "",
+            "company_id": company_id, "equipment_id": equipment_id,
+            "tecnico_id": tecnico_id, "tipo_servicio": tipo, "estado": estado,
+            "empresas": empresas, "available_equipment": available_equipment,
+            "available_technicians": available_technicians,
+            "tipo_selection": tipo_selection, "estado_selection": estado_selection,
+            "available_years": available_years,
+            "total_finalizados": state_counts.get("finalizado", 0),
+            "total_pendientes": total - state_counts.get("finalizado", 0),
+            "total_equipos": len(machines), "total_incidencias": incident_total,
+            "types_chart": types_chart, "ranking": ranking, "tech_chart": tech_chart,
+            "companies_chart": companies_chart, "months_chart": months_chart,
+            "dashboard_link": dashboard_link, "company_count": len(empresas),
         })
-
-        return request.render(
-            "sat.portal_my_tickets",
-            values,
-        )
+        return request.render("sat.portal_my_tickets", values)
 
     # ==========================================================
     # DETALLE DE TICKET

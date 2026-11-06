@@ -1888,489 +1888,842 @@
 </template>
 
 
-        <template id="portal_my_tickets" name="Mis Tickets">
+ 
+<template id="portal_my_tickets" name="Mis Tickets">
     <t t-call="portal.portal_layout">
         <t t-set="breadcrumbs_searchbar" t-value="True"/>
-
         <t t-call="portal.portal_searchbar">
             <t t-set="title">Mis Tickets</t>
         </t>
 
-        <!-- Custom CSS -->
         <style>
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap');
-            
-            .tickets-container {
-                font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
-                background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-                min-height: 100vh;
-                padding: 2rem 0;
+            .sat-ticket-dashboard {
+                --sat-ink: #17223d;
+                --sat-purple: #5546b8;
+                --sat-line: #e5e9f2;
+                background: #f5f7fc;
+                padding: 22px 0 42px;
+                color: var(--sat-ink);
+                font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
             }
-            
-            .tickets-hero {
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                border-radius: 24px;
-                padding: 2.5rem;
-                margin-bottom: 2rem;
-                box-shadow: 0 20px 60px rgba(245, 158, 11, 0.2);
-                position: relative;
-                overflow: hidden;
+            .sat-ticket-dashboard .sat-wrap {
+                max-width: 1540px;
+                margin: auto;
+                padding: 0 20px;
             }
-            
-            .tickets-hero::before {
-                content: '';
-                position: absolute;
-                top: -50%;
-                right: -20%;
-                width: 400px;
-                height: 400px;
-                background: radial-gradient(circle, rgba(254, 243, 199, 0.15) 0%, transparent 70%);
-                border-radius: 50%;
+            .sat-ticket-dashboard .sat-head {
+                display: flex;
+                justify-content: space-between;
+                gap: 15px;
+                align-items: center;
+                margin: 0 0 17px;
+                flex-wrap: wrap;
             }
-            
-            .tickets-hero h2 {
-                color: #fff;
-                font-weight: 700;
-                font-size: 2rem;
-                margin: 0 0 0.5rem 0;
-                letter-spacing: -0.5px;
-                position: relative;
-                z-index: 1;
-            }
-            
-            .tickets-hero-subtitle {
-                color: rgba(255,255,255,0.85);
-                font-size: 1rem;
+            .sat-ticket-dashboard h2 {
+                font-size: 1.65rem;
+                font-weight: 800;
                 margin: 0;
-                position: relative;
-                z-index: 1;
             }
-            
-            .tickets-count {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
-                background: rgba(255,255,255,0.2);
-                backdrop-filter: blur(10px);
-                padding: 0.5rem 1.25rem;
-                border-radius: 50px;
-                color: #fff;
-                font-weight: 600;
-                font-size: 1rem;
-                border: 1px solid rgba(255,255,255,0.3);
-                position: relative;
-                z-index: 1;
+            .sat-ticket-dashboard .sat-muted {
+                color: #69758c;
+                font-size: .86rem;
             }
-            
-            .ticket-card {
+            .sat-ticket-dashboard .sat-panel {
                 background: #fff;
-                border-radius: 16px;
-                border: 1px solid #e9ecef;
-                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                margin-bottom: 1.25rem;
+                border: 1px solid var(--sat-line);
+                border-radius: 14px;
+                box-shadow: 0 3px 16px #142e4b09;
+                margin-bottom: 14px;
+                padding: 18px;
+            }
+            .sat-ticket-dashboard .sat-form-grid {
+                display: grid;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 12px;
+            }
+            .sat-ticket-dashboard label {
+                font-size: .76rem;
+                font-weight: 700;
+                color: #394763;
+                display: block;
+                margin-bottom: 5px;
+            }
+            .sat-ticket-dashboard .sat-control {
+                width: 100%;
+                min-width: 0;
+                border: 1px solid #d7deea;
+                border-radius: 9px;
+                padding: 9px 10px;
+                background: white;
+                color: #21304a;
+                font-size: .85rem;
+            }
+            .sat-ticket-dashboard .sat-form-actions {
+                display: flex;
+                align-items: flex-end;
+                gap: 8px;
+                flex-wrap: wrap;
+                margin-top: 12px;
+            }
+            .sat-ticket-dashboard .sat-btn {
+                background: var(--sat-purple);
+                color: white;
+                border: 0;
+                border-radius: 9px;
+                padding: 10px 16px;
+                font-size: .83rem;
+                font-weight: 700;
+                text-decoration: none;
+                display: inline-block;
+            }
+            .sat-ticket-dashboard .sat-btn-alt {
+                background: #eef0f8;
+                color: #3c4780;
+            }
+            .sat-ticket-dashboard .sat-periods {
+                display: flex;
+                gap: 7px;
+                flex-wrap: wrap;
+                margin-top: 12px;
+            }
+            .sat-ticket-dashboard .sat-chip {
+                border: 1px solid #dadeec;
+                border-radius: 22px;
+                color: #515c77;
+                background: white;
+                padding: 6px 13px;
+                text-decoration: none;
+                font-size: .79rem;
+                font-weight: 650;
+            }
+            .sat-ticket-dashboard .sat-chip.sat-selected {
+                background: var(--sat-purple);
+                color: white;
+                border-color: var(--sat-purple);
+            }
+            .sat-ticket-dashboard .sat-kpis {
+                display: grid;
+                grid-template-columns: repeat(5, minmax(0, 1fr));
+                gap: 12px;
+                margin-bottom: 14px;
+            }
+            .sat-ticket-dashboard .sat-kpi {
+                border: 1px solid var(--sat-line);
+                border-radius: 13px;
+                background: #fff;
+                padding: 16px;
+                min-width: 0;
+                box-shadow: 0 3px 14px #142e4b07;
+            }
+            .sat-ticket-dashboard .sat-kpi .sat-number {
+                font-size: 1.85rem;
+                font-weight: 800;
+                line-height: 1.3;
+            }
+            .sat-ticket-dashboard .sat-kpi .sat-name {
+                color: #5c6982;
+                font-size: .79rem;
+                font-weight: 650;
+            }
+            .sat-ticket-dashboard .sat-kpi:nth-child(1) {
+                border-top: 3px solid #6a5bca;
+            }
+            .sat-ticket-dashboard .sat-kpi:nth-child(2) {
+                border-top: 3px solid #25aa75;
+            }
+            .sat-ticket-dashboard .sat-kpi:nth-child(3) {
+                border-top: 3px solid #eeae37;
+            }
+            .sat-ticket-dashboard .sat-kpi:nth-child(4) {
+                border-top: 3px solid #3699e7;
+            }
+            .sat-ticket-dashboard .sat-kpi:nth-child(5) {
+                border-top: 3px solid #e66e74;
+            }
+            .sat-ticket-dashboard .sat-grid-two {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 14px;
+            }
+            .sat-ticket-dashboard .sat-grid-three {
+                display: grid;
+                grid-template-columns: 1.25fr 1fr 1fr;
+                gap: 14px;
+            }
+            .sat-ticket-dashboard h3 {
+                font-size: .98rem;
+                font-weight: 800;
+                margin: 0 0 15px;
+            }
+            .sat-ticket-dashboard .sat-graph-row {
+                display: grid;
+                grid-template-columns: minmax(0, 190px) minmax(0, 1fr) 38px;
+                align-items: center;
+                gap: 9px;
+                margin-bottom: 12px;
+                text-decoration: none;
+                color: inherit;
+                font-size: .76rem;
+            }
+            .sat-ticket-dashboard .sat-graph-row:hover {
+                color: var(--sat-purple);
+            }
+            .sat-ticket-dashboard .sat-track {
+                height: 12px;
+                border-radius: 6px;
+                background: #edf0f7;
                 overflow: hidden;
             }
-            
-            .ticket-card:hover {
-                transform: translateY(-4px);
-                box-shadow: 0 12px 40px rgba(0,0,0,0.1);
-                border-color: #f59e0b;
+            .sat-ticket-dashboard .sat-fill {
+                display: block;
+                height: 100%;
+                background: #6355c6;
+                border-radius: 6px;
+                min-width: 2px;
             }
-            
-            .ticket-header {
+            .sat-ticket-dashboard .sat-fill-blue {
+                background: #3899e8;
+            }
+            .sat-ticket-dashboard .sat-fill-teal {
+                background: #38ab91;
+            }
+            .sat-ticket-dashboard .sat-fill-orange {
+                background: #e9a54b;
+            }
+            .sat-ticket-dashboard .sat-graph-row strong {
+                text-align: right;
+                font-variant-numeric: tabular-nums;
+            }
+            .sat-ticket-dashboard .sat-months {
                 display: flex;
-                align-items: center;
-                gap: 1rem;
-                padding: 1.5rem;
-                background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
-                border-bottom: 1px solid #e9ecef;
+                align-items: end;
+                gap: 7px;
+                min-height: 172px;
+                padding-top: 16px;
+                border-bottom: 1px solid #e0e4ef;
             }
-            
-            .ticket-icon {
-                width: 56px;
-                height: 56px;
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                border-radius: 14px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                flex-shrink: 0;
-                box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
-            }
-            
-            .ticket-icon i {
-                color: #fff;
-                font-size: 1.5rem;
-            }
-            
-            .ticket-title {
+            .sat-ticket-dashboard .sat-month {
                 flex: 1;
-            }
-            
-            .ticket-title h3 {
-                margin: 0 0 0.25rem 0;
-                font-size: 1.25rem;
-                font-weight: 700;
-                color: #1a1f3a;
-                letter-spacing: -0.3px;
-            }
-            
-            .ticket-meta {
+                min-width: 0;
+                height: 150px;
                 display: flex;
+                flex-direction: column;
+                justify-content: end;
                 align-items: center;
-                gap: 0.5rem;
-                font-size: 0.875rem;
-                color: #6c757d;
-                font-family: 'JetBrains Mono', monospace;
-            }
-            
-            .ticket-body {
-                padding: 1.5rem;
-            }
-            
-            .info-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 1rem;
-                margin-bottom: 1.5rem;
-            }
-            
-            .info-item {
-                background: #f8f9fa;
-                padding: 1rem;
-                border-radius: 12px;
-                border-left: 3px solid #f59e0b;
-            }
-            
-            .info-label {
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                font-size: 0.75rem;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-                color: #6c757d;
-                margin-bottom: 0.5rem;
-                font-weight: 600;
-            }
-            
-            .info-value {
-                font-size: 1rem;
-                font-weight: 600;
-                color: #1a1f3a;
-            }
-            
-            .status-badge {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.4rem;
-                padding: 0.5rem 1rem;
-                border-radius: 50px;
-                font-size: 0.875rem;
-                font-weight: 600;
-                border: 2px solid;
-            }
-            
-            .status-nuevo {
-                background: #dbeafe;
-                color: #1e40af;
-                border-color: #3b82f6;
-            }
-            
-            .status-proceso {
-                background: #fef3c7;
-                color: #92400e;
-                border-color: #fbbf24;
-            }
-            
-            .status-finalizado {
-                background: #d1fae5;
-                color: #065f46;
-                border-color: #10b981;
-            }
-            
-            .status-default {
-                background: #f3f4f6;
-                color: #374151;
-                border-color: #9ca3af;
-            }
-            
-            .btn-view-ticket {
-                background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-                color: #fff;
-                border: none;
-                border-radius: 12px;
-                padding: 0.875rem 1.5rem;
-                font-weight: 700;
-                font-size: 0.95rem;
-                transition: all 0.2s;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 0.5rem;
+                gap: 4px;
                 text-decoration: none;
+                font-size: .7rem;
+                color: #6c758b;
+            }
+            .sat-ticket-dashboard .sat-monthbar {
                 width: 100%;
+                max-width: 34px;
+                background: linear-gradient(180deg, #7768e3, #5144b4);
+                border-radius: 5px 5px 0 0;
+                min-height: 2px;
             }
-            
-            .btn-view-ticket:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
-                color: #fff;
+            .sat-ticket-dashboard .sat-month strong {
+                color: #2d3554;
             }
-            
-            .empty-state {
-                text-align: center;
-                padding: 4rem 2rem;
-                background: #fff;
-                border-radius: 24px;
-                box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            .sat-ticket-dashboard .sat-table-scroll {
+                overflow-x: auto;
             }
-            
-            .empty-state i {
-                font-size: 4rem;
-                color: #e5e7eb;
-                margin-bottom: 1.5rem;
+            .sat-ticket-dashboard .sat-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: .79rem;
             }
-            
-            .empty-state h3 {
-                font-size: 1.5rem;
+            .sat-ticket-dashboard .sat-table th {
+                background: #f4f6fb;
+                color: #56627a;
                 font-weight: 700;
-                color: #1a1f3a;
-                margin-bottom: 0.5rem;
+                text-align: left;
+                white-space: nowrap;
+                padding: 11px;
             }
-            
-            .empty-state p {
-                color: #6c757d;
-                font-size: 1rem;
-                margin-bottom: 2rem;
+            .sat-ticket-dashboard .sat-table td {
+                padding: 11px;
+                border-bottom: 1px solid #edf0f6;
+                vertical-align: middle;
             }
-            
-            .btn-equipos {
-                background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-                color: #fff;
-                border: none;
-                border-radius: 12px;
-                padding: 1rem 2rem;
+            .sat-ticket-dashboard .sat-table a {
+                color: #5144b4;
                 font-weight: 700;
-                font-size: 1rem;
-                transition: all 0.2s;
-                display: inline-flex;
-                align-items: center;
-                gap: 0.5rem;
                 text-decoration: none;
             }
-            
-            .btn-equipos:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 12px 24px rgba(99, 102, 241, 0.3);
-                color: #fff;
+            .sat-ticket-dashboard .sat-status {
+                border-radius: 20px;
+                background: #f0f1f6;
+                padding: 5px 9px;
+                white-space: nowrap;
+                font-size: .73rem;
+                font-weight: 650;
             }
-            
-            @media (max-width: 768px) {
-                .tickets-hero {
-                    padding: 2rem 1.5rem;
+            .sat-ticket-dashboard .sat-done {
+                background: #e2f6ec;
+                color: #218251;
+            }
+            .sat-ticket-dashboard .sat-progress {
+                background: #fff1d9;
+                color: #a36512;
+            }
+            .sat-ticket-dashboard .sat-empty {
+                text-align: center;
+                padding: 20px;
+                color: #6d7890;
+            }
+            .sat-ticket-dashboard .sat-note {
+                font-size: .73rem;
+                color: #778197;
+                margin-top: 10px;
+            }
+            .sat-ticket-dashboard .sat-pages {
+                margin-top: 15px;
+            }
+            @media(max-width:1100px) {
+                .sat-ticket-dashboard .sat-form-grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
                 }
-                
-                .tickets-hero h2 {
-                    font-size: 1.75rem;
+                .sat-ticket-dashboard .sat-kpis {
+                    grid-template-columns: repeat(3, minmax(0, 1fr));
                 }
-                
-                .ticket-header {
-                    flex-direction: column;
-                    align-items: flex-start;
+                .sat-ticket-dashboard .sat-grid-three {
+                    grid-template-columns: 1fr 1fr;
                 }
-                
-                .info-grid {
+            }
+            @media(max-width:700px) {
+                .sat-ticket-dashboard .sat-form-grid,
+                .sat-ticket-dashboard .sat-grid-two,
+                .sat-ticket-dashboard .sat-grid-three {
                     grid-template-columns: 1fr;
+                }
+                .sat-ticket-dashboard .sat-kpis {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+                .sat-ticket-dashboard .sat-graph-row {
+                    grid-template-columns: minmax(0, 120px) minmax(0, 1fr) 28px;
+                }
+                .sat-ticket-dashboard .sat-wrap {
+                    padding: 0 12px;
                 }
             }
         </style>
 
-        <div class="tickets-container">
-            <div class="container">
-                
-                <!-- Hero Section -->
-                <div class="tickets-hero">
-                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
-                        <div>
-                            <h2>
-                                <i class="fa fa-ticket-alt me-2"></i>
-                                Mis Tickets de Servicio
-                            </h2>
-                            <p class="tickets-hero-subtitle mb-0">
-                                Seguimiento de tus solicitudes de servicio técnico
-                            </p>
+        <div class="sat-ticket-dashboard">
+            <div class="sat-wrap">
+
+                <!-- Encabezado -->
+                <div class="sat-head">
+                    <div>
+                        <h2>
+                            <i class="fa fa-ticket me-2"/>
+                            Mis Tickets
+                        </h2>
+                        <div class="sat-muted">
+                            Panel de servicios técnicos de sus empresas autorizadas
                         </div>
-                        <t t-if="tickets">
-                            <div class="tickets-count">
-                                <i class="fa fa-layer-group"></i>
-                                <span><t t-esc="len(tickets)"/> tickets registrados</span>
+                    </div>
+                    <span class="sat-muted">
+                        <i class="fa fa-shield me-1"/>
+                        Información privada de su cuenta
+                    </span>
+                </div>
+
+                <!-- Filtros -->
+                <div class="sat-panel">
+                    <form method="get" action="/my/tickets" id="sat-ticket-filters">
+                        <div class="sat-form-grid">
+
+                            <!-- Empresas autorizadas -->
+                            <div>
+                                <label for="sat-company">Empresa / cliente</label>
+                                <select id="sat-company" name="company_id" class="sat-control">
+                                    <option value="">Todas mis empresas</option>
+                                    <t t-foreach="empresas" t-as="emp">
+                                        <option t-att-value="emp.id"
+                                                t-att-selected="company_id == emp.id and 'selected' or None">
+                                            <t t-esc="emp.name"/>
+                                        </option>
+                                    </t>
+                                </select>
                             </div>
+
+                            <!-- Equipos -->
+                            <div>
+                                <label for="sat-equipment">Equipo / serie</label>
+                                <select id="sat-equipment" name="equipment_id" class="sat-control">
+                                    <option value="">Todos mis equipos</option>
+                                    <t t-foreach="available_equipment" t-as="eq">
+                                        <option t-att-value="eq.id"
+                                                t-att-selected="equipment_id == eq.id and 'selected' or None">
+                                            <t t-esc="eq.display_name"/> —
+                                            <t t-esc="eq.serie or ''"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <!-- Tipo de servicio -->
+                            <div>
+                                <label for="sat-type">Tipo de servicio</label>
+                                <select id="sat-type" name="tipo_servicio" class="sat-control">
+                                    <option value="">Todos</option>
+                                    <t t-foreach="tipo_selection.items()" t-as="it">
+                                        <option t-att-value="it[0]"
+                                                t-att-selected="tipo_servicio == it[0] and 'selected' or None">
+                                            <t t-esc="it[1]"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <!-- Técnico -->
+                            <div>
+                                <label for="sat-technician">Técnico</label>
+                                <select id="sat-technician" name="tecnico_id" class="sat-control">
+                                    <option value="">Todos</option>
+                                    <t t-foreach="available_technicians" t-as="tecnico">
+                                        <option t-att-value="tecnico.id"
+                                                t-att-selected="tecnico_id == tecnico.id and 'selected' or None">
+                                            <t t-esc="tecnico.name"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <!-- Estado -->
+                            <div>
+                                <label for="sat-status">Estado</label>
+                                <select id="sat-status" name="estado" class="sat-control">
+                                    <option value="">Todos</option>
+                                    <t t-foreach="estado_selection.items()" t-as="it">
+                                        <option t-att-value="it[0]"
+                                                t-att-selected="estado == it[0] and 'selected' or None">
+                                            <t t-esc="it[1]"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <!-- Período -->
+                            <div>
+                                <label for="sat-period">Periodo</label>
+                                <select id="sat-period" name="periodo" class="sat-control">
+                                    <t t-foreach="[
+                                        ('todos','Todo el historial'),
+                                        ('hoy','Hoy'),
+                                        ('7dias','Últimos 7 días'),
+                                        ('mes','Mes'),
+                                        ('anio','Año'),
+                                        ('personalizado','Fechas personalizadas')
+                                    ]" t-as="period">
+                                        <option t-att-value="period[0]"
+                                                t-att-selected="periodo == period[0] and 'selected' or None">
+                                            <t t-esc="period[1]"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <!-- Año -->
+                            <div>
+                                <label for="sat-year">Año</label>
+                                <select id="sat-year" name="anio" class="sat-control">
+                                    <t t-foreach="available_years" t-as="y">
+                                        <option t-att-value="y"
+                                                t-att-selected="anio == y and 'selected' or None">
+                                            <t t-esc="y"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <!-- Mes -->
+                            <div>
+                                <label for="sat-month">Mes</label>
+                                <select id="sat-month" name="mes" class="sat-control">
+                                    <t t-foreach="[
+                                        (1,'Enero'),(2,'Febrero'),(3,'Marzo'),
+                                        (4,'Abril'),(5,'Mayo'),(6,'Junio'),
+                                        (7,'Julio'),(8,'Agosto'),(9,'Septiembre'),
+                                        (10,'Octubre'),(11,'Noviembre'),(12,'Diciembre')
+                                    ]" t-as="month">
+                                        <option t-att-value="month[0]"
+                                                t-att-selected="mes == month[0] and 'selected' or None">
+                                            <t t-esc="month[1]"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+
+                            <!-- Fechas -->
+                            <div>
+                                <label for="sat-from">Fecha inicio</label>
+                                <input id="sat-from"
+                                       class="sat-control"
+                                       type="date"
+                                       name="date_begin"
+                                       t-att-value="date_begin"/>
+                            </div>
+
+                            <div>
+                                <label for="sat-to">Fecha fin</label>
+                                <input id="sat-to"
+                                       class="sat-control"
+                                       type="date"
+                                       name="date_end"
+                                       t-att-value="date_end"/>
+                            </div>
+
+                            <!-- Búsqueda -->
+                            <div>
+                                <label for="sat-query">
+                                    Buscar ticket, serie, modelo o cliente
+                                </label>
+                                <input id="sat-query"
+                                       class="sat-control"
+                                       type="search"
+                                       name="search"
+                                       t-att-value="search"
+                                       placeholder="Ticket / Serie / Modelo"/>
+                            </div>
+
+                            <!-- Orden -->
+                            <div>
+                                <label for="sat-sort">Ordenar</label>
+                                <select id="sat-sort" name="sortby" class="sat-control">
+                                    <t t-foreach="searchbar_sortings.items()" t-as="s">
+                                        <option t-att-value="s[0]"
+                                                t-att-selected="sortby == s[0] and 'selected' or None">
+                                            <t t-esc="s[1]['label']"/>
+                                        </option>
+                                    </t>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="sat-form-actions">
+                            <button class="sat-btn" type="submit">
+                                <i class="fa fa-filter me-1"/>
+                                Aplicar filtros
+                            </button>
+                            <a class="sat-btn sat-btn-alt" href="/my/tickets">
+                                Limpiar
+                            </a>
+                        </div>
+                    </form>
+
+                    <!-- Filtros rápidos -->
+                    <div class="sat-periods">
+                        <t t-foreach="[
+                            ('hoy','Hoy'),
+                            ('7dias','7 días'),
+                            ('mes','Mes'),
+                            ('anio','Año'),
+                            ('todos','Todo')
+                        ]" t-as="p">
+                            <a t-att-href="dashboard_link(periodo=p[0])"
+                               t-att-class="'sat-chip sat-selected' if periodo == p[0] else 'sat-chip'">
+                                <t t-esc="p[1]"/>
+                            </a>
                         </t>
                     </div>
                 </div>
 
-                <!-- Empty State -->
-                <t t-if="not tickets">
-                    <div class="empty-state">
-                        <i class="fa fa-inbox"></i>
-                        <h3>No tiene tickets registrados</h3>
-                        <p>Actualmente no tiene tickets de servicio técnico</p>
-                        <a href="/my/equipos" class="btn-equipos">
-                            <i class="fa fa-print"></i>
-                            <span>Ver mis equipos</span>
-                        </a>
+                <!-- Indicadores -->
+                <div class="sat-kpis">
+                    <div class="sat-kpi">
+                        <div class="sat-name">Total tickets</div>
+                        <div class="sat-number">
+                            <t t-esc="ticket_total"/>
+                        </div>
                     </div>
-                </t>
+                    <div class="sat-kpi">
+                        <div class="sat-name">Finalizados</div>
+                        <div class="sat-number">
+                            <t t-esc="total_finalizados"/>
+                        </div>
+                    </div>
+                    <div class="sat-kpi">
+                        <div class="sat-name">Pendientes</div>
+                        <div class="sat-number">
+                            <t t-esc="total_pendientes"/>
+                        </div>
+                    </div>
+                    <div class="sat-kpi">
+                        <div class="sat-name">Equipos atendidos</div>
+                        <div class="sat-number">
+                            <t t-esc="total_equipos"/>
+                        </div>
+                    </div>
+                    <div class="sat-kpi">
+                        <div class="sat-name">Atenciones correctivas*</div>
+                        <div class="sat-number">
+                            <t t-esc="total_incidencias"/>
+                        </div>
+                    </div>
+                </div>
 
-                <!-- Ticket Cards -->
-                <t t-else="">
-                    <div class="tickets-list">
-                        <t t-foreach="tickets" t-as="ticket">
-                            <div class="ticket-card">
-                                <!-- Header -->
-                                <div class="ticket-header">
-                                    <div class="ticket-icon">
-                                        <i class="fa fa-ticket-alt"></i>
-                                    </div>
-                                    
-                                    <div class="ticket-title">
-                                        <!-- Cliente / Empresa primero -->
-                                        <t t-if="ticket.partner_id">
-                                            <div class="mb-2">
-                                                <span class="badge rounded-pill bg-light text-dark border" style="font-size: 0.9rem; font-weight: 700;">
-                                                    <i class="fa fa-building me-1"></i>
-                                                    <t t-esc="ticket.partner_id.name"/>
-                                                </span>
-                                            </div>
-                                        </t>
-                                        <!-- Luego el ticket -->
-                                        <h3><t t-esc="ticket.name"/></h3>
-                                        <div class="ticket-meta">
-                                            <i class="fa fa-calendar-plus"></i>
-                                            <span>Creado: <t t-esc="ticket.create_date.strftime('%d/%m/%Y')"/></span>
-                                        </div>
-                                    </div>
-                                    
-                                    <div>
-                                        <t t-if="ticket.estado == 'nuevo'">
-                                            <div class="status-badge status-nuevo">
-                                                <i class="fa fa-star"></i>
-                                                Nuevo
-                                            </div>
-                                        </t>
-                                        <t t-elif="ticket.estado == 'proceso'">
-                                            <div class="status-badge status-proceso">
-                                                <i class="fa fa-clock"></i>
-                                                En Proceso
-                                            </div>
-                                        </t>
-                                        <t t-elif="ticket.estado == 'finalizado'">
-                                            <div class="status-badge status-finalizado">
-                                                <i class="fa fa-check-circle"></i>
-                                                Finalizado
-                                            </div>
-                                        </t>
-                                        <t t-else="">
-                                            <div class="status-badge status-default">
-                                                <i class="fa fa-info-circle"></i>
-                                                <t t-esc="ticket.estado"/>
-                                            </div>
-                                        </t>
-                                    </div>
-                                </div>
+                <!-- Gráficos principales -->
+                <div class="sat-grid-two">
 
-                                <!-- Body -->
-                                <div class="ticket-body">
-                                    <!-- Info Grid -->
-                                    <div class="info-grid">
-                                        <!-- Equipo -->
-                                        <div class="info-item">
-                                            <div class="info-label">
-                                                <i class="fa fa-print"></i>
-                                                Equipo
-                                            </div>
-                                            <div class="info-value">
-                                                <t t-if="ticket.product_alquiler">
-                                                    <div><t t-esc="ticket.modelo_id_r"/></div>
-                                                    <div style="font-size: 0.875rem; color: #6b7280; font-weight: 500; margin-top: 0.25rem;">
-                                                        Serie: <t t-esc="ticket.serie_id_r"/>
-                                                    </div>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="text-muted">Sin equipo</span>
-                                                </t>
-                                            </div>
-                                        </div>
+                    <!-- Servicios más realizados -->
+                    <section class="sat-panel">
+                        <h3>
+                            <i class="fa fa-bar-chart me-2"/>
+                            Servicios más realizados
+                        </h3>
 
-                                        <!-- Fecha de Visita -->
-                                        <div class="info-item">
-                                            <div class="info-label">
-                                                <i class="fa fa-calendar-check"></i>
-                                                Fecha de Visita
-                                            </div>
-                                            <div class="info-value">
-                                                <t t-if="ticket.agenda">
-                                                    <div><t t-esc="ticket.agenda.strftime('%d/%m/%Y')"/></div>
-                                                    <div style="font-size: 0.875rem; color: #6b7280; font-weight: 500; margin-top: 0.25rem;">
-                                                        <i class="fa fa-clock"></i>
-                                                        <t t-esc="ticket.agenda.strftime('%H:%M')"/>
-                                                    </div>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="text-muted">Sin programar</span>
-                                                </t>
-                                            </div>
-                                        </div>
-
-                                        <!-- Tipo de Servicio -->
-                                        <div class="info-item">
-                                            <div class="info-label">
-                                                <i class="fa fa-wrench"></i>
-                                                Tipo de Servicio
-                                            </div>
-                                            <div class="info-value">
-                                                <t t-if="ticket.tipo_servicio_id">
-                                                    <t t-esc="dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, ticket.tipo_servicio_id)"/>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="text-muted">No especificado</span>
-                                                </t>
-                                            </div>
-                                        </div>
-
-                                        <!-- Técnico -->
-                                        <div class="info-item">
-                                            <div class="info-label">
-                                                <i class="fa fa-user-cog"></i>
-                                                Técnico Asignado
-                                            </div>
-                                            <div class="info-value">
-                                                <t t-if="ticket.responsable">
-                                                    <t t-esc="ticket.responsable.name"/>
-                                                </t>
-                                                <t t-else="">
-                                                    <span class="text-muted">Sin asignar</span>
-                                                </t>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Action Button -->
-                                    <a t-attf-href="/my/ticket/#{ticket.id}"
-                                       class="btn-view-ticket">
-                                        <i class="fa fa-eye"></i>
-                                        <span>Ver Detalles del Ticket</span>
-                                    </a>
-                                </div>
-                            </div>
+                        <t t-if="types_chart">
+                            <t t-foreach="types_chart" t-as="r">
+                                <a class="sat-graph-row" t-att-href="r['url']">
+                                    <span>
+                                        <t t-esc="r['label']"/>
+                                    </span>
+                                    <span class="sat-track">
+                                        <span class="sat-fill sat-fill-blue"
+                                              t-att-style="'width:%s%%' % r['pct']"/>
+                                    </span>
+                                    <strong>
+                                        <t t-esc="r['value']"/>
+                                    </strong>
+                                </a>
+                            </t>
                         </t>
+                        <t t-else="">
+                            <p class="sat-empty">
+                                Sin servicios para los filtros seleccionados.
+                            </p>
+                        </t>
+                    </section>
+
+                    <!-- Equipos con más incidencias -->
+                    <section class="sat-panel">
+                        <h3>
+                            <i class="fa fa-exclamation-triangle me-2"/>
+                            Máquinas con más atenciones correctivas
+                        </h3>
+
+                        <t t-if="ranking">
+                            <t t-foreach="ranking" t-as="r">
+                                <a class="sat-graph-row" t-att-href="r['url']">
+                                    <span>
+                                        <strong>
+                                            <t t-esc="r['model']"/>
+                                        </strong>
+                                        <span class="sat-muted" style="display:block">
+                                            <t t-esc="r['serie']"/>
+                                        </span>
+                                    </span>
+
+                                    <span class="sat-track">
+                                        <span class="sat-fill"
+                                              t-att-style="'width:%s%%' % r['pct']"/>
+                                    </span>
+
+                                    <strong>
+                                        <t t-esc="r['incidencias']"/>
+                                    </strong>
+                                </a>
+                            </t>
+                        </t>
+
+                        <t t-else="">
+                            <p class="sat-empty">
+                                No hay atenciones correctivas para este filtro.
+                            </p>
+                        </t>
+
+                        <div class="sat-note">
+                            *Atenciones correctivas = mantenimiento correctivo
+                            y cambio de repuestos. No equivale necesariamente
+                            al número de fallas distintas.
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Gráficos secundarios -->
+                <div class="sat-grid-three">
+
+                    <!-- Evolución mensual -->
+                    <section class="sat-panel">
+                        <h3>
+                            <i class="fa fa-calendar me-2"/>
+                            Evolución mensual de servicios
+                        </h3>
+
+                        <div class="sat-months">
+                            <t t-foreach="months_chart" t-as="r">
+                                <a class="sat-month"
+                                   t-att-href="r['url']"
+                                   t-att-title="'%s: %s servicios' % (r['label'], r['value'])">
+                                    <strong>
+                                        <t t-esc="r['value']"/>
+                                    </strong>
+                                    <span class="sat-monthbar"
+                                          t-att-style="'height:%s%%' % r['pct']"/>
+                                    <span>
+                                        <t t-esc="r['label']"/>
+                                    </span>
+                                </a>
+                            </t>
+                        </div>
+                    </section>
+
+                    <!-- Técnicos -->
+                    <section class="sat-panel">
+                        <h3>
+                            <i class="fa fa-users me-2"/>
+                            Distribución por técnico
+                        </h3>
+
+                        <t t-if="tech_chart">
+                            <t t-foreach="tech_chart" t-as="r">
+                                <a class="sat-graph-row" t-att-href="r['url']">
+                                    <span>
+                                        <t t-esc="r['label']"/>
+                                    </span>
+                                    <span class="sat-track">
+                                        <span class="sat-fill sat-fill-teal"
+                                              t-att-style="'width:%s%%' % r['pct']"/>
+                                    </span>
+                                    <strong>
+                                        <t t-esc="r['value']"/>
+                                    </strong>
+                                </a>
+                            </t>
+                        </t>
+                        <t t-else="">
+                            <p class="sat-empty">Sin datos.</p>
+                        </t>
+                    </section>
+
+                    <!-- Empresas autorizadas -->
+                    <section class="sat-panel">
+                        <h3>
+                            <i class="fa fa-building me-2"/>
+                            Mis empresas con más servicios
+                        </h3>
+
+                        <t t-if="companies_chart">
+                            <t t-foreach="companies_chart" t-as="r">
+                                <a class="sat-graph-row" t-att-href="r['url']">
+                                    <span>
+                                        <t t-esc="r['label']"/>
+                                    </span>
+                                    <span class="sat-track">
+                                        <span class="sat-fill sat-fill-orange"
+                                              t-att-style="'width:%s%%' % r['pct']"/>
+                                    </span>
+                                    <strong>
+                                        <t t-esc="r['value']"/>
+                                    </strong>
+                                </a>
+                            </t>
+                        </t>
+                        <t t-else="">
+                            <p class="sat-empty">Sin datos.</p>
+                        </t>
+                    </section>
+                </div>
+
+                <!-- Tabla de tickets -->
+                <section class="sat-panel" id="sat-ticket-list">
+                    <div class="sat-head">
+                        <h3>
+                            <i class="fa fa-list me-2"/>
+                            Listado de tickets
+                            <span class="sat-muted">
+                                (<t t-esc="ticket_total"/> resultados)
+                            </span>
+                        </h3>
                     </div>
-                </t>
+
+                    <div class="sat-table-scroll">
+                        <table class="sat-table">
+                            <thead>
+                                <tr>
+                                    <th>Ticket</th>
+                                    <th>Fecha de visita</th>
+                                    <th>Cliente</th>
+                                    <th>Equipo</th>
+                                    <th>Serie</th>
+                                    <th>Servicio</th>
+                                    <th>Técnico</th>
+                                    <th>Estado</th>
+                                    <th/>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                <t t-foreach="tickets" t-as="ticket">
+                                    <tr>
+                                        <td>
+                                            <a t-att-href="'/my/ticket/%s' % ticket.id">
+                                                <t t-esc="ticket.name"/>
+                                            </a>
+                                        </td>
+
+                                        <td>
+                                            <t t-esc="ticket.agenda.strftime('%d/%m/%Y') if ticket.agenda else 'Sin programar'"/>
+                                        </td>
+
+                                        <td>
+                                            <t t-esc="ticket.partner_id.name if ticket.partner_id else '-'"/>
+                                        </td>
+
+                                        <td>
+                                            <t t-esc="ticket.modelo_id_r or '-'"/>
+                                        </td>
+
+                                        <td>
+                                            <t t-esc="ticket.serie_id_r or '-'"/>
+                                        </td>
+
+                                        <td>
+                                            <t t-esc="tipo_selection.get(ticket.tipo_servicio_id, 'Sin especificar')"/>
+                                        </td>
+
+                                        <td>
+                                            <t t-esc="ticket.responsable.name if ticket.responsable else 'Sin asignar'"/>
+                                        </td>
+
+                                        <td>
+                                            <span t-att-class="'sat-status sat-done' if ticket.estado == 'finalizado' else ('sat-status sat-progress' if ticket.estado == 'proceso' else 'sat-status')">
+                                                <t t-esc="estado_selection.get(ticket.estado, ticket.estado or '-')"/>
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <a t-att-href="'/my/ticket/%s' % ticket.id">
+                                                Ver detalle
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </t>
+
+                                <t t-if="not tickets">
+                                    <tr>
+                                        <td colspan="9" class="sat-empty">
+                                            No se encontraron tickets con estos filtros.
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Paginación -->
+                    <div class="sat-pages">
+                        <t t-call="portal.pager"/>
+                    </div>
+                </section>
+
             </div>
         </div>
     </t>
 </template>
+
 
         <!-- ===================================================== -->
         <!-- DETALLE DE TICKET (LO MANTIENES) -->
