@@ -2057,7 +2057,7 @@
             }
             .sat-ticket-dashboard .sat-graph-row {
                 display: grid;
-                grid-template-columns: minmax(0, 190px) minmax(0, 1fr) 38px;
+                grid-template-columns: minmax(0,190px) minmax(0,1fr) 38px;
                 align-items: center;
                 gap: 9px;
                 margin-bottom: 12px;
@@ -2118,7 +2118,7 @@
             .sat-ticket-dashboard .sat-monthbar {
                 width: 100%;
                 max-width: 34px;
-                background: linear-gradient(180deg, #7768e3, #5144b4);
+                background: linear-gradient(180deg,#7768e3,#5144b4);
                 border-radius: 5px 5px 0 0;
                 min-height: 2px;
             }
@@ -2180,28 +2180,28 @@
             .sat-ticket-dashboard .sat-pages {
                 margin-top: 15px;
             }
-            @media(max-width:1100px) {
+            @media (max-width: 1100px) {
                 .sat-ticket-dashboard .sat-form-grid {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    grid-template-columns: repeat(2, minmax(0,1fr));
                 }
                 .sat-ticket-dashboard .sat-kpis {
-                    grid-template-columns: repeat(3, minmax(0, 1fr));
+                    grid-template-columns: repeat(3, minmax(0,1fr));
                 }
                 .sat-ticket-dashboard .sat-grid-three {
                     grid-template-columns: 1fr 1fr;
                 }
             }
-            @media(max-width:700px) {
+            @media (max-width: 700px) {
                 .sat-ticket-dashboard .sat-form-grid,
                 .sat-ticket-dashboard .sat-grid-two,
                 .sat-ticket-dashboard .sat-grid-three {
                     grid-template-columns: 1fr;
                 }
                 .sat-ticket-dashboard .sat-kpis {
-                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    grid-template-columns: repeat(2, minmax(0,1fr));
                 }
                 .sat-ticket-dashboard .sat-graph-row {
-                    grid-template-columns: minmax(0, 120px) minmax(0, 1fr) 28px;
+                    grid-template-columns: minmax(0,120px) minmax(0,1fr) 28px;
                 }
                 .sat-ticket-dashboard .sat-wrap {
                     padding: 0 12px;
@@ -2212,7 +2212,7 @@
         <div class="sat-ticket-dashboard">
             <div class="sat-wrap">
 
-                <!-- Encabezado -->
+                <!-- ENCABEZADO -->
                 <div class="sat-head">
                     <div>
                         <h2>
@@ -2229,16 +2229,25 @@
                     </span>
                 </div>
 
-                <!-- Filtros -->
+                <!-- FILTROS -->
                 <div class="sat-panel">
-                    <form method="get" action="/my/tickets" id="sat-ticket-filters">
+                    <form method="get"
+                          action="/my/tickets"
+                          id="sat-ticket-filters">
+
                         <div class="sat-form-grid">
 
-                            <!-- Empresas autorizadas -->
+                            <!-- EMPRESA -->
                             <div>
-                                <label for="sat-company">Empresa / cliente</label>
-                                <select id="sat-company" name="company_id" class="sat-control">
-                                    <option value="">Todas mis empresas</option>
+                                <label for="sat-company">
+                                    Empresa / cliente
+                                </label>
+                                <select id="sat-company"
+                                        name="company_id"
+                                        class="sat-control">
+                                    <option value="">
+                                        Todas mis empresas
+                                    </option>
                                     <t t-foreach="empresas" t-as="emp">
                                         <option t-att-value="emp.id"
                                                 t-att-selected="company_id == emp.id and 'selected' or None">
@@ -2248,25 +2257,36 @@
                                 </select>
                             </div>
 
-                            <!-- Equipos -->
+                            <!-- EQUIPO -->
                             <div>
-                                <label for="sat-equipment">Equipo / serie</label>
-                                <select id="sat-equipment" name="equipment_id" class="sat-control">
-                                    <option value="">Todos mis equipos</option>
+                                <label for="sat-equipment">
+                                    Equipo / serie
+                                </label>
+                                <select id="sat-equipment"
+                                        name="equipment_id"
+                                        class="sat-control">
+                                    <option value="">
+                                        Todos mis equipos
+                                    </option>
                                     <t t-foreach="available_equipment" t-as="eq">
                                         <option t-att-value="eq.id"
                                                 t-att-selected="equipment_id == eq.id and 'selected' or None">
-                                            <t t-esc="eq.display_name"/> —
+                                            <t t-esc="eq.display_name"/>
+                                            —
                                             <t t-esc="eq.serie or ''"/>
                                         </option>
                                     </t>
                                 </select>
                             </div>
 
-                            <!-- Tipo de servicio -->
+                            <!-- TIPO DE SERVICIO -->
                             <div>
-                                <label for="sat-type">Tipo de servicio</label>
-                                <select id="sat-type" name="tipo_servicio" class="sat-control">
+                                <label for="sat-type">
+                                    Tipo de servicio
+                                </label>
+                                <select id="sat-type"
+                                        name="tipo_servicio"
+                                        class="sat-control">
                                     <option value="">Todos</option>
                                     <t t-foreach="tipo_selection.items()" t-as="it">
                                         <option t-att-value="it[0]"
@@ -2274,13 +2294,21 @@
                                             <t t-esc="it[1]"/>
                                         </option>
                                     </t>
+                                    <option value="__sin_tipo__"
+                                            t-att-selected="tipo_servicio == '__sin_tipo__' and 'selected' or None">
+                                        Sin especificar
+                                    </option>
                                 </select>
                             </div>
 
-                            <!-- Técnico -->
+                            <!-- TECNICO -->
                             <div>
-                                <label for="sat-technician">Técnico</label>
-                                <select id="sat-technician" name="tecnico_id" class="sat-control">
+                                <label for="sat-technician">
+                                    Técnico
+                                </label>
+                                <select id="sat-technician"
+                                        name="tecnico_id"
+                                        class="sat-control">
                                     <option value="">Todos</option>
                                     <t t-foreach="available_technicians" t-as="tecnico">
                                         <option t-att-value="tecnico.id"
@@ -2288,13 +2316,21 @@
                                             <t t-esc="tecnico.name"/>
                                         </option>
                                     </t>
+                                    <option value="-1"
+                                            t-att-selected="tecnico_id == -1 and 'selected' or None">
+                                        Sin asignar
+                                    </option>
                                 </select>
                             </div>
 
-                            <!-- Estado -->
+                            <!-- ESTADO -->
                             <div>
-                                <label for="sat-status">Estado</label>
-                                <select id="sat-status" name="estado" class="sat-control">
+                                <label for="sat-status">
+                                    Estado
+                                </label>
+                                <select id="sat-status"
+                                        name="estado"
+                                        class="sat-control">
                                     <option value="">Todos</option>
                                     <t t-foreach="estado_selection.items()" t-as="it">
                                         <option t-att-value="it[0]"
@@ -2305,10 +2341,14 @@
                                 </select>
                             </div>
 
-                            <!-- Período -->
+                            <!-- PERIODO -->
                             <div>
-                                <label for="sat-period">Periodo</label>
-                                <select id="sat-period" name="periodo" class="sat-control">
+                                <label for="sat-period">
+                                    Periodo
+                                </label>
+                                <select id="sat-period"
+                                        name="periodo"
+                                        class="sat-control">
                                     <t t-foreach="[
                                         ('todos','Todo el historial'),
                                         ('hoy','Hoy'),
@@ -2325,10 +2365,12 @@
                                 </select>
                             </div>
 
-                            <!-- Año -->
+                            <!-- AÑO -->
                             <div>
                                 <label for="sat-year">Año</label>
-                                <select id="sat-year" name="anio" class="sat-control">
+                                <select id="sat-year"
+                                        name="anio"
+                                        class="sat-control">
                                     <t t-foreach="available_years" t-as="y">
                                         <option t-att-value="y"
                                                 t-att-selected="anio == y and 'selected' or None">
@@ -2338,15 +2380,25 @@
                                 </select>
                             </div>
 
-                            <!-- Mes -->
+                            <!-- MES -->
                             <div>
                                 <label for="sat-month">Mes</label>
-                                <select id="sat-month" name="mes" class="sat-control">
+                                <select id="sat-month"
+                                        name="mes"
+                                        class="sat-control">
                                     <t t-foreach="[
-                                        (1,'Enero'),(2,'Febrero'),(3,'Marzo'),
-                                        (4,'Abril'),(5,'Mayo'),(6,'Junio'),
-                                        (7,'Julio'),(8,'Agosto'),(9,'Septiembre'),
-                                        (10,'Octubre'),(11,'Noviembre'),(12,'Diciembre')
+                                        (1,'Enero'),
+                                        (2,'Febrero'),
+                                        (3,'Marzo'),
+                                        (4,'Abril'),
+                                        (5,'Mayo'),
+                                        (6,'Junio'),
+                                        (7,'Julio'),
+                                        (8,'Agosto'),
+                                        (9,'Septiembre'),
+                                        (10,'Octubre'),
+                                        (11,'Noviembre'),
+                                        (12,'Diciembre')
                                     ]" t-as="month">
                                         <option t-att-value="month[0]"
                                                 t-att-selected="mes == month[0] and 'selected' or None">
@@ -2356,7 +2408,7 @@
                                 </select>
                             </div>
 
-                            <!-- Fechas -->
+                            <!-- FECHAS -->
                             <div>
                                 <label for="sat-from">Fecha inicio</label>
                                 <input id="sat-from"
@@ -2375,7 +2427,7 @@
                                        t-att-value="date_end"/>
                             </div>
 
-                            <!-- Búsqueda -->
+                            <!-- BUSQUEDA -->
                             <div>
                                 <label for="sat-query">
                                     Buscar ticket, serie, modelo o cliente
@@ -2388,10 +2440,12 @@
                                        placeholder="Ticket / Serie / Modelo"/>
                             </div>
 
-                            <!-- Orden -->
+                            <!-- ORDEN -->
                             <div>
                                 <label for="sat-sort">Ordenar</label>
-                                <select id="sat-sort" name="sortby" class="sat-control">
+                                <select id="sat-sort"
+                                        name="sortby"
+                                        class="sat-control">
                                     <t t-foreach="searchbar_sortings.items()" t-as="s">
                                         <option t-att-value="s[0]"
                                                 t-att-selected="sortby == s[0] and 'selected' or None">
@@ -2400,6 +2454,7 @@
                                     </t>
                                 </select>
                             </div>
+
                         </div>
 
                         <div class="sat-form-actions">
@@ -2407,13 +2462,14 @@
                                 <i class="fa fa-filter me-1"/>
                                 Aplicar filtros
                             </button>
-                            <a class="sat-btn sat-btn-alt" href="/my/tickets">
+                            <a class="sat-btn sat-btn-alt"
+                               href="/my/tickets">
                                 Limpiar
                             </a>
                         </div>
                     </form>
 
-                    <!-- Filtros rápidos -->
+                    <!-- FILTROS RAPIDOS -->
                     <div class="sat-periods">
                         <t t-foreach="[
                             ('hoy','Hoy'),
@@ -2430,44 +2486,60 @@
                     </div>
                 </div>
 
-                <!-- Indicadores -->
+                <!-- INDICADORES KPI -->
                 <div class="sat-kpis">
+
                     <div class="sat-kpi">
-                        <div class="sat-name">Total tickets</div>
+                        <div class="sat-name">
+                            Total tickets
+                        </div>
                         <div class="sat-number">
                             <t t-esc="ticket_total"/>
                         </div>
                     </div>
+
                     <div class="sat-kpi">
-                        <div class="sat-name">Finalizados</div>
+                        <div class="sat-name">
+                            Finalizados
+                        </div>
                         <div class="sat-number">
                             <t t-esc="total_finalizados"/>
                         </div>
                     </div>
+
                     <div class="sat-kpi">
-                        <div class="sat-name">Pendientes</div>
+                        <div class="sat-name">
+                            Pendientes
+                        </div>
                         <div class="sat-number">
                             <t t-esc="total_pendientes"/>
                         </div>
                     </div>
+
                     <div class="sat-kpi">
-                        <div class="sat-name">Equipos atendidos</div>
+                        <div class="sat-name">
+                            Equipos atendidos
+                        </div>
                         <div class="sat-number">
                             <t t-esc="total_equipos"/>
                         </div>
                     </div>
+
                     <div class="sat-kpi">
-                        <div class="sat-name">Atenciones correctivas*</div>
+                        <div class="sat-name">
+                            Atenciones correctivas*
+                        </div>
                         <div class="sat-number">
                             <t t-esc="total_incidencias"/>
                         </div>
                     </div>
+
                 </div>
 
-                <!-- Gráficos principales -->
+                <!-- GRAFICOS PRINCIPALES -->
                 <div class="sat-grid-two">
 
-                    <!-- Servicios más realizados -->
+                    <!-- SERVICIOS MAS REALIZADOS -->
                     <section class="sat-panel">
                         <h3>
                             <i class="fa fa-bar-chart me-2"/>
@@ -2476,20 +2548,25 @@
 
                         <t t-if="types_chart">
                             <t t-foreach="types_chart" t-as="r">
-                                <a class="sat-graph-row" t-att-href="r['url']">
+                                <a class="sat-graph-row"
+                                   t-att-href="r['url']">
+
                                     <span>
                                         <t t-esc="r['label']"/>
                                     </span>
+
                                     <span class="sat-track">
                                         <span class="sat-fill sat-fill-blue"
                                               t-att-style="'width:%s%%' % r['pct']"/>
                                     </span>
+
                                     <strong>
                                         <t t-esc="r['value']"/>
                                     </strong>
                                 </a>
                             </t>
                         </t>
+
                         <t t-else="">
                             <p class="sat-empty">
                                 Sin servicios para los filtros seleccionados.
@@ -2497,7 +2574,7 @@
                         </t>
                     </section>
 
-                    <!-- Equipos con más incidencias -->
+                    <!-- RANKING DE MAQUINAS -->
                     <section class="sat-panel">
                         <h3>
                             <i class="fa fa-exclamation-triangle me-2"/>
@@ -2506,12 +2583,15 @@
 
                         <t t-if="ranking">
                             <t t-foreach="ranking" t-as="r">
-                                <a class="sat-graph-row" t-att-href="r['url']">
+                                <a class="sat-graph-row"
+                                   t-att-href="r['url']">
+
                                     <span>
                                         <strong>
                                             <t t-esc="r['model']"/>
                                         </strong>
-                                        <span class="sat-muted" style="display:block">
+                                        <span class="sat-muted"
+                                              style="display:block">
                                             <t t-esc="r['serie']"/>
                                         </span>
                                     </span>
@@ -2542,10 +2622,10 @@
                     </section>
                 </div>
 
-                <!-- Gráficos secundarios -->
+                <!-- GRAFICOS SECUNDARIOS -->
                 <div class="sat-grid-three">
 
-                    <!-- Evolución mensual -->
+                    <!-- EVOLUCION MENSUAL -->
                     <section class="sat-panel">
                         <h3>
                             <i class="fa fa-calendar me-2"/>
@@ -2557,11 +2637,14 @@
                                 <a class="sat-month"
                                    t-att-href="r['url']"
                                    t-att-title="'%s: %s servicios' % (r['label'], r['value'])">
+
                                     <strong>
                                         <t t-esc="r['value']"/>
                                     </strong>
+
                                     <span class="sat-monthbar"
                                           t-att-style="'height:%s%%' % r['pct']"/>
+
                                     <span>
                                         <t t-esc="r['label']"/>
                                     </span>
@@ -2570,7 +2653,7 @@
                         </div>
                     </section>
 
-                    <!-- Técnicos -->
+                    <!-- DISTRIBUCION POR TECNICO -->
                     <section class="sat-panel">
                         <h3>
                             <i class="fa fa-users me-2"/>
@@ -2579,26 +2662,33 @@
 
                         <t t-if="tech_chart">
                             <t t-foreach="tech_chart" t-as="r">
-                                <a class="sat-graph-row" t-att-href="r['url']">
+                                <a class="sat-graph-row"
+                                   t-att-href="r['url']">
+
                                     <span>
                                         <t t-esc="r['label']"/>
                                     </span>
+
                                     <span class="sat-track">
                                         <span class="sat-fill sat-fill-teal"
                                               t-att-style="'width:%s%%' % r['pct']"/>
                                     </span>
+
                                     <strong>
                                         <t t-esc="r['value']"/>
                                     </strong>
                                 </a>
                             </t>
                         </t>
+
                         <t t-else="">
-                            <p class="sat-empty">Sin datos.</p>
+                            <p class="sat-empty">
+                                Sin datos.
+                            </p>
                         </t>
                     </section>
 
-                    <!-- Empresas autorizadas -->
+                    <!-- EMPRESAS AUTORIZADAS -->
                     <section class="sat-panel">
                         <h3>
                             <i class="fa fa-building me-2"/>
@@ -2607,28 +2697,38 @@
 
                         <t t-if="companies_chart">
                             <t t-foreach="companies_chart" t-as="r">
-                                <a class="sat-graph-row" t-att-href="r['url']">
+                                <a class="sat-graph-row"
+                                   t-att-href="r['url']">
+
                                     <span>
                                         <t t-esc="r['label']"/>
                                     </span>
+
                                     <span class="sat-track">
                                         <span class="sat-fill sat-fill-orange"
                                               t-att-style="'width:%s%%' % r['pct']"/>
                                     </span>
+
                                     <strong>
                                         <t t-esc="r['value']"/>
                                     </strong>
                                 </a>
                             </t>
                         </t>
+
                         <t t-else="">
-                            <p class="sat-empty">Sin datos.</p>
+                            <p class="sat-empty">
+                                Sin datos.
+                            </p>
                         </t>
                     </section>
+
                 </div>
 
-                <!-- Tabla de tickets -->
-                <section class="sat-panel" id="sat-ticket-list">
+                <!-- LISTADO DE TICKETS -->
+                <section class="sat-panel"
+                         id="sat-ticket-list">
+
                     <div class="sat-head">
                         <h3>
                             <i class="fa fa-list me-2"/>
@@ -2641,6 +2741,7 @@
 
                     <div class="sat-table-scroll">
                         <table class="sat-table">
+
                             <thead>
                                 <tr>
                                     <th>Ticket</th>
@@ -2651,13 +2752,14 @@
                                     <th>Servicio</th>
                                     <th>Técnico</th>
                                     <th>Estado</th>
-                                    <th/>
+                                    <th></th>
                                 </tr>
                             </thead>
 
                             <tbody>
                                 <t t-foreach="tickets" t-as="ticket">
                                     <tr>
+
                                         <td>
                                             <a t-att-href="'/my/ticket/%s' % ticket.id">
                                                 <t t-esc="ticket.name"/>
@@ -2699,28 +2801,33 @@
                                                 Ver detalle
                                             </a>
                                         </td>
+
                                     </tr>
                                 </t>
 
                                 <t t-if="not tickets">
                                     <tr>
-                                        <td colspan="9" class="sat-empty">
+                                        <td colspan="9"
+                                            class="sat-empty">
                                             No se encontraron tickets con estos filtros.
                                         </td>
                                     </tr>
                                 </t>
+
                             </tbody>
                         </table>
                     </div>
 
-                    <!-- Paginación -->
+                    <!-- PAGINACION -->
                     <div class="sat-pages">
                         <t t-call="portal.pager"/>
                     </div>
+
                 </section>
 
             </div>
         </div>
+
     </t>
 </template>
 
