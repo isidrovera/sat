@@ -1087,7 +1087,7 @@ class PortalAlquiler(CustomerPortal):
             last = max(month_counts)
             month_keys = []
             y, m = last
-            for _ in range(12):
+            for month_index in range(12):
                 month_keys.append((y, m))
                 y, m = (y-1, 12) if m == 1 else (y, m-1)
             month_keys.reverse()
