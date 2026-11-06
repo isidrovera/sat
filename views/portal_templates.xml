@@ -2557,7 +2557,7 @@
 
                                     <span class="sat-track">
                                         <span class="sat-fill sat-fill-blue"
-                                              t-att-style="'width:%s%%' % r['pct']"/>
+                                              t-att-style="'width:' + str(r['pct']) + '%'"/>
                                     </span>
 
                                     <strong>
@@ -2598,7 +2598,7 @@
 
                                     <span class="sat-track">
                                         <span class="sat-fill"
-                                              t-att-style="'width:%s%%' % r['pct']"/>
+                                              t-att-style="'width:' + str(r['pct']) + '%'"/>
                                     </span>
 
                                     <strong>
@@ -2671,7 +2671,7 @@
 
                                     <span class="sat-track">
                                         <span class="sat-fill sat-fill-teal"
-                                              t-att-style="'width:%s%%' % r['pct']"/>
+                                              t-att-style="'width:' + str(r['pct']) + '%'"/>
                                     </span>
 
                                     <strong>
@@ -2706,7 +2706,7 @@
 
                                     <span class="sat-track">
                                         <span class="sat-fill sat-fill-orange"
-                                              t-att-style="'width:%s%%' % r['pct']"/>
+                                              t-att-style="'width:' + str(r['pct']) + '%'"/>
                                     </span>
 
                                     <strong>
