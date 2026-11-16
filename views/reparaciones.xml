@@ -679,9 +679,11 @@
       </field>
     </record>
 
-<!-- ========================================== -->
-<!-- CALENDARIO DE REPARACIONES SAT - ODOO 19 -->
-<!-- ========================================== -->
+
+<!-- ============================================ -->
+<!-- CALENDARIO DE REPARACIONES - ODOO 19          -->
+<!-- Fecha automática de creación                 -->
+<!-- ============================================ -->
 
 <record id="reparaciones_calendar_view" model="ir.ui.view">
     <field name="name">reparaciones.calendar.moderno</field>
@@ -689,14 +691,15 @@
     <field name="arch" type="xml">
 
         <calendar
-            string="Agenda de Reparaciones"
-            date_start="fecha_programada"
-            date_delay="duracion_estimada"
+            string="Calendario de Reparaciones SAT"
+            date_start="create_date"
             color="responsable_id"
-            mode="week"
+            mode="month"
             scales="day,week,month"
             event_open_popup="true"
             quick_create="false"
+            create="false"
+            edit="false"
             show_date_picker="true">
 
             <field name="name"
@@ -728,10 +731,15 @@
             <field name="ubicacion_id"
                    options="{'icon': 'fa fa-map-marker'}"/>
 
+            <field name="fecha_finalizacion"
+                   options="{'icon': 'fa fa-check-circle'}"/>
+
         </calendar>
 
     </field>
 </record>
+
+
 
 <!-- ========================================== -->
 <!-- PIVOTE GERENCIAL DE REPARACIONES -->
