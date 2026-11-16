@@ -585,28 +585,95 @@
                 </search>
             </field>
         </record>
-        <record id="ticket_calendar" model="ir.ui.view">
-            <field name="name">ticket.calendar</field>
-            <field name="model">ticket.alquiler</field>
-            <field name="arch" type="xml">
-                <calendar date_start="agenda" color="partner_id" event_limit="5">
-                    <field name="partner_id" filters="1"/>
-                    <field name="partner_id"/>
-                </calendar>
-            </field>
-        </record>
-        <record id="ticket_pivot" model="ir.ui.view">
-            <field name="name">ticket.pivot</field>
-            <field name="model">ticket.alquiler</field>
-            <field name="arch" type="xml">
-                <pivot string="">
-                    <field name="agenda" type="row"/>
-                    <field name="partner_id" type="row"/>
-                    <field name="product_alquiler" type="row"/>
-                    <field name="tipo_servicio_id" type="col"/>
-                </pivot>
-            </field>
-        </record>
+        
+<!-- CALENDARIO DE VISITAS TÉCNICAS SAT -->
+<record id="ticket_calendar" model="ir.ui.view">
+    <field name="name">ticket.alquiler.calendar.sat</field>
+    <field name="model">ticket.alquiler</field>
+    <field name="arch" type="xml">
+        <calendar
+            string="Agenda de Visitas Técnicas"
+            date_start="agenda"
+            color="responsable"
+            mode="week"
+            scales="day,week,month"
+            event_open_popup="true"
+            quick_create="false"
+            show_date_picker="true"
+            create="true"
+            edit="true">
+
+            <!-- Identificación -->
+            <field name="name"
+                   options="{'icon': 'fa fa-ticket'}"/>
+
+            <field name="partner_id"
+                   filters="1"
+                   options="{'icon': 'fa fa-building'}"/>
+
+            <!-- Técnico y filtros laterales -->
+            <field name="responsable"
+                   filters="1"
+                   options="{'icon': 'fa fa-user'}"/>
+
+            <!-- Datos del servicio -->
+            <field name="tipo_servicio_id"
+                   options="{'icon': 'fa fa-wrench'}"/>
+
+            <field name="product_alquiler"
+                   options="{'icon': 'fa fa-print'}"/>
+
+            <field name="serie_id_r"
+                   options="{'icon': 'fa fa-barcode'}"/>
+
+            <!-- Ubicación y contacto -->
+            <field name="direccion_id_r"
+                   options="{'icon': 'fa fa-map-marker'}"/>
+
+            <field name="contacto_id_r"
+                   options="{'icon': 'fa fa-address-book'}"/>
+
+            <!-- Estado y programación -->
+            <field name="estado"
+                   options="{'icon': 'fa fa-tasks'}"/>
+
+            <field name="agenda"
+                   options="{'icon': 'fa fa-clock-o'}"/>
+
+        </calendar>
+    </field>
+</record>
+
+        
+<!-- PIVOTE GERENCIAL DE TICKETS SAT -->
+<record id="ticket_pivot" model="ir.ui.view">
+    <field name="name">ticket.alquiler.pivot.gerencial</field>
+    <field name="model">ticket.alquiler</field>
+    <field name="arch" type="xml">
+        <pivot string="Análisis Gerencial SAT"
+               display_quantity="1">
+
+            <!-- Agrupación principal por técnico -->
+            <field name="responsable"
+                   type="row"/>
+
+            <!-- Desglose por tipo de servicio -->
+            <field name="tipo_servicio_id"
+                   type="row"/>
+
+            <!-- Comparación por mes -->
+            <field name="agenda"
+                   type="col"
+                   interval="month"/>
+
+            <!-- Cantidad de tickets -->
+            <field name="__count"
+                   type="measure"/>
+
+        </pivot>
+    </field>
+</record>
+
         <!-- ================================================= -->
         <!-- WIZARD: ticket.subpartes.wizard (sin cambios)      -->
         <!-- ================================================= -->
