@@ -424,20 +424,25 @@
       <field name="name">reparaciones.reparaciones.list</field>
       <field name="model">reparaciones.reparaciones</field>
       <field name="arch" type="xml">
-        <list string="Reparaciones" default_order="id desc" class="sat_repair_list">
-          <field name="create_date" string="Agendado" widget="remaining_days" width="80%" />
-          <field name="cliente_id" widget="many2one_avatar" />
-          <field name="marca" />
-          <field name="maquina_id" />
-          <field name="serie_id" />
-          <field name="ubicacion_id" widget="badge" />
-          <field name="responsable_id" widget="many2one_avatar" />
-          <field name="estado_id" widget="badge"
-            decoration-muted="estado_id == 'en_revision'"
-            decoration-info="estado_id == 'en_revision'"
-            decoration-success="estado_id == 'finalizado'"
-            decoration-danger="estado_id not in ('sin_revisar','en_revision','finalizado','entregada')"
-            decoration-warning="estado_id == 'entregada'" />
+        <list string="Control de Reparaciones" default_order="create_date desc" class="sat_repair_list sat_repair_list_modern"
+              decoration-muted="estado_id == 'entregada'">
+          <field name="name" string="N° Reparación"/>
+          <field name="create_date" string="Fecha de ingreso" widget="datetime"/>
+          <field name="cliente_id" string="Cliente" optional="show"/>
+          <field name="maquina_id" string="Equipo" optional="show"/>
+          <field name="nombre_maquina" string="Modelo" optional="show"/>
+          <field name="marca" string="Marca" optional="hide"/>
+          <field name="serie_id" string="Serie" optional="show"/>
+          <field name="responsable_id" string="Técnico" widget="many2one_avatar"/>
+          <field name="tipo_revision" string="Revisión" widget="badge" optional="show"/>
+          <field name="prioridad" string="Prioridad" widget="badge" optional="show"/>
+          <field name="ubicacion_id" string="Ubicación" widget="badge" optional="hide"/>
+          <field name="estado_id" string="Estado" widget="badge"
+                 decoration-info="estado_id == 'en_revision'"
+                 decoration-success="estado_id == 'finalizado'"
+                 decoration-danger="estado_id == 'con_problemas'"
+                 decoration-warning="estado_id in ('de_partes', 'entregada')"/>
+          <field name="fecha_finalizacion" string="Finalización" optional="hide"/>
         </list>
       </field>
     </record>
@@ -750,7 +755,7 @@
     <field name="model">reparaciones.reparaciones</field>
     <field name="arch" type="xml">
 
-        <pivot string="Análisis de Reparaciones SAT"
+        <pivot string="Reparaciones ingresadas por técnico y mes"
                display_quantity="1">
 
             <field name="responsable_id"
@@ -773,16 +778,27 @@
     <field name="model">reparaciones.reparaciones</field>
     <field name="arch" type="xml">
 
-        <graph string="Producción de Reparaciones"
+        <graph string="Reparaciones por técnico y estado"
                type="bar"
                stacked="1">
 
-            <field name="responsable_id"/>
+            <field name="responsable_id" type="row"/>
 
-            <field name="estado_id"/>
+            <field name="estado_id" type="col"/>
 
         </graph>
 
+    </field>
+</record>
+
+<!-- Gráfico adicional: ingresos por mes, sin inventar cantidades. -->
+<record id="reparaciones_graph_mensual_view" model="ir.ui.view">
+    <field name="name">reparaciones.graph.ingresos.mensuales</field>
+    <field name="model">reparaciones.reparaciones</field>
+    <field name="arch" type="xml">
+        <graph string="Reparaciones ingresadas por mes" type="line">
+            <field name="create_date" type="row" interval="month"/>
+        </graph>
     </field>
 </record>
 
