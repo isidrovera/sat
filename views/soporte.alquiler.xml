@@ -645,32 +645,33 @@
 </record>
 
         
-<!-- PIVOTE GERENCIAL DE TICKETS SAT -->
+<!-- ================================================ -->
+<!-- PIVOTE GERENCIAL SAT - ODOO 19                   -->
+<!-- ================================================ -->
+
 <record id="ticket_pivot" model="ir.ui.view">
     <field name="name">ticket.alquiler.pivot.gerencial</field>
     <field name="model">ticket.alquiler</field>
     <field name="arch" type="xml">
+
         <pivot string="Análisis Gerencial SAT"
                display_quantity="1">
 
-            <!-- Agrupación principal por técnico -->
+            <!-- Técnico responsable -->
             <field name="responsable"
                    type="row"/>
 
-            <!-- Desglose por tipo de servicio -->
+            <!-- Tipo de servicio -->
             <field name="tipo_servicio_id"
                    type="row"/>
 
-            <!-- Comparación por mes -->
+            <!-- Comparativo mensual -->
             <field name="agenda"
                    type="col"
                    interval="month"/>
 
-            <!-- Cantidad de tickets -->
-            <field name="__count"
-                   type="measure"/>
-
         </pivot>
+
     </field>
 </record>
 
