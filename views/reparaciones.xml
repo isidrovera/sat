@@ -678,5 +678,105 @@
         </kanban>
       </field>
     </record>
+
+<!-- ========================================== -->
+<!-- CALENDARIO DE REPARACIONES SAT - ODOO 19 -->
+<!-- ========================================== -->
+
+<record id="reparaciones_calendar_view" model="ir.ui.view">
+    <field name="name">reparaciones.calendar.moderno</field>
+    <field name="model">reparaciones.reparaciones</field>
+    <field name="arch" type="xml">
+
+        <calendar
+            string="Agenda de Reparaciones"
+            date_start="fecha_programada"
+            date_delay="duracion_estimada"
+            color="responsable_id"
+            mode="week"
+            scales="day,week,month"
+            event_open_popup="true"
+            quick_create="false"
+            show_date_picker="true">
+
+            <field name="name"
+                   options="{'icon': 'fa fa-wrench'}"/>
+
+            <field name="cliente_id"
+                   filters="1"
+                   options="{'icon': 'fa fa-building'}"/>
+
+            <field name="responsable_id"
+                   filters="1"
+                   options="{'icon': 'fa fa-user'}"/>
+
+            <field name="maquina_id"
+                   options="{'icon': 'fa fa-print'}"/>
+
+            <field name="serie_id"
+                   options="{'icon': 'fa fa-barcode'}"/>
+
+            <field name="tipo_revision"
+                   options="{'icon': 'fa fa-cogs'}"/>
+
+            <field name="estado_id"
+                   options="{'icon': 'fa fa-tasks'}"/>
+
+            <field name="prioridad"
+                   options="{'icon': 'fa fa-flag'}"/>
+
+            <field name="ubicacion_id"
+                   options="{'icon': 'fa fa-map-marker'}"/>
+
+        </calendar>
+
+    </field>
+</record>
+
+<!-- ========================================== -->
+<!-- PIVOTE GERENCIAL DE REPARACIONES -->
+<!-- ========================================== -->
+
+<record id="reparaciones_pivot_view" model="ir.ui.view">
+    <field name="name">reparaciones.pivot.gerencial</field>
+    <field name="model">reparaciones.reparaciones</field>
+    <field name="arch" type="xml">
+
+        <pivot string="Análisis de Reparaciones SAT"
+               display_quantity="1">
+
+            <field name="responsable_id"
+                   type="row"/>
+
+            <field name="estado_id"
+                   type="row"/>
+
+            <field name="create_date"
+                   type="col"
+                   interval="month"/>
+
+        </pivot>
+
+    </field>
+</record>
+
+<record id="reparaciones_graph_view" model="ir.ui.view">
+    <field name="name">reparaciones.graph.gerencial</field>
+    <field name="model">reparaciones.reparaciones</field>
+    <field name="arch" type="xml">
+
+        <graph string="Producción de Reparaciones"
+               type="bar"
+               stacked="1">
+
+            <field name="responsable_id"/>
+
+            <field name="estado_id"/>
+
+        </graph>
+
+    </field>
+</record>
+
   </data>
 </odoo>

@@ -1008,6 +1008,23 @@ class Reparaciones(models.Model):
     asesora_id  = fields.Char(related='maquina_id.asesora_id',string='Asesora')
     
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
+
+    # PROGRAMACIÓN DE REPARACIONES
+    fecha_programada = fields.Datetime(
+        string='Fecha y hora programada',
+        tracking=True,
+        index=True,
+        copy=False,
+        help='Fecha y hora previstas para iniciar la reparación.'
+    )
+
+    duracion_estimada = fields.Float(
+        string='Duración estimada (horas)',
+        default=2.0,
+        tracking=True,
+        help='Tiempo estimado de trabajo del técnico.'
+    )
+
    
     asesora_mobile_clean = fields.Char(
         string='Número de celular asesora (limpio)',
