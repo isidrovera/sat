@@ -37,26 +37,38 @@ class SatSat(models.Model):
             if len(items) >= 1:
                 raise ValidationError(_("El número de serie debe ser único."))
 
-    @api.model
-    def create(self, vals):
+    
+    @api.model_create_multi
+    def create(self, vals_list):
         """
-        Al crear un nuevo registro, copia automáticamente el contómetro 
-        al campo contometro_proveedor (valor inicial del proveedor).
+        Crea uno o varios registros de máquinas SAT.
+
+        - Compatible con la creación múltiple de Odoo 18.
+        - Conserva el contómetro inicial del proveedor.
+        - Marca las máquinas cuya reparación ya fue finalizada.
         """
-        # Si viene contómetro pero no contometro_proveedor, copiar automáticamente
-        if vals.get('estado_ventas_id') == 'finalizado':
-            vals['reserva_reparacion_finalizada_antes'] = True
-        if vals.get('contometro') and not vals.get('contometro_proveedor'):
-            vals['contometro_proveedor'] = vals['contometro']
-            _logger.info(
-                "[CREATE] Copiando contómetro → contometro_proveedor: %s",
-                vals['contometro']
-            )
-        
-        # Crear el registro normalmente
-        record = super(SatSat, self).create(vals)
-        
-        return record
+
+        for vals in vals_list:
+
+            # 1. Registrar si la reparación está finalizada
+            if vals.get('estado_ventas_id') == 'finalizado':
+                vals['reserva_reparacion_finalizada_antes'] = True
+
+            # 2. Guardar el contómetro inicial del proveedor
+            if vals.get('contometro') and not vals.get('contometro_proveedor'):
+
+                vals['contometro_proveedor'] = vals['contometro']
+
+                _logger.info(
+                    "[CREATE] Copiando contómetro → "
+                    "contometro_proveedor: %s",
+                    vals['contometro']
+                )
+
+        # 3. Crear todos los registros
+        records = super(SatSat, self).create(vals_list)
+
+        return records
 
 
 
