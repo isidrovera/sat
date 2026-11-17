@@ -385,3 +385,6 @@ access_sat_visita_tecnica_admin,sat.visita.tecnica.admin,model_sat_visita_tecnic
 access_sat_visita_evento_tecnico,sat.visita.evento.tecnico,model_sat_visita_evento,sat.sat_tecnica_group_user,1,0,0,0
 access_sat_visita_evento_jefes,sat.visita.evento.jefes,model_sat_visita_evento,sat.sat_jefes_group_user,1,0,0,0
 access_sat_visita_evento_admin,sat.visita.evento.admin,model_sat_visita_evento,base.group_system,1,0,1,0
+access_sat_visita_tecnico_tecnico,sat.visita.tecnico.tecnico,model_sat_visita_tecnico,sat.sat_tecnica_group_user,1,0,0,0
+access_sat_visita_tecnico_jefes,sat.visita.tecnico.jefes,model_sat_visita_tecnico,sat.sat_jefes_group_user,1,1,1,0
+access_sat_visita_tecnico_admin,sat.visita.tecnico.admin,model_sat_visita_tecnico,base.group_system,1,1,1,1

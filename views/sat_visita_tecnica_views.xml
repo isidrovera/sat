@@ -302,6 +302,46 @@
 
                     <notebook>
 
+                        <!-- PARTICIPANTES: UN RECORRIDO FÍSICO POR TÉCNICO -->
+
+                        <page string="Técnicos participantes" name="participantes">
+
+                            <div class="alert alert-info" role="alert">
+                                Cada técnico tiene sus propias horas de ruta,
+                                llegada y salida. Estos registros pertenecen a
+                                la visita completa, no a cada máquina.
+                                El técnico principal se genera automáticamente.
+                            </div>
+
+                            <field name="participante_ids"
+                                   readonly="estado != 'programada'"
+                                   groups="sat.sat_jefes_group_user,base.group_system">
+                                <list editable="bottom" create="1" delete="0">
+                                    <field name="tecnico_id" required="1"/>
+                                    <field name="traccar_device_id" readonly="1" optional="show"/>
+                                    <field name="estado" widget="badge" readonly="1"/>
+                                    <field name="fecha_en_ruta" readonly="1" optional="show"/>
+                                    <field name="fecha_llegada" readonly="1" optional="show"/>
+                                    <field name="fecha_salida" readonly="1" optional="show"/>
+                                    <field name="tiempo_traslado_minutos" readonly="1" optional="show"/>
+                                    <field name="tiempo_en_sitio_minutos" readonly="1" optional="show"/>
+                                </list>
+                            </field>
+
+                            <field name="participante_ids" readonly="1"
+                                   groups="sat.sat_tecnica_group_user,!sat.sat_jefes_group_user,!base.group_system">
+                                <list create="0" edit="0" delete="0">
+                                    <field name="tecnico_id"/>
+                                    <field name="estado" widget="badge"/>
+                                    <field name="fecha_en_ruta"/>
+                                    <field name="fecha_llegada"/>
+                                    <field name="fecha_salida"/>
+                                    <field name="tiempo_traslado_minutos"/>
+                                </list>
+                            </field>
+
+                        </page>
+
                         <!-- TICKETS VINCULADOS -->
 
                         <page string="Tickets vinculados"

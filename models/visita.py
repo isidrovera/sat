@@ -22,7 +22,7 @@ import math
 from datetime import timedelta
 
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import AccessError, UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -92,6 +92,68 @@ class SatVisitaTecnica(models.Model):
         'gps_visita_id',
         string='Tickets de la visita',
     )
+
+    participante_ids = fields.One2many(
+        'sat.visita.tecnico', 'visita_id',
+        string='Técnicos participantes', copy=False,
+        help='Un registro independiente por técnico y visita. Los recorridos no se duplican por máquina.',
+    )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        visitas = super().create(vals_list)
+        visitas._asegurar_participante_principal()
+        return visitas
+
+    def write(self, vals):
+        if 'tecnico_id' in vals:
+            for visita in self:
+                if visita.tecnico_id.id != vals['tecnico_id'] and visita.estado != 'programada':
+                    raise UserError(_('No puede cambiar el técnico principal después de iniciar el recorrido.'))
+        resultado = super().write(vals)
+        if {'tecnico_id', 'estado', 'fecha_en_ruta', 'fecha_llegada', 'fecha_salida'} & set(vals):
+            self._asegurar_participante_principal()
+        return resultado
+
+    def _asegurar_participante_principal(self):
+        """Conserva el flujo heredado y refleja sus eventos en un participante.
+
+        No inventa fechas y no inicia/cierra los recorridos de otros técnicos.
+        """
+        Participante = self.env['sat.visita.tecnico'].sudo()
+        for visita in self:
+            if not visita.tecnico_id:
+                continue
+            participante = Participante.search([
+                ('visita_id', '=', visita.id),
+                ('tecnico_id', '=', visita.tecnico_id.id),
+            ], limit=1)
+            if not participante:
+                participante = Participante.create({
+                    'visita_id': visita.id,
+                    'tecnico_id': visita.tecnico_id.id,
+                })
+            mapa = {
+                'programada': 'programada', 'en_ruta': 'en_ruta',
+                'en_sitio': 'en_sitio', 'salida_pendiente': 'salida_pendiente',
+                'salida_confirmada': 'salida_confirmada', 'cancelada': 'cancelada',
+            }
+            valores = {
+                'estado': mapa[visita.estado],
+                'fecha_en_ruta': visita.fecha_en_ruta or False,
+                'fecha_llegada': visita.fecha_llegada or False,
+                'fecha_salida': visita.fecha_salida or False,
+                'fuente_ruta': visita.fuente_ruta or False,
+                'fuente_llegada': visita.fuente_llegada or False,
+                'fuente_salida': visita.fuente_salida or False,
+                'referencia_ruta': visita.referencia_ruta or False,
+                'referencia_llegada': visita.referencia_llegada or False,
+                'referencia_salida': visita.referencia_salida or False,
+            }
+            cambios = {clave: valor for clave, valor in valores.items()
+                       if participante[clave] != valor}
+            if cambios:
+                participante.write(cambios)
 
     estado = fields.Selection(
         [
@@ -271,9 +333,9 @@ class SatVisitaTecnica(models.Model):
             ))
 
         for ticket in self.ticket_ids:
-            if ticket.responsable != self.tecnico_id:
+            if ticket.responsable not in self.participante_ids.mapped('tecnico_id'):
                 raise UserError(_(
-                    "El ticket %s tiene otro técnico."
+                    "El técnico responsable del ticket %s no participa en esta visita."
                 ) % ticket.name)
 
             if ticket.partner_id != self.partner_id:
@@ -324,13 +386,12 @@ class SatVisitaTecnica(models.Model):
         for visita in self:
             for ticket in visita.ticket_ids:
                 if (
-                    ticket.responsable != visita.tecnico_id
+                    ticket.responsable not in visita.participante_ids.mapped('tecnico_id')
                     or ticket.partner_id != visita.partner_id
                 ):
                     raise ValidationError(_(
-                        "Todos los tickets de una visita "
-                        "deben tener el mismo técnico "
-                        "y cliente."
+                        "Todos los tickets deben corresponder al cliente "
+                        "y a un técnico participante de la visita."
                     ))
 
     # ======================================================
@@ -365,6 +426,17 @@ class SatVisitaTecnica(models.Model):
         self._lock_tecnico()
 
         anterior = self._otra_visita_activa()
+
+        apoyo_abierto = self.env['sat.visita.tecnico'].sudo().search([
+            ('tecnico_id', '=', self.tecnico_id.id),
+            ('visita_id', '!=', self.id),
+            ('estado', 'in', ['en_ruta', 'en_sitio', 'salida_pendiente']),
+        ], limit=1)
+
+        if apoyo_abierto:
+            raise UserError(_(
+                "El técnico participa en la visita %s y todavía no registra su salida."
+            ) % apoyo_abierto.visita_id.name)
 
         if anterior:
             raise UserError(_(
@@ -468,7 +540,7 @@ class SatVisitaTecnica(models.Model):
                 ),
             )
 
-            for ticket in visita.ticket_ids:
+            for ticket in visita.ticket_ids.filtered(lambda t: t.responsable == visita.tecnico_id):
                 if ticket.estado == 'proceso':
                     ticket.with_context(
                         sat_gps_visita_operacion=visita.id
@@ -523,7 +595,8 @@ class SatVisitaTecnica(models.Model):
         self._validar_tickets()
         if self.estado != 'programada':
             return False
-        tickets_proceso = self.ticket_ids.filtered(lambda t: t.estado == 'proceso')
+        tickets_proceso = self.ticket_ids.filtered(
+            lambda t: t.estado == 'proceso' and t.responsable == self.tecnico_id)
         if not tickets_proceso:
             return False
         self.write({
@@ -612,7 +685,7 @@ class SatVisitaTecnica(models.Model):
             referencia,
         )
 
-        for ticket in self.ticket_ids:
+        for ticket in self.ticket_ids.filtered(lambda t: t.responsable == self.tecnico_id):
             if ticket.estado in ('proceso', 'en_ruta'):
                 ticket.with_context(
                     sat_gps_visita_operacion=self.id
@@ -748,7 +821,7 @@ class SatVisitaTecnica(models.Model):
             referencia=referencia,
         )
 
-        for ticket in self.ticket_ids:
+        for ticket in self.ticket_ids.filtered(lambda t: t.responsable == self.tecnico_id):
             if not ticket.fecha_salida_sitio:
                 ticket.with_context(
                     sat_gps_visita_operacion=self.id
@@ -920,6 +993,40 @@ class TicketAlquilerVisita(models.Model):
         tracking=True,
     )
 
+    gps_participante_ids = fields.Many2many(
+        'sat.visita.tecnico', 'sat_ticket_visita_participante_rel',
+        'ticket_id', 'participante_id', string='Técnicos que atendieron',
+        copy=False,
+        help='Se conserva la participación real aunque cambie el responsable administrativo.',
+    )
+
+    def _gps_participante_responsable(self):
+        self.ensure_one()
+        if not self.gps_visita_id or not self.responsable:
+            return self.env['sat.visita.tecnico']
+        return self.gps_visita_id.participante_ids.filtered(
+            lambda p: p.tecnico_id == self.responsable)[:1]
+
+    def _gps_asegurar_responsable_participante(self):
+        """Vincula al responsable con su visita, sin duplicar otros participantes."""
+        Participante = self.env['sat.visita.tecnico'].sudo()
+        for ticket in self:
+            if not ticket.gps_visita_id or not ticket.responsable:
+                continue
+            visita = ticket.gps_visita_id
+            participante = Participante.search([
+                ('visita_id', '=', visita.id),
+                ('tecnico_id', '=', ticket.responsable.id),
+            ], limit=1)
+            if not participante:
+                participante = Participante.create({
+                    'visita_id': visita.id, 'tecnico_id': ticket.responsable.id,
+                })
+            if participante not in ticket.gps_participante_ids:
+                ticket.with_context(sat_gps_vinculacion_interna=True).sudo().write({
+                    'gps_participante_ids': [(4, participante.id)],
+                })
+
     # ==========================================================
     # VINCULACIÓN AUTOMÁTICA: UNA VISITA POR SEDE Y HORARIO
     # ==========================================================
@@ -946,11 +1053,11 @@ class TicketAlquilerVisita(models.Model):
             if not self._gps_ticket_elegible_para_visita(ticket):
                 continue
 
-            # Serializa la selección + creación para un mismo técnico.
-            # En particular evita dos visitas duplicadas en concurrencia.
+            # La selección se serializa por cliente: dos técnicos distintos
+            # que llegan al mismo cliente/sede no crean visitas duplicadas.
             self.env.cr.execute(
-                'SELECT id FROM res_users WHERE id = %s FOR UPDATE',
-                [ticket.responsable.id],
+                'SELECT id FROM res_partner WHERE id = %s FOR UPDATE',
+                [ticket.partner_id.id],
             )
             ticket.invalidate_recordset(['gps_visita_id'])
             if ticket.gps_visita_id:
@@ -959,7 +1066,6 @@ class TicketAlquilerVisita(models.Model):
             desde = ticket.agenda - timedelta(minutes=30)
             hasta = ticket.agenda + timedelta(minutes=30)
             candidatas = Visita.search([
-                ('tecnico_id', '=', ticket.responsable.id),
                 ('partner_id', '=', ticket.partner_id.id),
                 ('agenda', '>=', desde),
                 ('agenda', '<=', hasta),
@@ -1001,9 +1107,20 @@ class TicketAlquilerVisita(models.Model):
                     ) % ticket.name,
                 )
 
+            # Crear el participante antes de asignar la visita, porque la
+            # restricción de integridad se evalúa dentro de write().
+            Participante = self.env['sat.visita.tecnico'].sudo()
+            if not Participante.search([
+                ('visita_id', '=', visita.id),
+                ('tecnico_id', '=', ticket.responsable.id),
+            ], limit=1):
+                Participante.create({
+                    'visita_id': visita.id, 'tecnico_id': ticket.responsable.id,
+                })
             ticket.with_context(sat_gps_vinculacion_interna=True).write({
                 'gps_visita_id': visita.id,
             })
+            ticket._gps_asegurar_responsable_participante()
             _logger.info(
                 '[SAT-GPS-VINCULO] ticket=%s visita=%s tecnico=%s estado_ticket=%s',
                 ticket.name, visita.id, ticket.responsable.id, ticket.estado,
@@ -1073,10 +1190,12 @@ class TicketAlquilerVisita(models.Model):
         tickets = super().create(vals_list)
         if not self.env.context.get('sat_gps_vinculacion_interna'):
             tickets._gps_vincular_visita_si_corresponde()
+            tickets._gps_asegurar_responsable_participante()
         return tickets
 
     @api.constrains(
         'gps_visita_id',
+        'gps_participante_ids',
         'responsable',
         'partner_id',
     )
@@ -1087,10 +1206,9 @@ class TicketAlquilerVisita(models.Model):
             if not visita:
                 continue
 
-            if ticket.responsable != visita.tecnico_id:
+            if ticket.responsable not in visita.participante_ids.mapped('tecnico_id'):
                 raise ValidationError(_(
-                    "El técnico del ticket no coincide "
-                    "con la visita física."
+                    "El técnico responsable debe participar en la visita física."
                 ))
 
             if ticket.partner_id != visita.partner_id:
@@ -1099,7 +1217,23 @@ class TicketAlquilerVisita(models.Model):
                     "con la visita física."
                 ))
 
+            if any(p.visita_id != visita for p in ticket.gps_participante_ids):
+                raise ValidationError(_(
+                    "El ticket contiene técnicos participantes de otra visita."
+                ))
+
     def write(self, vals):
+        if vals.get('responsable'):
+            Participante = self.env['sat.visita.tecnico'].sudo()
+            for ticket in self.filtered('gps_visita_id'):
+                if not Participante.search([
+                    ('visita_id', '=', ticket.gps_visita_id.id),
+                    ('tecnico_id', '=', vals['responsable']),
+                ], limit=1):
+                    Participante.create({
+                        'visita_id': ticket.gps_visita_id.id,
+                        'tecnico_id': vals['responsable'],
+                    })
         if vals.get('estado') == 'en_ruta':
             for ticket in self:
                 visita = ticket.gps_visita_id
@@ -1110,24 +1244,24 @@ class TicketAlquilerVisita(models.Model):
                         "antes de marcar En ruta."
                     ))
 
-                visita._lock_tecnico()
-
-                if visita.estado != 'en_ruta':
+                participante = ticket._gps_participante_responsable()
+                if not participante or participante.estado != 'en_ruta':
                     raise UserError(_(
-                        "Primero debe iniciar la ruta "
-                        "desde la visita física."
+                        "Primero debe iniciar la ruta del técnico responsable."
                     ))
-
-                anterior = visita._otra_visita_activa()
-
-                if anterior:
-                    raise UserError(_(
-                        "No puede iniciar ruta. "
-                        "La visita anterior %s "
-                        "no tiene salida confirmada."
-                    ) % anterior.name)
+                if participante.tecnico_id == visita.tecnico_id:
+                    visita._lock_tecnico()
+                    anterior = visita._otra_visita_activa()
+                    if anterior:
+                        raise UserError(_(
+                            "No puede iniciar ruta. La visita anterior %s "
+                            "no tiene salida confirmada."
+                        ) % anterior.name)
 
         result = super().write(vals)
+        if (not self.env.context.get('sat_gps_vinculacion_interna')
+                and any(k in vals for k in ('responsable', 'gps_visita_id'))):
+            self._gps_asegurar_responsable_participante()
         if (not self.env.context.get('sat_gps_vinculacion_interna')
                 and any(clave in vals for clave in (
                     'responsable', 'partner_id', 'agenda', 'estado',
@@ -1135,3 +1269,175 @@ class TicketAlquilerVisita(models.Model):
                 ))):
             self._gps_vincular_visita_si_corresponde()
         return result
+
+
+class SatVisitaTecnico(models.Model):
+    """Participación física individual; no representa un ticket ni una máquina.
+
+    El técnico principal sigue gobernado por los métodos heredados de la visita.
+    Sus eventos se reflejan aquí desde _asegurar_participante_principal().
+    """
+    _name = 'sat.visita.tecnico'
+    _description = 'Participación de técnico en visita SAT'
+    _order = 'visita_id, id'
+
+    visita_id = fields.Many2one(
+        'sat.visita.tecnica', string='Visita', required=True,
+        ondelete='cascade', index=True,
+    )
+    tecnico_id = fields.Many2one(
+        'res.users', string='Técnico', required=True, index=True,
+    )
+    traccar_device_id = fields.Integer(
+        string='Dispositivo Traccar', readonly=True, copy=False,
+        help='Identificador del GPS asociado al técnico al incluirlo en la visita.',
+    )
+    estado = fields.Selection([
+        ('programada', 'Programada'),
+        ('en_ruta', 'En ruta'),
+        ('en_sitio', 'En sitio'),
+        ('salida_pendiente', 'Salida pendiente'),
+        ('salida_confirmada', 'Salida confirmada'),
+        ('cancelada', 'Cancelada'),
+    ], required=True, default='programada', index=True)
+    fecha_en_ruta = fields.Datetime(readonly=True, copy=False)
+    fecha_llegada = fields.Datetime(readonly=True, copy=False)
+    fecha_salida = fields.Datetime(readonly=True, copy=False)
+    fuente_ruta = fields.Selection([
+        ('manual', 'Manual'), ('traccar', 'Traccar'),
+    ], readonly=True, copy=False)
+    fuente_llegada = fields.Selection([
+        ('manual', 'Manual'), ('traccar', 'Traccar'),
+    ], readonly=True, copy=False)
+    fuente_salida = fields.Selection([
+        ('manual', 'Manual'), ('traccar', 'Traccar'),
+    ], readonly=True, copy=False)
+    referencia_ruta = fields.Char(readonly=True, copy=False)
+    referencia_llegada = fields.Char(readonly=True, copy=False)
+    referencia_salida = fields.Char(readonly=True, copy=False)
+    tiempo_traslado_minutos = fields.Float(
+        compute='_compute_tiempos', store=True, string='Traslado (min)',
+    )
+    tiempo_en_sitio_minutos = fields.Float(
+        compute='_compute_tiempos', store=True, string='En sitio (min)',
+    )
+
+    _visita_tecnico_unico = models.Constraint(
+        'UNIQUE(visita_id, tecnico_id)',
+        'Un técnico no puede estar dos veces en la misma visita.',
+    )
+
+    @api.depends('fecha_en_ruta', 'fecha_llegada', 'fecha_salida')
+    def _compute_tiempos(self):
+        for rec in self:
+            rec.tiempo_traslado_minutos = max(0.0, (
+                (rec.fecha_llegada - rec.fecha_en_ruta).total_seconds() / 60
+            )) if rec.fecha_en_ruta and rec.fecha_llegada else 0.0
+            rec.tiempo_en_sitio_minutos = max(0.0, (
+                (rec.fecha_salida - rec.fecha_llegada).total_seconds() / 60
+            )) if rec.fecha_llegada and rec.fecha_salida else 0.0
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        Vinculo = self.env['tecnico.dispositivo.gps'].sudo()
+        for vals in vals_list:
+            if not vals.get('traccar_device_id') and vals.get('tecnico_id'):
+                vinculos = Vinculo.search([
+                    ('user_id', '=', vals['tecnico_id']), ('activo', '=', True),
+                ], limit=2)
+                if len(vinculos) > 1:
+                    raise ValidationError(_('El técnico tiene más de un GPS activo. Revise sus vínculos Traccar.'))
+                if vinculos:
+                    vals['traccar_device_id'] = vinculos.traccar_device_id
+        return super().create(vals_list)
+
+    @api.constrains('fecha_en_ruta', 'fecha_llegada', 'fecha_salida')
+    def _check_orden_fechas(self):
+        for rec in self:
+            if rec.fecha_en_ruta and rec.fecha_llegada and rec.fecha_llegada < rec.fecha_en_ruta:
+                raise ValidationError(_('La llegada no puede preceder a la salida hacia el cliente.'))
+            if rec.fecha_llegada and rec.fecha_salida and rec.fecha_salida < rec.fecha_llegada:
+                raise ValidationError(_('La salida del cliente no puede preceder a la llegada.'))
+
+    def _registrar_etapa(self, etapa, fecha_evento, fuente, referencia):
+        """Eventos individuales para técnicos de apoyo, con evidencia verificable.
+
+        Los eventos del principal deben seguir los métodos existentes de visita.
+        """
+        if etapa not in ('ruta', 'llegada', 'salida'):
+            raise UserError(_('Tipo de evento GPS desconocido.'))
+        for rec in self:
+            if (not self.env.su and self.env.user != rec.tecnico_id
+                    and not self.env.user.has_group('sat.sat_jefes_group_user')
+                    and not self.env.user.has_group('base.group_system')):
+                raise AccessError(_('No puede registrar el GPS de otro técnico.'))
+            if rec.tecnico_id == rec.visita_id.tecnico_id:
+                raise UserError(_('Use la acción de la visita para registrar al técnico principal.'))
+            fecha = rec.visita_id._validar_fecha(fecha_evento, etapa)
+            rec.visita_id._validar_fuente(fuente, referencia)
+            self.env.cr.execute('SELECT id FROM res_users WHERE id = %s FOR UPDATE', [rec.tecnico_id.id])
+            campos = {
+                'ruta': ('programada', 'en_ruta', 'fecha_en_ruta'),
+                'llegada': ('en_ruta', 'en_sitio', 'fecha_llegada'),
+                'salida': ('en_sitio', 'salida_confirmada', 'fecha_salida'),
+            }
+            previo, siguiente, campo_fecha = campos[etapa]
+            if rec.estado == siguiente and rec[campo_fecha]:
+                continue  # Idempotencia de reintentos del mismo evento.
+            if rec.estado != previo:
+                raise UserError(_('Transición inválida para %s: %s.') % (rec.tecnico_id.name, etapa))
+            if etapa == 'ruta':
+                abierta = self.sudo().search([
+                    ('tecnico_id', '=', rec.tecnico_id.id),
+                    ('id', '!=', rec.id),
+                    ('estado', 'in', ['en_ruta', 'en_sitio', 'salida_pendiente']),
+                ], limit=1)
+                if abierta:
+                    raise UserError(_('El técnico ya tiene otro recorrido abierto.'))
+            if etapa == 'llegada' and fecha < rec.fecha_en_ruta:
+                raise UserError(_('La llegada es anterior al inicio de ruta.'))
+            if etapa == 'salida' and fecha < rec.fecha_llegada:
+                raise UserError(_('La salida es anterior a la llegada.'))
+            rec.sudo().write({
+                'estado': siguiente,
+                campo_fecha: fecha,
+                'fuente_' + etapa: fuente,
+                'referencia_' + etapa: referencia,
+            })
+            rec.visita_id._registrar_evento(
+                tipo={'ruta': 'ruta', 'llegada': 'llegada', 'salida': 'salida'}[etapa],
+                fuente=fuente, fecha_evento=fecha,
+                referencia=referencia,
+                detalle='Técnico participante: %s (ID %s)' % (rec.tecnico_id.name, rec.tecnico_id.id),
+            )
+            # Los tickets de otros técnicos de la misma visita no cambian.
+            propios = rec.visita_id.ticket_ids.filtered(
+                lambda t: t.responsable == rec.tecnico_id)
+            if etapa == 'ruta':
+                for ticket in propios.filtered(lambda t: t.estado == 'proceso'):
+                    ticket.with_context(sat_gps_visita_operacion=rec.visita_id.id).write({
+                        'estado': 'en_ruta', 'fecha_en_ruta': fecha,
+                    })
+            elif etapa == 'llegada':
+                for ticket in propios.filtered(lambda t: t.estado in ('proceso', 'en_ruta')):
+                    ticket.with_context(sat_gps_visita_operacion=rec.visita_id.id).write({
+                        'estado': 'en_sitio', 'fecha_llegada': fecha,
+                    })
+            else:
+                for ticket in propios.filtered(lambda t: not t.fecha_salida_sitio):
+                    ticket.with_context(sat_gps_visita_operacion=rec.visita_id.id).write({
+                        'fecha_salida_sitio': fecha,
+                    })
+        return True
+
+    def registrar_inicio_ruta(self, fecha_evento, fuente, referencia):
+        return self._registrar_etapa('ruta', fecha_evento, fuente, referencia)
+
+    def registrar_llegada(self, fecha_evento, fuente, referencia):
+        return self._registrar_etapa('llegada', fecha_evento, fuente, referencia)
+
+    def registrar_salida(self, fecha_evento, fuente, referencia):
+        return self._registrar_etapa('salida', fecha_evento, fuente, referencia)
+
+
+

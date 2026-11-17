@@ -324,9 +324,11 @@ class TicketAlquilerTracking(models.Model):
             campo = campos_estado.get(nuevo_estado) if cambio_estado else None
             if campo and not valores.get(campo) and not rec[campo]:
                 if nuevo_estado in ('en_ruta', 'en_sitio') and rec.gps_visita_id:
-                    origen = rec.gps_visita_id.fecha_en_ruta if nuevo_estado == 'en_ruta' else rec.gps_visita_id.fecha_llegada
+                    participante = rec._gps_participante_responsable()
+                    origen = (participante.fecha_en_ruta if nuevo_estado == 'en_ruta'
+                              else participante.fecha_llegada) if participante else False
                     if not origen:
-                        raise UserError(_('La visita no tiene evento físico verificado para este estado.'))
+                        raise UserError(_('El técnico responsable no tiene evento GPS verificado para este estado.'))
                     valores[campo] = origen
                 elif nuevo_estado not in ('en_ruta', 'en_sitio'):
                     valores[campo] = ahora
@@ -679,14 +681,15 @@ class TicketAlquilerTracking(models.Model):
             if not visita:
                 _logger.warning('[GPS-BLOQUEO] ticket=%s razon=sin_gps_visita', ticket.name)
                 raise UserError(_('Asigne una visita física antes de iniciar ruta.'))
-            if visita.estado != 'en_ruta':
+            participante = ticket._gps_participante_responsable()
+            if not participante or participante.estado != 'en_ruta':
                 _logger.warning('[GPS-BLOQUEO] ticket=%s visita=%s razon=visita_no_en_ruta estado=%s',
                                 ticket.name, visita.id, visita.estado)
-                raise UserError(_('Inicie el recorrido desde la visita física.'))
-            visita._validar_siguiente_ruta()
+                raise UserError(_('Inicie el recorrido del técnico responsable.'))
+            if ticket.responsable == visita.tecnico_id:
+                visita._validar_siguiente_ruta()
             if ticket.estado == 'proceso':
-                # La visita es dueña del horario. No generar una segunda fecha.
-                ticket.write({'estado': 'en_ruta', 'fecha_en_ruta': visita.fecha_en_ruta})
+                ticket.write({'estado': 'en_ruta', 'fecha_en_ruta': participante.fecha_en_ruta})
                 _logger.info('[GPS-TRANSICION] ticket=%s estado_final=%s fecha_en_ruta=%s',
                              ticket.name, ticket.estado, ticket.fecha_en_ruta)
             else:
@@ -700,10 +703,11 @@ class TicketAlquilerTracking(models.Model):
             visita = ticket.gps_visita_id
             if not visita:
                 raise UserError(_('El ticket no está asociado a una visita física.'))
-            if not visita.fecha_llegada:
-                raise UserError(_('La visita no tiene llegada física confirmada.'))
+            participante = ticket._gps_participante_responsable()
+            if not participante or not participante.fecha_llegada:
+                raise UserError(_('El técnico responsable no tiene llegada física confirmada.'))
             if ticket.estado in ('proceso', 'en_ruta'):
-                ticket.write({'estado': 'en_sitio', 'fecha_llegada': visita.fecha_llegada})
+                ticket.write({'estado': 'en_sitio', 'fecha_llegada': participante.fecha_llegada})
             ticket._cancelar_tokens_retiro_pendientes()
         return True
 
@@ -733,6 +737,26 @@ class TicketAlquilerTracking(models.Model):
             visita = ticket.gps_visita_id
             if not visita:
                 raise UserError(_('Vincule el ticket a una visita física.'))
+            participante = ticket._gps_participante_responsable()
+            if participante and participante.tecnico_id != visita.tecnico_id:
+                if participante.fecha_salida:
+                    if not ticket.fecha_salida_sitio:
+                        ticket.write({'fecha_salida_sitio': participante.fecha_salida})
+                    continue
+                if fuente.lower() not in ('manual', 'confirmacion_manual', 'traccar'):
+                    raise UserError(_('Fuente de salida no reconocida.'))
+                fecha = fecha_salida or fields.Datetime.now()
+                if fuente.lower() == 'traccar' and not fecha_salida:
+                    raise UserError(_('La salida GPS requiere fecha original.'))
+                referencia = ('odoo-user:%s' % self.env.uid if fuente.lower() != 'traccar'
+                              else self.env.context.get('traccar_event_reference'))
+                if not referencia:
+                    raise UserError(_('Falta la referencia de la salida.'))
+                participante.registrar_salida(
+                    fecha, 'traccar' if fuente.lower() == 'traccar' else 'manual', referencia)
+                if not ticket.fecha_salida_sitio:
+                    ticket.write({'fecha_salida_sitio': participante.fecha_salida})
+                continue
             if visita.fecha_salida:
                 if not ticket.fecha_salida_sitio:
                     ticket.write({'fecha_salida_sitio': visita.fecha_salida})
@@ -966,7 +990,120 @@ class TicketAlquilerTracking(models.Model):
                 contadores['errores'] += 1
                 _logger.exception('[GPS-ERROR] cron=113 device=%s tecnico=%s', device, tecnico.id)
         _logger.info('[CRON-MOVIMIENTO] FIN cron=113 resumen=%s', contadores)
+        # Los técnicos de apoyo se verifican por separado. No se modifican
+        # los estados del ticket ni el flujo heredado del técnico principal.
+        try:
+            self._cron_gps_participantes_apoyo(posiciones, ahora)
+        except Exception:
+            _logger.exception('[GPS-APOYO] Falló la evaluación de participantes; cron 113 principal conservado')
         return True
+
+    @api.model
+    def _cron_gps_participantes_apoyo(self, posiciones, ahora):
+        """Evalúa movimientos físicos de participantes que NO son el principal.
+
+        Requiere observaciones distintas y consecutivas, sin inventar tiempos.
+        Mantiene estados individuales, nunca cambia los tickets ni la visita.
+        """
+        Participante = self.env['sat.visita.tecnico'].sudo()
+        Config = self.env['ir.config_parameter'].sudo()
+        candidatos = Participante.search([
+            ('estado', 'in', ['programada', 'en_ruta', 'en_sitio']),
+            # La salida del principal no implica que los apoyos ya se retiraron.
+            ('visita_id.estado', '!=', 'cancelada'),
+            ('visita_id.agenda', '>=', ahora - timedelta(days=1)),
+            ('visita_id.agenda', '<=', ahora + timedelta(days=1)),
+        ])
+        por_dispositivo = {}
+        for participante in candidatos:
+            if participante.tecnico_id == participante.visita_id.tecnico_id:
+                continue  # El responsable conserva su circuito de GPS original.
+            if participante.traccar_device_id:
+                por_dispositivo.setdefault(participante.traccar_device_id, []).append(participante)
+
+        for device, miembros in por_dispositivo.items():
+            # Sin selección inequívoca no atribuimos una ruta a un cliente.
+            if len(miembros) != 1:
+                _logger.warning('[GPS-APOYO] device=%s candidatas=%s, se omite', device, [m.id for m in miembros])
+                continue
+            participante = miembros[0]
+            visita = participante.visita_id
+            pos = posiciones.get(device)
+            if not self._gps_posicion_valida(pos, max_edad_min=5):
+                continue
+            try:
+                lat, lon = float(pos['latitude']), float(pos['longitude'])
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180) or (lat == 0 and lon == 0):
+                    continue
+                if not visita._coordenadas_validas(visita.latitud, visita.longitud):
+                    continue
+                precision = pos.get('accuracy')
+                if precision is None:
+                    precision = (pos.get('attributes') or {}).get('accuracy')
+                if precision is not None and float(precision) > 100:
+                    continue
+                instante = datetime.fromisoformat(str(pos['fixTime']).replace('Z', '+00:00'))
+                instante = instante.astimezone(timezone.utc).replace(tzinfo=None)
+                if instante > ahora + timedelta(minutes=2):
+                    continue
+                metros = self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
+                clave = 'sat.gps.apoyo.%s.%s' % (device, participante.id)
+                actual = {'ts': instante.isoformat(), 'pos_id': pos.get('id'),
+                          'lat': lat, 'lon': lon, 'd': metros}
+                previo_txt = Config.get_param(clave, default='')
+                try:
+                    previo = json.loads(previo_txt) if previo_txt else {}
+                except (ValueError, TypeError):
+                    previo = {}
+                anterior = datetime.fromisoformat(previo['ts']) if previo.get('ts') else None
+                # Reutilizar exactamente el mismo fix no es una segunda lectura.
+                if anterior and (instante <= anterior or str(pos.get('id')) == str(previo.get('pos_id'))):
+                    continue
+                intervalo = (instante - anterior).total_seconds() if anterior else None
+                serie = (int(previo.get('serie', 0)) if intervalo is not None
+                         and 20 <= intervalo <= 300 else 0)
+                referencia = 'traccar-apoyo:%s:%s@%s' % (
+                    participante.id, pos.get('id'), instante.isoformat())
+
+                if participante.estado == 'programada':
+                    # Inicio: al menos 300 m de movimiento, acercándose al sitio.
+                    if anterior and 30 <= intervalo <= 600 and metros >= 150:
+                        desplazamiento = self._haversine_metros(
+                            previo['lat'], previo['lon'], lat, lon)
+                        acercamiento = float(previo['d']) - metros
+                        if desplazamiento >= 300 and acercamiento > 100:
+                            # Un apoyo no debe abrir desplazamiento mientras
+                            # es principal de otra visita todavía activa.
+                            otro_principal = self.env['sat.visita.tecnica'].sudo().search([
+                                ('tecnico_id', '=', participante.tecnico_id.id),
+                                ('id', '!=', visita.id),
+                                ('estado', 'in', ['en_ruta', 'en_sitio', 'salida_pendiente']),
+                            ], limit=1)
+                            if not otro_principal:
+                                participante.registrar_inicio_ruta(instante, 'traccar', referencia)
+                                serie = 0
+                    actual['serie'] = 0
+
+                elif participante.estado == 'en_ruta':
+                    # Llegada: dos posiciones recientes en radio de 100 metros.
+                    serie = (serie + 1) if metros <= 100 else 0
+                    actual['serie'] = serie
+                    if serie >= 2 and participante.fecha_en_ruta and instante >= participante.fecha_en_ruta:
+                        participante.registrar_llegada(instante, 'traccar', referencia)
+                        actual['serie'] = 0
+
+                elif participante.estado == 'en_sitio':
+                    # Retiro: tres observaciones consecutivas fuera de 150 m,
+                    # con permanencia mínima que protege contra saltos GPS.
+                    serie = (serie + 1) if metros > UMBRAL_METROS_SALIDA else 0
+                    actual['serie'] = serie
+                    if (serie >= 3 and participante.fecha_llegada
+                            and instante >= participante.fecha_llegada + timedelta(minutes=UMBRAL_MINUTOS_SITIO)):
+                        participante.registrar_salida(instante, 'traccar', referencia)
+                        actual['serie'] = 0
+                Config.set_param(clave, json.dumps(actual))
+            except Exception:
+                _logger.exception('[GPS-APOYO] Error device=%s participante=%s', device, participante.id)
 
     @api.model
     def cron_gps_detectar_llegada(self):
@@ -1062,7 +1199,9 @@ class TicketAlquilerTracking(models.Model):
                 _logger.info('[GPS-TRANSICION] llegada intento visita=%s fecha=%s referencia=%s',
                              visita.id, fix_utc, referencia)
                 if visita.registrar_llegada_verificada(fix_utc, referencia, 'traccar'):
-                    visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(notificar=False, fecha_evento=fix_utc)
+                    visita.ticket_ids.filtered(lambda t: t.responsable == visita.tecnico_id and
+                        t.estado in ('proceso', 'en_ruta')).action_en_sitio(
+                            notificar=False, fecha_evento=fix_utc)
                     _logger.info('[CRON-LLEGADA] Llegada observada por doble posición: visita=%s tecnico=%s', visita.id, vinculo.user_id.id)
                 parametros.set_param(clave, '')
             except Exception:
@@ -1143,7 +1282,8 @@ class TicketAlquilerTracking(models.Model):
                                            if ultima_salida else visita.fecha_llegada)
                         if instante > fecha_detectada and visita.registrar_regreso(
                                 instante, referencia_regreso):
-                            for ticket in visita.ticket_ids:
+                            for ticket in visita.ticket_ids.filtered(
+                                    lambda t: t.responsable == visita.tecnico_id):
                                 ticket._cancelar_tokens_retiro_pendientes()
                             _logger.info('[CRON-SALIDA] visita=%s regreso GPS confirmado a %.0fm',
                                          visita.id, metros)
@@ -1233,11 +1373,12 @@ class TicketAlquilerTracking(models.Model):
         omitidos = 0
         for ticket in tickets:
             visita = ticket.gps_visita_id
+            participante = ticket._gps_participante_responsable()
             # Si se detectó salida o la visita ya está cerrada, no iniciar revisión.
-            if (not visita or visita.estado != 'en_sitio'
-                    or not visita.fecha_llegada
-                    or visita.fecha_llegada > umbral
-                    or visita.fecha_salida):
+            if (not visita or not participante or participante.estado != 'en_sitio'
+                    or not participante.fecha_llegada
+                    or participante.fecha_llegada > umbral
+                    or participante.fecha_salida):
                 omitidos += 1
                 continue
             try:
@@ -1250,7 +1391,7 @@ class TicketAlquilerTracking(models.Model):
                         '[CRON-REVISION] ticket=%s visita=%s '
                         'en_sitio -> en_revision tras %.1f min',
                         ticket.name, visita.id,
-                        (ahora - visita.fecha_llegada).total_seconds() / 60.0,
+                        (ahora - participante.fecha_llegada).total_seconds() / 60.0,
                     )
             except Exception:
                 _logger.exception(
@@ -1355,6 +1496,7 @@ class TicketAlquilerTracking(models.Model):
             return resultado
         # Regreso a la geocerca durante una salida pendiente.
         regresos = tickets_hoy.filtered(lambda t: t.gps_visita_id and
+            t.responsable == t.gps_visita_id.tecnico_id and
             t.gps_visita_id.estado == 'salida_pendiente' and
             t.traccar_geofence_id == gid).mapped('gps_visita_id')
         if len(regresos) == 1:
@@ -1379,10 +1521,22 @@ class TicketAlquilerTracking(models.Model):
             return resultado
         visita = visitas[0]
         ref = 'traccar-event:%s' % datos.get('eventId') if datos.get('eventId') else 'traccar-geofence:%s@%s' % (gid, fields.Datetime.to_string(fecha))
+        tecnicos_evento = candidatos.mapped('responsable')
+        if len(tecnicos_evento) != 1:
+            _logger.warning('[GPS-APOYO] geofenceEnter con técnicos ambiguos visita=%s', visita.id)
+            return resultado
+        if tecnicos_evento != visita.tecnico_id:
+            participante = visita.participante_ids.filtered(
+                lambda p: p.tecnico_id == tecnicos_evento)[:1]
+            if participante and participante.estado == 'en_ruta':
+                participante.registrar_llegada(fecha, 'traccar', ref)
+                return candidatos
+            return resultado
         if visita.registrar_llegada_verificada(fecha, ref, 'traccar'):
-            visita.ticket_ids.filtered(lambda t: t.estado in ('proceso', 'en_ruta')).action_en_sitio(
+            visita.ticket_ids.filtered(lambda t: t.responsable == visita.tecnico_id and
+                t.estado in ('proceso', 'en_ruta')).action_en_sitio(
                 notificar=False, fecha_evento=fecha)
-            resultado = visita.ticket_ids
+            resultado = visita.ticket_ids.filtered(lambda t: t.responsable == visita.tecnico_id)
             if resultado:
                 try:
                     aceptado = resultado[0].notificar_en_sitio(
@@ -1502,3 +1656,6 @@ class TicketAlquilerTracking(models.Model):
                 lines.append(f"Llego {fmt_min(abs(self.diferencia_puntualidad_minutos))} antes")
 
         return '\n'.join(lines)
+
+
+
