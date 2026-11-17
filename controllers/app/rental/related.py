@@ -1486,6 +1486,13 @@ class RentalRelatedController(RentalBaseController):
             lambda candidate: candidate.active and not candidate.share
         ).sorted(key=lambda candidate: (candidate.name or "").lower())
 
+        Wizard = request.env["whatsapp.notification.wizard"].sudo()
+        groups = [
+            {"value": group_id, "label": group_name}
+            for group_id, group_name in Wizard._get_grupos_disponibles()
+            if group_id
+        ]
+
         return self._json_response({
             "success": True,
             "technicians": [
@@ -1495,6 +1502,7 @@ class RentalRelatedController(RentalBaseController):
             "types": options("tipo_servicio_id"),
             "priorities": options("priority"),
             "direct_visit": options("asistencia_id"),
+            "whatsapp_groups": groups,
         })
 
     @http.route(
@@ -1602,6 +1610,26 @@ class RentalRelatedController(RentalBaseController):
                 if vals[field_name] not in dict(selection):
                     raise UserError("Valor inválido para %s." % field_name)
 
+            notify_group = data.get("notificar_grupos") is True
+            group_id = str(data.get("grupo_seleccionado") or "").strip()
+            Wizard = request.env["whatsapp.notification.wizard"].sudo()
+            if notify_group:
+                group_ids = {
+                    group_value for group_value, _ in Wizard._get_grupos_disponibles()
+                    if group_value
+                }
+                if not group_id or group_id not in group_ids:
+                    raise UserError("Seleccione un grupo de WhatsApp válido.")
+
+            wizard_values = {
+                "notificar_grupos": notify_group,
+                "grupo_seleccionado": group_id if notify_group else False,
+                "cliente_solicita_toner": data.get("cliente_solicita_toner") is True,
+                "enviar_toner": data.get("enviar_toner") is True,
+                "observaciones_toner": str(data.get("observaciones_toner") or "").strip(),
+                "mensaje_adicional": str(data.get("mensaje_adicional") or "").strip(),
+            }
+
             # Una sola transacción: copiar los datos reales del alquiler y
             # ejecutar las validaciones del modelo al aplicar agenda/técnico.
             with request.env.cr.savepoint():
@@ -1611,6 +1639,23 @@ class RentalRelatedController(RentalBaseController):
                 if not ticket:
                     raise UserError("El método de creación no devolvió un ticket válido.")
                 ticket.write(vals)
+
+                wizard = Wizard.create({"ticket_id": ticket.id, **wizard_values})
+                wizard.action_confirmar_asignacion()
+                if ticket.estado != "proceso":
+                    raise UserError("La asignación no cambió el ticket al estado Proceso.")
+
+            # Firebase es independiente: un fallo no revierte el ticket SAT.
+            push_result = {"success": False, "sent": 0, "failed": 0}
+            try:
+                push_result = request.env["app.push.service"].sudo().send_to_user(
+                    user=technician,
+                    title="Nuevo ticket de servicio asignado",
+                    body="Ticket %s: %s" % (ticket.name, rental.serie or ""),
+                    data={"type": "service_assignment", "service_id": str(ticket.id)},
+                )
+            except Exception:
+                _logger.exception("Error al enviar push para ticket %s", ticket.id)
 
             self._post_app_message(
                 rental,
@@ -1635,6 +1680,11 @@ class RentalRelatedController(RentalBaseController):
                     "counts": self._related_counts(
                         rental
                     ),
+                    "push": {
+                        "success": bool(push_result.get("success")),
+                        "sent": int(push_result.get("sent") or 0),
+                        "failed": int(push_result.get("failed") or 0),
+                    },
                 },
                 status=201,
             )
@@ -2868,3 +2918,6 @@ class RentalRelatedController(RentalBaseController):
             return self._error_response(
                 exc
             )
+
+
+
