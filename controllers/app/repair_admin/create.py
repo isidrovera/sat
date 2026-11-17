@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# REPAIR_ADMIN_CREATE_V3_ODOO_MODEL_WORKFLOW
+# REPAIR_ADMIN_CREATE_V5_ODOO_MODEL_WORKFLOW_MULTICHANNEL
 
 import logging
 
@@ -207,12 +207,89 @@ class RepairAdminCreateController(RepairAdminBaseController):
                 repair.pcloud_folder_id,
             )
 
+            # El proceso de autoasignación de Odoo invoca este mismo método
+            # después de crear la reparación. create() no lo llama solo.
+            # Un error de WhatsApp no debe borrar la reparación ya preparada.
+            whatsapp_attempted = False
+            whatsapp_warning = False
+            notify_method = getattr(
+                repair, "enviar_mensaje_whatsapp_reparaciones", None
+            )
+            if callable(notify_method):
+                try:
+                    notify_method()
+                    whatsapp_attempted = True
+                except Exception:
+                    whatsapp_warning = True
+                    _logger.exception(
+                        "Fallo al solicitar notificación WhatsApp de "
+                        "reparación %s al técnico %s",
+                        repair.id, technician.id,
+                    )
+            else:
+                whatsapp_warning = True
+                _logger.warning(
+                    "El modelo reparaciones.reparaciones no expone "
+                    "enviar_mensaje_whatsapp_reparaciones() para reparación %s",
+                    repair.id,
+                )
+
+            # Push es independiente del envío por WhatsApp. El servicio
+            # distribuye la alerta a TODOS los tokens FCM activos del técnico.
+            # No se cancela la reparación si no hay equipos o Firebase falla.
+            push_result = {
+                "success": False,
+                "sent": 0,
+                "failed": 0,
+                "code": "PUSH_NOT_ATTEMPTED",
+            }
+            try:
+                push_result = request.env["app.push.service"].sudo().send_to_user(
+                    user=technician,
+                    title="Nueva reparación asignada",
+                    body=(
+                        "Se te asignó la reparación %s. "
+                        "Ingresa a Copier Support para revisarla."
+                    ) % (repair.name or repair.id),
+                    data={
+                        "type": "repair_assignment",
+                        "repair_id": str(repair.id),
+                        "machine_id": str(machine.id),
+                    },
+                )
+                _logger.info(
+                    "Push reparación %s: enviados=%s, fallidos=%s, código=%s",
+                    repair.id,
+                    push_result.get("sent", 0),
+                    push_result.get("failed", 0),
+                    push_result.get("code", ""),
+                )
+            except Exception:
+                _logger.exception(
+                    "Error al solicitar notificación FCM para reparación %s",
+                    repair.id,
+                )
+                push_result = {
+                    "success": False,
+                    "sent": 0,
+                    "failed": 0,
+                    "code": "PUSH_EXCEPTION",
+                }
+
             return self._json_response({
                 "success": True,
                 "code": "REPAIR_CREATED",
                 "message": "Reparación creada y asignada correctamente.",
                 "repair": self._ra_serialize_repair_detail(repair),
                 "pcloud_folder_id": repair.pcloud_folder_id,
+                "whatsapp_attempted": whatsapp_attempted,
+                "whatsapp_warning": whatsapp_warning,
+                "push": {
+                    "success": bool(push_result.get("success")),
+                    "sent": int(push_result.get("sent") or 0),
+                    "failed": int(push_result.get("failed") or 0),
+                    "code": push_result.get("code") or "",
+                },
             }, status=201)
 
         except (ValidationError, UserError) as exc:
