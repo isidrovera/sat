@@ -378,7 +378,7 @@ body {{
 
 <body>
 <main class="card">
-    <div class="brand">COPIER COMPANY S.A.C.</div>
+    <div class="brand">Andes.</div>
     {contenido}
     <div class="footer">
         Sistema de Atención Técnica SAT<br>

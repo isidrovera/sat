@@ -2,14 +2,14 @@
 <odoo>
     <template id="sat_gps_live_map" name="Seguimiento GPS de visita SAT">
         <t t-call="website.layout">
-            <t t-set="title">Seguimiento GPS - COPIER COMPANY</t>
+            <t t-set="title">Seguimiento GPS - Andes</t>
             <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet"/>
             <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
             <main class="container my-4" id="sat_gps_tracking"
                   t-att-data-url="data_url" t-att-data-tiles-url="tiles_url">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                     <div>
-                        <h2 class="mb-0">COPIER COMPANY</h2>
+                        <h2 class="mb-0">Andes</h2>
                         <div class="text-muted" t-esc="visita.name"/>
                     </div>
                     <span class="badge text-bg-primary">Seguimiento GPS</span>
