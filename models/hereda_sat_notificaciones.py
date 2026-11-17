@@ -312,7 +312,19 @@ class HeredaSatNotificaciones(models.Model):
         return True
     def enviar_mensaje_transportistas(self):
         """Envía notificación a transportistas para traer la máquina."""
-        transportista_numeros = ['51924894872']
+        # Ambos transportistas reciben el enlace. Los números se pueden
+        # administrar sin modificar código desde Parámetros del sistema.
+        configurados = self.env['ir.config_parameter'].sudo().get_param(
+            'sat.transportista_whatsapp_numeros', '51924894872,51926061582'
+        )
+        transportista_numeros = list(dict.fromkeys(
+            re.sub(r'\D', '', numero)
+            for numero in configurados.split(',')
+            if re.sub(r'\D', '', numero)
+        ))
+        if not transportista_numeros:
+            _logger.error('[TRANSPORTE] No hay teléfonos configurados')
+            return False
         
         # Obtener el display name de la ubicación
         ubicacion_display = dict(self._fields['ubicacion_id'].selection).get(self.ubicacion_id, self.ubicacion_id)
@@ -333,12 +345,14 @@ class HeredaSatNotificaciones(models.Model):
         _logger.info(f"Enviando mensaje a transportistas para máquina {self.serie_id}")
 
         exito_total = True
+        exitos = 0
         for numero in transportista_numeros:
             try:
                 # 🔥 CAMBIO: Usar API BOOT
                 resultado = self._send_whatsapp_message_boot(numero, mensaje)
                 
                 if resultado:
+                    exitos += 1
                     _logger.info(f"✅ Mensaje enviado exitosamente a transportista {numero} para máquina {self.serie_id}")
                 else:
                     _logger.warning(f"⚠️ Fallo al enviar mensaje a transportista {numero} para máquina {self.serie_id}")
@@ -351,15 +365,18 @@ class HeredaSatNotificaciones(models.Model):
         # Registrar en el chatter
         if exito_total:
             self.message_post(
-                body=f"✅ Notificación enviada a transportistas para traer el equipo desde {ubicacion_display}.",
+                body=f"✅ Notificación enviada a {exitos} transportistas para traer el equipo desde {ubicacion_display}.",
                 message_type='notification',
                 subtype_xmlid='mail.mt_note'
             )
         else:
             self.message_post(
-                body=f"⚠️ Hubo problemas al enviar la notificación a algunos transportistas. Revisar logs.",
+                body=f"⚠️ Notificación de transporte: {exitos} de {len(transportista_numeros)} envíos aceptados. Revisar logs.",
                 message_type='notification',
                 subtype_xmlid='mail.mt_note'
             )
         
         return exito_total
+
+
+

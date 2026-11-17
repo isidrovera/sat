@@ -3,110 +3,101 @@ from odoo.http import request
 import logging
 from datetime import datetime
 import pytz
+from html import escape
 
 _logger = logging.getLogger(__name__)
 
 class SatController(http.Controller):
-    @http.route('/sat/change_location/<int:record_id>', type='http', auth='public', website=True)
+    @http.route(
+        '/sat/change_location/<int:record_id>',
+        type='http', auth='public', methods=['GET'], website=True,
+    )
     def change_location(self, record_id, token=None, **kwargs):
-        _logger.info(f"[CONTROLLER] Iniciando proceso de cambio de ubicación")
-        _logger.info(f"[CONTROLLER] Record ID: {record_id}")
-        _logger.info(f"[CONTROLLER] Token recibido: {token}")
-        _logger.info(f"[CONTROLLER] Parámetros adicionales: {kwargs}")
-        
+        """El GET solo muestra confirmación; jamás mueve la máquina."""
         try:
-            _logger.info(f"[CONTROLLER] Buscando registro con ID: {record_id}")
-            record = request.env['sat.sat'].with_context(force_location_change=True).sudo().browse(record_id)
-            
-            _logger.info(f"[CONTROLLER] Registro encontrado: {record}")
-            
-            # Validar existencia
-            if not record.exists():
-                _logger.error(f"[CONTROLLER] Registro {record_id} no encontrado")
-                return self._render_error('No se encontró la máquina especificada')
-                
-            # Verificar campo token
-            if not hasattr(record, 'location_change_token'):
-                _logger.error(f"[CONTROLLER] El campo 'location_change_token' no existe en el modelo")
-                return self._render_error('Error de configuración: Campo de token no existe')
-            
-            _logger.info(f"[CONTROLLER] Token almacenado en BD: {record.location_change_token}")
-            _logger.info(f"[CONTROLLER] Token recibido en URL: {token}")
-            
-            # Validación mejorada de token
-            if not token:
-                _logger.error(f"[CONTROLLER] No se proporcionó token en la URL")
-                return self._render_error('Token requerido')
-                
-            if not record.location_change_token:
-                _logger.error(f"[CONTROLLER] No hay token válido en la base de datos para el registro {record_id}")
-                return self._render_error('Token no válido o ya utilizado')
-                
-            if record.location_change_token != token:
-                _logger.error(f"[CONTROLLER] Token inválido: {token} vs {record.location_change_token}")
-                return self._render_error('Token inválido o expirado')
-            
-            _logger.info(f"[CONTROLLER] Token validado correctamente")
-            
-            # Guardar información antes del cambio
-            ubicacion_anterior = record.ubicacion_id
-            _logger.info(f"[CONTROLLER] Ubicación anterior: {ubicacion_anterior}")
-            
-            # Cambiar ubicación y limpiar token usando el método del modelo
-            try:
-                _logger.info(f"[CONTROLLER] Ejecutando cambio de ubicación a primer_piso")
-                record.write({'ubicacion_id': 'primer_piso'})
-                _logger.info(f"[CONTROLLER] Ubicación actualizada exitosamente")
-                
-                # Invalidar token usando el método del modelo
-                _logger.info(f"[CONTROLLER] Invalidando token")
-                if record.invalidar_token_ubicacion():
-                    _logger.info(f"[CONTROLLER] Token invalidado correctamente")
-                else:
-                    _logger.warning(f"[CONTROLLER] No se pudo invalidar el token completamente")
-                
-                # Confirmar cambios
-                request.env.cr.commit()
-                _logger.info(f"[CONTROLLER] Cambios confirmados en la base de datos")
-                
-            except Exception as e:
-                _logger.error(f"[CONTROLLER] Error al cambiar ubicación: {str(e)}")
-                request.env.cr.rollback()
-                return self._render_error(f'Error al cambiar ubicación: {str(e)}')
-            
-            # Registrar el cambio en el historial
-            try:
-                _logger.info(f"[CONTROLLER] Creando mensaje en el historial")
-                peru_tz = pytz.timezone('America/Lima')
-                current_time = datetime.now(peru_tz).strftime('%Y-%m-%d %H:%M:%S')
-                message = f"<b>Cambio de ubicación por transportista:</b> De {ubicacion_anterior} a <b>primer_piso</b> el {current_time}"
-                record.message_post(body=message, subtype_id=request.env.ref('mail.mt_note').id)
-                _logger.info(f"[CONTROLLER] Mensaje registrado en el historial")
-                
-            except Exception as e:
-                _logger.error(f"[CONTROLLER] Error al crear mensaje en historial: {str(e)}")
-                # No fallar por esto, continuar
-            
-            # Recargar el registro para obtener los datos actualizados
-            record = request.env['sat.sat'].sudo().browse(record_id)
-            
-            # Obtener información del modelo para la página de éxito
-            model_info = {
-                'name': record.name.name if hasattr(record, 'name') and record.name else 'Desconocido',
-                'serie': record.serie_id if hasattr(record, 'serie_id') else 'Desconocido',
-                'marca': record.marca if hasattr(record, 'marca') else 'Desconocido',
-                'ubicacion': 'Primer piso'
-            }
-            
-            _logger.info(f"[CONTROLLER] Información de la máquina: {model_info}")
-            _logger.info(f"[CONTROLLER] Proceso completado exitosamente para registro {record_id}")
-            
-            return self._render_success('Ubicación actualizada correctamente', model_info)
-            
-        except Exception as e:
-            _logger.error(f"[CONTROLLER] Error general: {str(e)}", exc_info=True)
-            request.env.cr.rollback()
-            return self._render_error(f'Error interno: {str(e)}')
+            record = request.env['sat.sat'].sudo().browse(record_id).exists()
+            if not record or not token or record.location_change_token != token:
+                return self._render_error('Enlace inválido o ya utilizado')
+            if record.ubicacion_id not in ('segundo_local', 'covida'):
+                return self._render_error('Esta máquina ya no está pendiente de traslado')
+            return self._render_confirmation(record, token)
+        except Exception:
+            _logger.exception('[TRANSPORTE] Error preparando confirmación de máquina %s', record_id)
+            return self._render_error('No se pudo cargar la confirmación')
+
+    @http.route(
+        '/sat/change_location/<int:record_id>',
+        type='http', auth='public', methods=['POST'], website=True, csrf=True,
+    )
+    def confirm_change_location(self, record_id, token=None, **kwargs):
+        """Solo un POST explícito confirma la llegada al primer piso."""
+        try:
+            # Serializar confirmaciones simultáneas del mismo enlace.
+            request.env.cr.execute('SELECT id FROM sat_sat WHERE id = %s FOR UPDATE', [record_id])
+            if not request.env.cr.fetchone():
+                return self._render_error('No se encontró la máquina')
+            record = request.env['sat.sat'].sudo().browse(record_id).exists()
+            record.invalidate_recordset(['location_change_token', 'ubicacion_id'])
+            if not record or not token or record.location_change_token != token:
+                return self._render_error('Enlace inválido o ya utilizado')
+            if record.ubicacion_id not in ('segundo_local', 'covida'):
+                return self._render_error('Esta máquina ya no está pendiente de traslado')
+
+            anterior = record.ubicacion_id
+            record.with_context(force_location_change=True).write({
+                'ubicacion_id': 'primer_piso',
+                'location_change_token': False,
+            })
+            peru_tz = pytz.timezone('America/Lima')
+            fecha = datetime.now(peru_tz).strftime('%Y-%m-%d %H:%M:%S')
+            record.message_post(
+                body=(
+                    '<b>Traslado confirmado por enlace:</b> '
+                    f'{escape(anterior)} → <b>Primer piso</b> el {fecha}'
+                ),
+                subtype_xmlid='mail.mt_note',
+            )
+            return self._render_success('Ubicación actualizada correctamente', {
+                'name': record.name.name if record.name else 'Desconocido',
+                'serie': record.serie_id or 'Desconocido',
+                'marca': record.marca or 'Desconocido',
+                'ubicacion': 'Primer piso',
+            })
+        except Exception:
+            _logger.exception('[TRANSPORTE] Error confirmando máquina %s', record_id)
+            return self._render_error('No se pudo confirmar el traslado. Intente nuevamente')
+
+    def _render_confirmation(self, record, token):
+        nombre = escape(record.name.name if record.name else 'Máquina')
+        serie = escape(record.serie_id or '')
+        ubicaciones = dict(record._fields['ubicacion_id'].selection)
+        origen = escape(ubicaciones.get(record.ubicacion_id, record.ubicacion_id))
+        csrf = escape(request.csrf_token(), quote=True)
+        token_value = escape(token, quote=True)
+        html = f"""<!doctype html>
+<html lang="es"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="referrer" content="no-referrer"/>
+<title>Confirmar traslado SAT</title>
+<style>
+body{{font-family:system-ui,Arial,sans-serif;background:#f1f5fa;margin:0;padding:24px;color:#183153}}
+.card{{max-width:440px;margin:8vh auto;background:#fff;border-radius:20px;padding:30px;box-shadow:0 15px 40px #18315318}}
+h1{{font-size:24px;margin:0 0 8px}}p{{line-height:1.6}}.muted{{color:#64748b}}
+button{{border:0;background:#1d57b7;color:white;width:100%;padding:16px;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer}}
+</style></head><body><main class="card">
+<h1>Confirmar llegada</h1>
+<p class="muted">Verifique que la máquina ya se encuentre físicamente en el primer piso.</p>
+<p><b>Modelo:</b> {nombre}<br/><b>Serie:</b> {serie}<br/><b>Origen:</b> {origen}<br/><b>Destino:</b> Primer piso</p>
+<form method="post" action="/sat/change_location/{record.id}">
+<input type="hidden" name="csrf_token" value="{csrf}"/>
+<input type="hidden" name="token" value="{token_value}"/>
+<button type="submit">Confirmar llegada al primer piso</button></form>
+</main></body></html>"""
+        return request.make_response(html, headers=[
+            ('Content-Type', 'text/html; charset=utf-8'),
+            ('Cache-Control', 'no-store'),
+            ('Referrer-Policy', 'no-referrer'),
+        ])
     
     def _render_error(self, error_message):
         """Renderiza una página de error moderna con cierre automático"""
@@ -399,3 +390,6 @@ class SatController(http.Controller):
         </html>
         """
         return http.Response(html, status=200, mimetype='text/html')
+
+
+

@@ -1276,8 +1276,14 @@ class SatSat(models.Model):
             if campos_relevantes.intersection(vals.keys()):
                 if self.disponibilidad_id == 'separada' and self.ubicacion_id in ['segundo_local', 'covida']:
                     with self.env.cr.savepoint():
-                        self.enviar_mensaje_transportistas()
-                    _logger.info("[TRANSPORTE] Notificación enviada para ID %s", self.id)
+                        enviado = self.enviar_mensaje_transportistas()
+                    if enviado:
+                        _logger.info("[TRANSPORTE] Notificación enviada a todos para ID %s", self.id)
+                    else:
+                        _logger.warning(
+                            "[TRANSPORTE] Uno o más transportistas no recibieron notificación para ID %s",
+                            self.id,
+                        )
                 else:
                     _logger.info(
                         "[TRANSPORTE] Sin notificación para ID %s "
@@ -2368,7 +2374,7 @@ class SatSat(models.Model):
         import secrets
         for record in self:
             if record.location_change_token and not force:
-                _logger.info(f"[TOKEN AUTO] Token ya existe para ID {record.id}, no se regenera: {record.location_change_token}")
+                _logger.info("[TOKEN AUTO] Token ya existe para ID %s, no se regenera", record.id)
                 continue
 
             token = secrets.token_urlsafe(16)
@@ -2376,9 +2382,9 @@ class SatSat(models.Model):
             token_verificado = self.env['sat.sat'].sudo().browse(record.id).location_change_token
 
             if token_verificado == token:
-                _logger.info(f"[TOKEN AUTO] Token generado y verificado correctamente para ID {record.id}: {token}")
+                _logger.info("[TOKEN AUTO] Token generado y verificado para ID %s", record.id)
             else:
-                _logger.error(f"[TOKEN AUTO] FALLO al guardar token para ID {record.id}. Esperado: {token}, Leído: {token_verificado}")
+                _logger.error("[TOKEN AUTO] FALLO al guardar token para ID %s", record.id)
 
 
     
@@ -2410,18 +2416,18 @@ class SatSat(models.Model):
         # Continuar con el ID real
         if record.location_change_token:
             token = record.location_change_token
-            _logger.info(f"[TOKEN] Ya existe token para ID {record.id}: {token}")
+            _logger.info("[TOKEN] Ya existe token para ID %s", record.id)
         else:
             token = secrets.token_urlsafe(16)
             record.sudo().write({'location_change_token': token})
             token_verificado = self.env['sat.sat'].sudo().browse(record.id).location_change_token
             if token_verificado != token:
-                _logger.error(f"[TOKEN] FALLO al guardar token para ID {record.id}. Esperado: {token}, Leído: {token_verificado}")
+                _logger.error("[TOKEN] FALLO al guardar token para ID %s", record.id)
                 return None
-            _logger.info(f"[TOKEN] Token generado correctamente para ID {record.id}: {token}")
+            _logger.info("[TOKEN] Token generado para ID %s", record.id)
 
         url = f"{base_url}/sat/change_location/{record.id}?token={token}"
-        _logger.info(f"[TOKEN] URL final generada: {url}")
+        _logger.info("[TOKEN] URL de traslado preparada para ID %s", record.id)
         return url
 
 
@@ -2487,7 +2493,16 @@ class SatSat(models.Model):
             _logger.info(f"Cron diario: Se encontraron {len(registros_a_traer)} máquinas para traer")
             
             if registros_a_traer:
-                transportista_numeros = ['51924894872']
+                import re
+                configurados = self.env['ir.config_parameter'].sudo().get_param(
+                    'sat.transportista_whatsapp_numeros',
+                    '51924894872,51926061582',
+                )
+                transportista_numeros = list(dict.fromkeys(
+                    re.sub(r'\D', '', numero)
+                    for numero in configurados.split(',')
+                    if re.sub(r'\D', '', numero)
+                ))
                 exitos = 0
                 fallos = 0
                 
@@ -2760,3 +2775,6 @@ class SatSat(models.Model):
     
 
     
+
+
+
