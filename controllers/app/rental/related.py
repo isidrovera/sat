@@ -93,6 +93,7 @@ class RentalRelatedController(RentalBaseController):
         [
             "/api/app/rentals/<int:rental_id>/related",
             "/api/app/rentals/<int:rental_id>/related/tickets",
+            "/api/app/rentals/<int:rental_id>/related/tickets/create-options",
             "/api/app/rentals/<int:rental_id>/related/tickets/<int:ticket_id>",
             "/api/app/rentals/<int:rental_id>/related/orders",
             "/api/app/rentals/<int:rental_id>/related/orders/<int:order_id>",
@@ -1438,6 +1439,64 @@ class RentalRelatedController(RentalBaseController):
     # CREATE TICKET
     # ============================================================
 
+    def _ticket_creator_allowed(self, user):
+        return bool(
+            user and (
+                self._has_group(user, self.SYSTEM_GROUP)
+                or self._has_group(user, self.HEAD_GROUP)
+            )
+        )
+
+    @http.route(
+        "/api/app/rentals/<int:rental_id>/related/tickets/create-options",
+        type="http", auth="public", methods=["GET"],
+        csrf=False, save_session=True,
+    )
+    def rental_ticket_create_options(self, rental_id, **kwargs):
+        user, error = self._require_user()
+        if error:
+            return error
+        if not self._ticket_creator_allowed(user):
+            return self._json_response({
+                "success": False, "code": "TICKET_CREATE_FORBIDDEN",
+                "message": "Solo administradores y jefes de taller pueden crear tickets.",
+            }, status=403)
+
+        rental = request.env[self.RENTAL_MODEL].sudo().browse(rental_id).exists()
+        if not rental:
+            return self._rental_not_found_response()
+
+        Ticket = request.env[self.TICKET_MODEL].sudo()
+        def options(field_name):
+            selection = Ticket._fields[field_name].selection
+            if callable(selection):
+                selection = selection(Ticket)
+            return [{"value": value, "label": label} for value, label in selection]
+
+        technicians = request.env["res.users"].sudo().browse()
+        for xmlid in (self.TECHNICAL_GROUP, self.HEAD_GROUP):
+            group = request.env.ref(xmlid, raise_if_not_found=False)
+            if not group:
+                continue
+            if "user_ids" in group._fields:
+                technicians |= group.user_ids.sudo()
+            elif "users" in group._fields:
+                technicians |= group.users.sudo()
+        technicians = technicians.filtered(
+            lambda candidate: candidate.active and not candidate.share
+        ).sorted(key=lambda candidate: (candidate.name or "").lower())
+
+        return self._json_response({
+            "success": True,
+            "technicians": [
+                {"id": technician.id, "name": technician.name}
+                for technician in technicians
+            ],
+            "types": options("tipo_servicio_id"),
+            "priorities": options("priority"),
+            "direct_visit": options("asistencia_id"),
+        })
+
     @http.route(
         "/api/app/rentals/<int:rental_id>/related/tickets",
         type="http",
@@ -1451,28 +1510,25 @@ class RentalRelatedController(RentalBaseController):
         rental_id,
         **kwargs,
     ):
-        user, error = self._require_rental_user()
+        user, error = self._require_user()
 
         if error:
             return error
 
+        if not self._ticket_creator_allowed(user):
+            return self._json_response({
+                "success": False,
+                "code": "TICKET_CREATE_FORBIDDEN",
+                "message": "Solo administradores y jefes de taller pueden crear tickets.",
+            }, status=403)
+
         try:
-            rental = self._get_rental(
-                rental_id,
-                user,
-                require_write=True,
-            )
+            rental = request.env[self.RENTAL_MODEL].sudo().browse(
+                rental_id
+            ).exists()
 
             if not rental:
                 return self._rental_not_found_response()
-
-            write_error = self._require_rental_write_access(
-                rental,
-                user,
-            )
-
-            if write_error:
-                return write_error
 
             if not self._field(
                 rental,
@@ -1509,36 +1565,52 @@ class RentalRelatedController(RentalBaseController):
                     "no está disponible."
                 )
 
-            action = rental.create_ticket()
+            data = self._json_body()
+            Ticket = request.env[self.TICKET_MODEL].sudo()
 
-            ticket_id = (
-                action.get(
-                    "res_id"
-                )
-                if isinstance(
-                    action,
-                    dict,
-                )
-                else False
-            )
+            try:
+                technician_id = int(data.get("responsable") or 0)
+                agenda = fields.Datetime.to_datetime(data.get("agenda"))
+            except (ValueError, TypeError):
+                raise UserError("Técnico o fecha de visita inválidos.")
+            technician = request.env["res.users"].sudo().browse(
+                technician_id
+            ).exists()
+            if not technician or not technician.active or technician.share:
+                raise UserError("Seleccione un técnico válido.")
+            if not (
+                self._has_group(technician, self.TECHNICAL_GROUP)
+                or self._has_group(technician, self.HEAD_GROUP)
+            ):
+                raise UserError("El usuario seleccionado no pertenece al equipo técnico.")
 
-            Ticket = request.env[
-                self.TICKET_MODEL
-            ]
+            if not agenda:
+                raise UserError("Seleccione la fecha y hora de visita.")
+            if not isinstance(data.get("description"), str) or not data["description"].strip():
+                raise UserError("Describa el problema reportado.")
 
-            ticket = (
-                Ticket.browse(
-                    ticket_id
-                ).exists()
-                if ticket_id
-                else Ticket.browse()
-            )
+            vals = {
+                "responsable": technician.id,
+                "agenda": agenda,
+                "description": data["description"].strip(),
+                "tipo_servicio_id": data.get("tipo_servicio_id") or "revision",
+                "priority": data.get("priority") or "1",
+                "asistencia_id": data.get("asistencia_id") or "no",
+            }
+            for field_name in ("tipo_servicio_id", "priority", "asistencia_id"):
+                selection = Ticket._fields[field_name].selection
+                if vals[field_name] not in dict(selection):
+                    raise UserError("Valor inválido para %s." % field_name)
 
-            if not ticket:
-                raise UserError(
-                    "El método de creación no devolvió "
-                    "un ticket válido."
-                )
+            # Una sola transacción: copiar los datos reales del alquiler y
+            # ejecutar las validaciones del modelo al aplicar agenda/técnico.
+            with request.env.cr.savepoint():
+                action = rental.create_ticket()
+                ticket_id = action.get("res_id") if isinstance(action, dict) else False
+                ticket = Ticket.browse(ticket_id).exists() if ticket_id else Ticket.browse()
+                if not ticket:
+                    raise UserError("El método de creación no devolvió un ticket válido.")
+                ticket.write(vals)
 
             self._post_app_message(
                 rental,
