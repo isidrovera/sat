@@ -111,33 +111,35 @@ class AppServiceController(AppBaseController):
     # BASIC HELPERS
     # ============================================================
 
+    def _service_is_admin_reader(self, user):
+        """Administración y jefatura SAT pueden consultar todos los tickets."""
+        if not user:
+            return False
+        return bool(
+            user.has_group("base.group_system")
+            or user.has_group("sat.sat_jefes_group_user")
+        )
+
     def _service_get_service(
         self,
         service_id,
         user,
+        allow_admin_read=False,
     ):
         """
         Devuelve solamente servicios asignados
         al usuario autenticado.
         """
 
-        return request.env[
-            "ticket.alquiler"
-        ].search(
-            [
-                (
-                    "id",
-                    "=",
-                    service_id,
-                ),
-                (
-                    "responsable",
-                    "=",
-                    user.id,
-                ),
-            ],
-            limit=1,
-        )
+        Ticket = request.env["ticket.alquiler"]
+        domain = [("id", "=", service_id)]
+        if allow_admin_read and self._service_is_admin_reader(user):
+            # Solamente lectura administrativa; las acciones que modifican
+            # el ticket siguen usando la restricción del responsable.
+            Ticket = Ticket.sudo()
+        else:
+            domain.append(("responsable", "=", user.id))
+        return Ticket.search(domain, limit=1)
 
     def _service_not_found_response(
         self,
@@ -1458,13 +1460,17 @@ class AppServiceController(AppBaseController):
             except Exception:
                 limit = 50
 
-            domain = [
-                (
-                    "responsable",
-                    "=",
-                    user.id,
-                ),
-            ]
+            try:
+                offset = max(
+                    int(request.httprequest.args.get("offset", 0)), 0
+                )
+            except (TypeError, ValueError):
+                offset = 0
+
+            admin_reader = self._service_is_admin_reader(user)
+            domain = []
+            if not admin_reader:
+                domain.append(("responsable", "=", user.id))
 
             if state:
                 domain.append(
@@ -1508,10 +1514,12 @@ class AppServiceController(AppBaseController):
                     ]
                 )
 
+            Ticket = request.env["ticket.alquiler"]
+            if admin_reader:
+                Ticket = Ticket.sudo()
+            total = Ticket.search_count(domain)
             tickets = (
-                request.env[
-                    "ticket.alquiler"
-                ].search(
+                Ticket.search(
                     domain,
                     order=(
                         "agenda asc, "
@@ -1519,6 +1527,7 @@ class AppServiceController(AppBaseController):
                         "id desc"
                     ),
                     limit=limit,
+                    offset=offset,
                 )
             )
 
@@ -1531,6 +1540,11 @@ class AppServiceController(AppBaseController):
                             tickets
                         )
                     ),
+
+                    "total": total,
+                    "limit": limit,
+                    "offset": offset,
+                    "has_more": offset + len(tickets) < total,
 
                     "items": [
                         self._service_serialize_service_short(
@@ -1576,6 +1590,7 @@ class AppServiceController(AppBaseController):
                 self._service_get_service(
                     service_id,
                     user,
+                    allow_admin_read=True,
                 )
             )
 
