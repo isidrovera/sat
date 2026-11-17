@@ -1009,21 +1009,7 @@ class Reparaciones(models.Model):
     
     fecha_finalizacion = fields.Datetime(string='Fecha de Finalización', readonly=True, store=True)
 
-    # PROGRAMACIÓN DE REPARACIONES
-    fecha_programada = fields.Datetime(
-        string='Fecha y hora programada',
-        tracking=True,
-        index=True,
-        copy=False,
-        help='Fecha y hora previstas para iniciar la reparación.'
-    )
-
-    duracion_estimada = fields.Float(
-        string='Duración estimada (horas)',
-        default=2.0,
-        tracking=True,
-        help='Tiempo estimado de trabajo del técnico.'
-    )
+    
 
    
     asesora_mobile_clean = fields.Char(
