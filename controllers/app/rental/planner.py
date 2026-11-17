@@ -607,19 +607,6 @@ class RentalPlannerController(RentalBaseController):
             "res.users"
         ]
 
-        domain = [
-            (
-                "share",
-                "=",
-                False,
-            ),
-            (
-                "active",
-                "=",
-                True,
-            ),
-        ]
-
         zone = self._field(
             rental,
             "zona_mantenimiento_id",
@@ -654,28 +641,26 @@ class RentalPlannerController(RentalBaseController):
                 raise_if_not_found=False,
             )
 
-            group_ids = [
-                item.id
-                for item in (
-                    technical,
-                    head,
-                )
-                if item
-            ]
+            # Odoo 19 no expone necesariamente groups_id en res.users.
+            # Obtener los usuarios desde los grupos reales y filtrar
+            # por activo/interno sin construir un dominio inválido.
+            users = User.browse()
+            for group in (technical, head):
+                if not group:
+                    continue
 
-            if group_ids:
-                domain.append(
-                    (
-                        "groups_id",
-                        "in",
-                        group_ids,
-                    )
-                )
+                if "user_ids" in group._fields:
+                    members = group.user_ids
+                elif "users" in group._fields:
+                    members = group.users
+                else:
+                    members = User.browse()
 
-            users = User.search(
-                domain,
-                order="name asc",
-            )
+                users |= members
+
+            users = users.filtered(
+                lambda item: item.active and not item.share
+            ).sorted(key=lambda item: (item.name or "").lower())
 
         return [
             {
