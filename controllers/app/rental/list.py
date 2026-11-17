@@ -372,6 +372,15 @@ class RentalListController(RentalBaseController):
             )
         )
 
+    def _filter_nonstored_toner(self, records, states):
+        """Filtra estado de tóner calculado sin generar SQL inválido."""
+        if not states:
+            return records
+
+        return records.filtered(
+            lambda rental: rental.estado_stock_toner in states
+        )
+
     # ============================================================
     # FILTER DOMAIN
     # ============================================================
@@ -546,6 +555,10 @@ class RentalListController(RentalBaseController):
             toner_state
             and "estado_stock_toner"
             in Rental._fields
+            and self._field_supports_domain(
+                Rental,
+                "estado_stock_toner",
+            )
         ):
             domain.append(
                 (
@@ -1044,19 +1057,20 @@ class RentalListController(RentalBaseController):
         toner_alerts = 0
 
         if "estado_stock_toner" in Rental._fields:
-            toner_alerts = Rental.search_count(
-                base_domain
-                + [
-                    (
-                        "estado_stock_toner",
-                        "in",
-                        [
-                            "critico",
-                            "bajo",
-                        ],
-                    )
-                ]
-            )
+            if self._field_supports_domain(Rental, "estado_stock_toner"):
+                toner_alerts = Rental.search_count(
+                    base_domain + [
+                        ("estado_stock_toner", "in", ["critico", "bajo"])
+                    ]
+                )
+            else:
+                # Un compute sin store ni search no puede usarse en SQL.
+                # Se calcula sobre los registros visibles para este usuario.
+                toner_alerts = sum(
+                    1
+                    for rental in Rental.search(base_domain)
+                    if rental.estado_stock_toner in ("critico", "bajo")
+                )
 
         pending_orders = 0
 
@@ -1348,18 +1362,32 @@ class RentalListController(RentalBaseController):
                 )
             )
 
-            if pending_orders_python_filter:
+            toner_filter = self._csv_query("toner_state")
+            toner_python_filter = bool(
+                toner_filter
+                and "estado_stock_toner" in Rental._fields
+                and not self._field_supports_domain(
+                    Rental, "estado_stock_toner"
+                )
+            )
+
+            if pending_orders_python_filter or toner_python_filter:
                 all_records = Rental.search(
                     domain,
                     order=self._sort_order(),
                 )
 
-                filtered_records = (
-                    self._filter_nonstored_pending_orders(
-                        all_records,
+                filtered_records = all_records
+                if pending_orders_python_filter:
+                    filtered_records = self._filter_nonstored_pending_orders(
+                        filtered_records,
                         pending_orders_filter,
                     )
-                )
+                if toner_python_filter:
+                    filtered_records = self._filter_nonstored_toner(
+                        filtered_records,
+                        toner_filter,
+                    )
 
                 total = len(
                     filtered_records
