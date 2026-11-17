@@ -1279,6 +1279,7 @@ class SatVisitaTecnico(models.Model):
     """
     _name = 'sat.visita.tecnico'
     _description = 'Participación de técnico en visita SAT'
+    _rec_name = 'tecnico_id'
     _order = 'visita_id, id'
 
     visita_id = fields.Many2one(
@@ -1438,6 +1439,3 @@ class SatVisitaTecnico(models.Model):
 
     def registrar_salida(self, fecha_evento, fuente, referencia):
         return self._registrar_etapa('salida', fecha_evento, fuente, referencia)
-
-
-

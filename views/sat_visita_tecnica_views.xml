@@ -225,6 +225,15 @@
                             invisible="estado != 'programada'"
                             confirm="¿Cancelar esta visita programada?"/>
 
+                    <button name="action_generar_link_gps" type="object"
+                            string="Generar enlace GPS" icon="fa-link"
+                            groups="sat.sat_jefes_group_user,base.group_system"
+                            invisible="estado in ('cancelada', 'salida_confirmada')"/>
+                    <button name="action_revocar_link_gps" type="object"
+                            string="Revocar enlace" icon="fa-ban"
+                            groups="sat.sat_jefes_group_user,base.group_system"
+                            invisible="not gps_link_cliente"/>
+
                     <field name="estado"
                            widget="statusbar"
                            statusbar_visible="programada,en_ruta,en_sitio,salida_pendiente,salida_confirmada"/>
@@ -242,6 +251,12 @@
                     </div>
 
                     <group>
+
+                        <group string="Seguimiento del cliente"
+                               groups="sat.sat_jefes_group_user,base.group_system">
+                            <field name="gps_link_cliente" widget="url" readonly="1"/>
+                            <field name="gps_public_expira" readonly="1"/>
+                        </group>
 
                         <group string="Programación">
 

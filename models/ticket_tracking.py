@@ -1656,6 +1656,3 @@ class TicketAlquilerTracking(models.Model):
                 lines.append(f"Llego {fmt_min(abs(self.diferencia_puntualidad_minutos))} antes")
 
         return '\n'.join(lines)
-
-
-
