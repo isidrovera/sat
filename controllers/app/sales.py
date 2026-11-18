@@ -548,6 +548,17 @@ class AppSalesController(AppBaseController):
             "reservation": self._serialize_reservation(machine),
             "repair": self._serialize_repair_short(repair),
             "permissions": self._machine_permissions(machine, user),
+            # Resumen disponible también en la lista para Flutter Logística.
+            "ingress": {
+                "checked": bool(self._field(machine, "check_ingreso", False)),
+                "state": self._field(machine, "ingreso_estado", "") or "",
+                "state_label": (
+                    self._selection_label(machine, "ingreso_estado")
+                    if self._field(machine, "ingreso_estado", False) else ""
+                ),
+                "date": self._datetime(self._field(machine, "ingreso_fecha", False)),
+                "source": self._field(machine, "ingreso_fuente", "") or "",
+            },
         }
 
         if detail:
@@ -1517,6 +1528,9 @@ class AppSalesController(AppBaseController):
         elif scope == "all":
             pass
 
+        elif scope == "ingress_pending":
+            domain.append(("check_ingreso", "=", False))
+
         else:
             domain.append(("reserva_asesora_id", "=", user.id))
 
@@ -1558,6 +1572,11 @@ class AppSalesController(AppBaseController):
         try:
             args = request.httprequest.args
             scope = (args.get("scope", "mine") or "mine").strip()
+            if scope == "ingress_pending":
+                # Restringido al mismo grupo que confirma descargas.
+                logistics_user, logistics_error = self._require_logistics_user()
+                if logistics_error:
+                    return logistics_error
             search = (args.get("search", "") or "").strip()
             tech = (args.get("technical_state", "") or "").strip()
             reservation = (args.get("reservation_state", "") or "").strip()
@@ -1664,6 +1683,7 @@ class AppSalesController(AppBaseController):
             machine = self._get_machine(machine_id, sudo_read=False)
             if not machine:
                 return self._machine_not_found()
+
             self._ensure_owner(machine, user, allow_free=True)
 
             data = self._get_json_body()
@@ -3285,6 +3305,22 @@ class AppSalesController(AppBaseController):
             if not machine:
                 return self._machine_not_found()
 
+            # Un solo ingreso por máquina, incluso si dos dispositivos confirman
+            # simultáneamente.
+            request.env.cr.execute(
+                "SELECT id FROM sat_sat WHERE id = %s FOR UPDATE", [machine.id]
+            )
+            machine.invalidate_recordset(["check_ingreso"])
+            if machine.check_ingreso:
+                return self._json_response(
+                    {
+                        "success": False,
+                        "code": "INGRESS_ALREADY_REGISTERED",
+                        "message": "El ingreso de esta máquina ya fue registrado.",
+                    },
+                    status=409,
+                )
+
             data = self._get_json_body()
             ingress_state = data.get("ingress_state") or "ok_no_obs"
             ingress_source = data.get("ingress_source") or "manual"
@@ -3296,7 +3332,7 @@ class AppSalesController(AppBaseController):
                     {
                         "success": False,
                         "code": "INGRESS_OBSERVATION_REQUIRED",
-                        "message": "Debes escribir la observación antes de registrar el ingreso.",
+                        "message": "Debes escribir una observación para registrar el ingreso.",
                     },
                     status=400,
                 )
@@ -3859,6 +3895,3 @@ class AppSalesController(AppBaseController):
             )
         except Exception as exc:
             return self._error_response(exc)
-
-
-
