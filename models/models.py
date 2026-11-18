@@ -981,7 +981,7 @@ class SatSat(models.Model):
         vals = dict(vals or {})
         vals_ingreso_in = self._sat_get_ingreso_vals(vals)
 
-        _logger.error(
+        _logger.debug(
             "SAT.WRITE → ENTRANDO | IDS=%s | VALS=%s | INGRESO_IN=%s",
             self.ids,
             vals,
@@ -1046,7 +1046,7 @@ class SatSat(models.Model):
                         e,
                         exc_info=True,
                     )
-        _logger.error(
+        _logger.debug(
             "SAT.WRITE → ANTES SUPER | IDS=%s | VALS=%s | INGRESO_REAPPLY=%s",
             self.ids,
             vals,
@@ -1063,7 +1063,7 @@ class SatSat(models.Model):
         except Exception:
             pass
 
-        _logger.error(
+        _logger.debug(
             "SAT.WRITE → DESPUÉS SUPER | IDS=%s | check=%s estado=%s fecha=%s fuente=%s",
             self.ids,
             self.mapped("check_ingreso"),
@@ -1583,7 +1583,7 @@ class SatSat(models.Model):
         except Exception:
             pass
 
-        _logger.error(
+        _logger.debug(
             "SAT.WRITE → CHECK INGRESO POST | ID=%s | IN=%s | NOW=(check=%s estado=%s fecha=%s fuente=%s)",
             self.id,
             vals_ingreso_in,
@@ -2770,11 +2770,3 @@ class SatSat(models.Model):
             record.message_post(
                 body="Se regresó el estado de 'Entregada' a 'Finalizado'. Se limpiaron factura y fecha de entrega."
             )
-
-
-    
-
-    
-
-
-
