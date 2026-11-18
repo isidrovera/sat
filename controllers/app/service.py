@@ -4,7 +4,7 @@ import base64
 import logging
 import math
 import mimetypes
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 
 import requests
 
@@ -901,8 +901,11 @@ class AppServiceController(AppBaseController):
             ),
 
             "captured_at": (
-                photo.timestamp_captura
-                or False
+                fields.Datetime.to_datetime(photo.timestamp_captura)
+                .replace(tzinfo=timezone.utc)
+                .isoformat()
+                .replace('+00:00', 'Z')
+                if photo.timestamp_captura else False
             ),
 
             "latitude": (
@@ -3619,6 +3622,30 @@ class AppServiceController(AppBaseController):
                     status=400,
                 )
 
+            # La fecha se registra en UTC en Odoo (sin tzinfo).
+            # Si el cliente aún no la envía, conservamos compatibilidad.
+            captured_at = fields.Datetime.now()
+            raw_captured_at = data.get("captured_at")
+            if raw_captured_at:
+                try:
+                    parsed = datetime.fromisoformat(
+                        str(raw_captured_at).strip().replace('Z', '+00:00')
+                    )
+                    if parsed.tzinfo is None:
+                        raise ValueError('La fecha requiere zona horaria')
+                    captured_at = parsed.astimezone(timezone.utc).replace(
+                        tzinfo=None
+                    )
+                except (TypeError, ValueError, OverflowError):
+                    return self._json_response(
+                        {
+                            'success': False,
+                            'code': 'INVALID_CAPTURED_AT',
+                            'message': 'Fecha de captura inválida; envía ISO 8601 con zona horaria.',
+                        },
+                        status=400,
+                    )
+
             original_value = (
                 data.get(
                     "original_image"
@@ -3845,7 +3872,7 @@ class AppServiceController(AppBaseController):
                 ),
 
                 "timestamp_captura": (
-                    fields.Datetime.now()
+                    captured_at
                 ),
 
                 "user_agent": (
@@ -5133,3 +5160,6 @@ class AppServiceController(AppBaseController):
             return self._error_response(
                 exc
             )
+
+
+
