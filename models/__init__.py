@@ -150,5 +150,4 @@ from . import modelo_toner
 from . import sat_repuesto_compatibilidad
 from . import sat_repuesto_media
 from . import visita
-from . import sat_gps_map
 from . import sat_gps_tracking
