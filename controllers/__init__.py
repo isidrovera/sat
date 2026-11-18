@@ -54,3 +54,4 @@ from . import app
 
 from . import monitoring
 from . import repuesto_media
+from . import sat_gps_tracking
