@@ -3380,6 +3380,19 @@ class AppSalesController(AppBaseController):
                 "ingreso_fecha": fields.Datetime.now(),
                 "ingreso_fuente": ingress_source,
             }
+            if ingress_state == "ok_obs":
+                # Ventas consulta sat.sat.descripcion. Mantener cualquier
+                # observación anterior y añadir el daño indicado por Logística.
+                previous_description = str(
+                    self._field(machine, "descripcion", "") or ""
+                ).strip()
+                ingress_description = "Ingreso con observación: %s" % observation
+                vals["descripcion"] = (
+                    "%s\n%s" % (previous_description, ingress_description)
+                    if previous_description else ingress_description
+                )
+                # Equivale al onchange de descripcion en el formulario Odoo.
+                vals["activador"] = "si"
             if location:
                 vals["ubicacion_id"] = location
 
@@ -3895,3 +3908,9 @@ class AppSalesController(AppBaseController):
             )
         except Exception as exc:
             return self._error_response(exc)
+
+
+
+
+
+
