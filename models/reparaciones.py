@@ -997,7 +997,7 @@ class Reparaciones(models.Model):
     # Campo de descripción
     informe = fields.Html(string='Descripción Detallada de la Revisión')
     contometrok_id = fields.Char(string="Contometro", related='maquina_id.contometro', readonly=False, store=True,  tracking=True)
-    contometro_inicial = fields.Char(string="Contometro Inicial", readonly=True, tracking=True )
+    contometro_inicial = fields.Char(string="Contometro Inicial", tracking=True )
     responsable_id = fields.Many2one( 'res.users', string='Responsable', tracking=True )
     nombre_responsable  = fields.Char(related='responsable_id.name', string='Nombre responsable',store=True )
     cliente_id = fields.Many2one('res.partner', string='Cliente', related='maquina_id.cliente_id', readonly=True, store=True, tracking=True)
