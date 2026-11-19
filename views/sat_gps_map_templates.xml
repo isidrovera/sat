@@ -1,79 +1,680 @@
+
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <template id="sat_gps_live_map" name="Seguimiento GPS de visita SAT">
+
+    <template
+        id="sat_gps_live_map"
+        name="Seguimiento GPS de visita SAT"
+    >
+
         <t t-call="website.layout">
-            <t t-set="title">Seguimiento GPS | Andes</t>
-            <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet"/>
-            <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+
+            <t t-set="title">
+                Seguimiento GPS | Andes
+            </t>
+
+            <!-- MAPLIBRE -->
+
+            <link
+                href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css"
+                rel="stylesheet"
+            />
+
+            <script
+                src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"
+            ></script>
+
+            <!-- ESTILOS EXCLUSIVOS DEL MAPA -->
+
             <style>
-                #sat_gps_tracking {--sat-ink:#14243b;--sat-muted:#617087;color:var(--sat-ink);max-width:1500px}
-                #sat_gps_tracking .sat-hero {background:linear-gradient(125deg,#0f2749,#1d4e84);color:#fff;border-radius:22px;padding:23px 27px;margin-bottom:18px;display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;box-shadow:0 12px 34px rgba(20,44,76,.12)}
-                #sat_gps_tracking .sat-hero h1 {font-size:clamp(1.25rem,2.2vw,1.9rem);font-weight:750;letter-spacing:-.03em;margin:0}
-                #sat_gps_tracking .sat-subtitle {opacity:.83;margin-top:5px;font-size:.93rem}
-                #sat_gps_tracking .sat-live {border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.13);border-radius:999px;padding:9px 14px;font-size:.86rem;font-weight:650;white-space:nowrap}
-                #sat_gps_tracking .sat-live-dot {display:inline-block;width:9px;height:9px;background:#57e5a0;border-radius:100%;margin-right:7px;box-shadow:0 0 0 4px rgba(87,229,160,.16)}
-                #sat_gps_tracking .sat-map-shell {position:relative;border-radius:22px;overflow:hidden;isolation:isolate;border:1px solid #dfe7f1;background:#eef3fa;box-shadow:0 10px 32px rgba(18,44,75,.10)}
-                #sat_gps_tracking #sat_gps_map {width:100%;height:clamp(470px,72vh,880px)}
-                #sat_gps_tracking .sat-toolbar {position:absolute;z-index:5;top:15px;left:15px;display:flex;gap:8px;flex-wrap:wrap;max-width:calc(100% - 90px);pointer-events:none}
-                #sat_gps_tracking .sat-toolbar button {pointer-events:auto;border:1px solid #e0e8f3;background:rgba(255,255,255,.97);color:#243754;font-size:.85rem;font-weight:650;border-radius:11px;padding:10px 13px;box-shadow:0 3px 12px rgba(18,44,75,.1)}
-                #sat_gps_tracking .sat-toolbar button:hover,#sat_gps_tracking .sat-toolbar button:focus-visible {background:#eff5ff;border-color:#93b6ef}
-                #sat_gps_tracking .sat-toolbar button:disabled {opacity:.55;cursor:not-allowed}
-                #sat_gps_tracking .sat-toolbar button[aria-pressed="true"] {background:#dbeafe;color:#164c9b;border-color:#9fc5f5}
-                #sat_gps_tracking .sat-map-note {position:absolute;bottom:15px;left:15px;z-index:4;background:rgba(255,255,255,.95);border-radius:10px;padding:8px 11px;font-size:.78rem;color:#485973;box-shadow:0 3px 12px rgba(18,44,75,.08);max-width:calc(100% - 30px)}
-                #sat_gps_tracking .sat-status {background:#fff;border:1px solid #e1e8f2;border-radius:14px;margin:15px 0;padding:14px 18px;color:#50617b;display:flex;gap:10px;align-items:center;font-size:.9rem}
-                #sat_gps_tracking .sat-status-dot {width:9px;height:9px;flex-shrink:0;background:#2b89df;border-radius:50%}
-                #sat_gps_tracking .sat-status.sat-error .sat-status-dot {background:#dc4545}
-                #sat_gps_tracking .sat-cards {display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:13px}
-                #sat_gps_tracking .sat-tech-card {border:1px solid #e0e8f3;background:white;border-radius:17px;padding:18px;box-shadow:0 4px 16px rgba(18,44,75,.045)}
-                #sat_gps_tracking .sat-tech-top {display:flex;align-items:center;gap:11px}
-                #sat_gps_tracking .sat-avatar {width:40px;height:40px;display:grid;place-items:center;flex-shrink:0;border-radius:13px;color:white;font-weight:750}
-                #sat_gps_tracking .sat-tech-name {font-weight:750;font-size:.94rem;line-height:1.25}
-                #sat_gps_tracking .sat-tech-state {color:var(--sat-muted);font-size:.82rem;margin-top:4px}
-                #sat_gps_tracking .sat-tech-meta {font-size:.81rem;color:#617087;margin:12px 0}
-                #sat_gps_tracking .sat-tech-action {background:#f2f6fc;border:1px solid #dfe8f6;color:#1f5596;padding:8px 11px;border-radius:9px;font-size:.83rem;font-weight:650;width:100%}
-                #sat_gps_tracking .sat-tech-action:hover {background:#e6f0ff}
-                #sat_gps_tracking .sat-footer-note {font-size:.79rem;color:#6b7890;margin:16px 3px}
-                #sat_gps_tracking .maplibregl-ctrl-top-right {top:65px;right:8px}
-                #sat_gps_tracking .sat-map-shell:fullscreen,#sat_gps_tracking .sat-map-shell.sat-fullscreen {position:fixed;inset:0;width:100vw;height:100dvh;border:0;border-radius:0;z-index:100000;background:#eaf0f8}
-                #sat_gps_tracking .sat-map-shell:fullscreen #sat_gps_map,#sat_gps_tracking .sat-map-shell.sat-fullscreen #sat_gps_map {height:100%}
-                body.sat-map-lock {overflow:hidden}
-                @media(max-width:700px) {
-                    #sat_gps_tracking.sat-page {padding-left:11px;padding-right:11px;margin-top:12px!important}
-                    #sat_gps_tracking .sat-hero {border-radius:16px;padding:18px}
-                    #sat_gps_tracking #sat_gps_map {height:67dvh;min-height:400px}
-                    #sat_gps_tracking .sat-toolbar {top:10px;left:10px;gap:5px;max-width:calc(100% - 68px)}
-                    #sat_gps_tracking .sat-toolbar button {padding:8px 9px;font-size:.75rem}
-                    #sat_gps_tracking .sat-map-note {font-size:.71rem;bottom:8px;left:8px}
-                    #sat_gps_tracking .sat-map-shell {border-radius:15px}
-                    #sat_gps_tracking .maplibregl-ctrl-top-right {top:90px}
+
+                #sat_gps_tracking {
+                    --sat-ink: #14243b;
+                    --sat-muted: #617087;
+
+                    color: var(--sat-ink);
+                    max-width: 1500px;
                 }
+
+                /* CABECERA */
+
+                #sat_gps_tracking .sat-hero {
+                    background: linear-gradient(
+                        125deg,
+                        #0f2749,
+                        #1d4e84
+                    );
+
+                    color: #ffffff;
+                    border-radius: 22px;
+
+                    padding: 23px 27px;
+                    margin-bottom: 18px;
+
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+
+                    gap: 16px;
+                    flex-wrap: wrap;
+
+                    box-shadow:
+                        0 12px 34px rgba(20, 44, 76, .12);
+                }
+
+                #sat_gps_tracking .sat-hero h1 {
+                    font-size: clamp(
+                        1.25rem,
+                        2.2vw,
+                        1.9rem
+                    );
+
+                    font-weight: 750;
+                    letter-spacing: -.03em;
+                    margin: 0;
+                }
+
+                #sat_gps_tracking .sat-subtitle {
+                    opacity: .83;
+                    margin-top: 5px;
+                    font-size: .93rem;
+                }
+
+                #sat_gps_tracking .sat-live {
+                    border:
+                        1px solid rgba(255, 255, 255, .35);
+
+                    background:
+                        rgba(255, 255, 255, .13);
+
+                    border-radius: 999px;
+                    padding: 9px 14px;
+
+                    font-size: .86rem;
+                    font-weight: 650;
+                    white-space: nowrap;
+                }
+
+                #sat_gps_tracking .sat-live-dot {
+                    display: inline-block;
+
+                    width: 9px;
+                    height: 9px;
+
+                    background: #57e5a0;
+                    border-radius: 100%;
+
+                    margin-right: 7px;
+
+                    box-shadow:
+                        0 0 0 4px rgba(87, 229, 160, .16);
+                }
+
+                /* CONTENEDOR DEL MAPA */
+
+                #sat_gps_tracking .sat-map-shell {
+                    position: relative;
+
+                    border-radius: 22px;
+                    overflow: hidden;
+
+                    isolation: isolate;
+
+                    border: 1px solid #dfe7f1;
+                    background: #eef3fa;
+
+                    box-shadow:
+                        0 10px 32px rgba(18, 44, 75, .10);
+                }
+
+                #sat_gps_tracking #sat_gps_map {
+                    width: 100%;
+
+                    height: clamp(
+                        470px,
+                        72vh,
+                        880px
+                    );
+                }
+
+                /* BOTONES DEL MAPA */
+
+                #sat_gps_tracking .sat-toolbar {
+                    position: absolute;
+                    z-index: 5;
+
+                    top: 15px;
+                    left: 15px;
+
+                    display: flex;
+                    flex-wrap: wrap;
+
+                    gap: 8px;
+
+                    max-width: calc(100% - 90px);
+
+                    pointer-events: none;
+                }
+
+                #sat_gps_tracking .sat-toolbar button {
+                    pointer-events: auto;
+
+                    border: 1px solid #e0e8f3;
+
+                    background:
+                        rgba(255, 255, 255, .97);
+
+                    color: #243754;
+
+                    font-size: .85rem;
+                    font-weight: 650;
+
+                    border-radius: 11px;
+                    padding: 10px 13px;
+
+                    box-shadow:
+                        0 3px 12px rgba(18, 44, 75, .1);
+
+                    cursor: pointer;
+                }
+
+                #sat_gps_tracking .sat-toolbar button:hover,
+                #sat_gps_tracking .sat-toolbar button:focus-visible {
+                    background: #eff5ff;
+                    border-color: #93b6ef;
+                }
+
+                #sat_gps_tracking .sat-toolbar button:disabled {
+                    opacity: .55;
+                    cursor: not-allowed;
+                }
+
+                #sat_gps_tracking .sat-toolbar button[aria-pressed="true"] {
+                    background: #dbeafe;
+                    color: #164c9b;
+                    border-color: #9fc5f5;
+                }
+
+                /* INFORMACIÓN INFERIOR DEL MAPA */
+
+                #sat_gps_tracking .sat-map-note {
+                    position: absolute;
+
+                    bottom: 15px;
+                    left: 15px;
+
+                    z-index: 4;
+
+                    background:
+                        rgba(255, 255, 255, .95);
+
+                    border-radius: 10px;
+                    padding: 8px 11px;
+
+                    font-size: .78rem;
+                    color: #485973;
+
+                    box-shadow:
+                        0 3px 12px rgba(18, 44, 75, .08);
+
+                    max-width: calc(100% - 30px);
+                }
+
+                /* ESTADO DE ACTUALIZACIÓN */
+
+                #sat_gps_tracking .sat-status {
+                    background: #ffffff;
+
+                    border: 1px solid #e1e8f2;
+                    border-radius: 14px;
+
+                    margin: 15px 0;
+                    padding: 14px 18px;
+
+                    color: #50617b;
+
+                    display: flex;
+                    align-items: center;
+
+                    gap: 10px;
+
+                    font-size: .9rem;
+                }
+
+                #sat_gps_tracking .sat-status-dot {
+                    width: 9px;
+                    height: 9px;
+
+                    flex-shrink: 0;
+
+                    background: #2b89df;
+                    border-radius: 50%;
+                }
+
+                #sat_gps_tracking .sat-status.sat-error .sat-status-dot {
+                    background: #dc4545;
+                }
+
+                /* TARJETAS DE TÉCNICOS */
+
+                #sat_gps_tracking .sat-cards {
+                    display: grid;
+
+                    grid-template-columns:
+                        repeat(
+                            auto-fit,
+                            minmax(260px, 1fr)
+                        );
+
+                    gap: 13px;
+                }
+
+                #sat_gps_tracking .sat-tech-card {
+                    border: 1px solid #e0e8f3;
+
+                    background: white;
+                    border-radius: 17px;
+
+                    padding: 18px;
+
+                    box-shadow:
+                        0 4px 16px rgba(18, 44, 75, .045);
+                }
+
+                #sat_gps_tracking .sat-tech-top {
+                    display: flex;
+                    align-items: center;
+
+                    gap: 11px;
+                }
+
+                #sat_gps_tracking .sat-avatar {
+                    width: 40px;
+                    height: 40px;
+
+                    display: grid;
+                    place-items: center;
+
+                    flex-shrink: 0;
+
+                    border-radius: 13px;
+                    color: white;
+
+                    font-weight: 750;
+                }
+
+                #sat_gps_tracking .sat-tech-name {
+                    font-weight: 750;
+                    font-size: .94rem;
+                    line-height: 1.25;
+                }
+
+                #sat_gps_tracking .sat-tech-state {
+                    color: var(--sat-muted);
+                    font-size: .82rem;
+
+                    margin-top: 4px;
+                }
+
+                #sat_gps_tracking .sat-tech-meta {
+                    font-size: .81rem;
+                    color: #617087;
+
+                    margin: 12px 0;
+                }
+
+                #sat_gps_tracking .sat-tech-action {
+                    background: #f2f6fc;
+
+                    border: 1px solid #dfe8f6;
+
+                    color: #1f5596;
+
+                    padding: 8px 11px;
+                    border-radius: 9px;
+
+                    font-size: .83rem;
+                    font-weight: 650;
+
+                    width: 100%;
+
+                    cursor: pointer;
+                }
+
+                #sat_gps_tracking .sat-tech-action:hover {
+                    background: #e6f0ff;
+                }
+
+                /* MARCADORES PERSONALIZADOS */
+
+                #sat_gps_tracking .sat-gps-marker {
+                    display: flex;
+
+                    flex-direction: column;
+                    align-items: center;
+
+                    gap: 4px;
+
+                    cursor: pointer;
+                    max-width: 210px;
+
+                    filter:
+                        drop-shadow(
+                            0 3px 4px rgba(15, 33, 59, .16)
+                        );
+                }
+
+                /* ICONO DEL TÉCNICO O EMPRESA */
+
+                #sat_gps_tracking .sat-gps-marker-icon {
+                    width: 43px;
+                    height: 43px;
+
+                    border: 3px solid #ffffff;
+                    border-radius: 50%;
+
+                    display: grid;
+                    place-items: center;
+
+                    color: white;
+                    font-size: 21px;
+                    line-height: 1;
+
+                    box-shadow:
+                        0 2px 8px rgba(20, 42, 72, .16);
+                }
+
+                /* NOMBRE SIEMPRE VISIBLE */
+
+                #sat_gps_tracking .sat-gps-marker-name {
+                    max-width: 200px;
+
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+
+                    border: 1px solid #e0e8f3;
+
+                    background:
+                        rgba(255, 255, 255, .98);
+
+                    color: #172841;
+
+                    padding: 5px 10px;
+                    border-radius: 9px;
+
+                    font-size: 12px;
+                    font-weight: 750;
+                    text-align: center;
+
+                    box-shadow:
+                        0 2px 6px rgba(20, 42, 72, .10);
+                }
+
+                /* UBICACIÓN GPS ANTIGUA */
+
+                #sat_gps_tracking .sat-gps-marker-old
+                .sat-gps-marker-icon {
+                    filter: grayscale(.45);
+                    opacity: .82;
+                }
+
+                #sat_gps_tracking .sat-gps-marker-old
+                .sat-gps-marker-name {
+                    background: #fff7ed;
+                    border-color: #fed7aa;
+                    color: #92400e;
+                }
+
+                /* PUNTA INFERIOR DEL MARCADOR */
+
+                #sat_gps_tracking .sat-gps-marker:after {
+                    content: '';
+
+                    width: 0;
+                    height: 0;
+
+                    border-left:
+                        5px solid transparent;
+
+                    border-right:
+                        5px solid transparent;
+
+                    border-top:
+                        7px solid white;
+
+                    margin-top: -4px;
+                }
+
+                /* CONTROLES NATIVOS */
+
+                #sat_gps_tracking .maplibregl-ctrl-top-right {
+                    top: 65px;
+                    right: 8px;
+                }
+
+                /* PANTALLA COMPLETA */
+
+                #sat_gps_tracking .sat-map-shell:fullscreen,
+                #sat_gps_tracking .sat-map-shell.sat-fullscreen {
+                    position: fixed;
+
+                    inset: 0;
+
+                    width: 100vw;
+                    height: 100dvh;
+
+                    border: 0;
+                    border-radius: 0;
+
+                    z-index: 100000;
+
+                    background: #eaf0f8;
+                }
+
+                #sat_gps_tracking .sat-map-shell:fullscreen
+                #sat_gps_map,
+                #sat_gps_tracking .sat-map-shell.sat-fullscreen
+                #sat_gps_map {
+                    height: 100%;
+                }
+
+                body.sat-map-lock {
+                    overflow: hidden;
+                }
+
+                /* NOTA INFERIOR */
+
+                #sat_gps_tracking .sat-footer-note {
+                    font-size: .79rem;
+                    color: #6b7890;
+
+                    margin: 16px 3px;
+                }
+
+                /* DISPOSITIVOS MÓVILES */
+
+                @media (max-width: 700px) {
+
+                    #sat_gps_tracking.sat-page {
+                        padding-left: 11px;
+                        padding-right: 11px;
+
+                        margin-top: 12px !important;
+                    }
+
+                    #sat_gps_tracking .sat-hero {
+                        border-radius: 16px;
+                        padding: 18px;
+                    }
+
+                    #sat_gps_tracking #sat_gps_map {
+                        height: 67dvh;
+                        min-height: 400px;
+                    }
+
+                    #sat_gps_tracking .sat-toolbar {
+                        top: 10px;
+                        left: 10px;
+
+                        gap: 5px;
+
+                        max-width: calc(100% - 68px);
+                    }
+
+                    #sat_gps_tracking .sat-toolbar button {
+                        padding: 8px 9px;
+                        font-size: .75rem;
+                    }
+
+                    #sat_gps_tracking .sat-map-note {
+                        font-size: .71rem;
+
+                        bottom: 8px;
+                        left: 8px;
+                    }
+
+                    #sat_gps_tracking .sat-map-shell {
+                        border-radius: 15px;
+                    }
+
+                    #sat_gps_tracking
+                    .maplibregl-ctrl-top-right {
+                        top: 90px;
+                    }
+                }
+
             </style>
-            <main class="container-fluid sat-page my-4 px-lg-4" id="sat_gps_tracking"
-                  t-att-data-url="data_url" t-att-data-tiles-url="tiles_url">
+
+            <!-- CONTENIDO -->
+
+            <main
+                class="container-fluid sat-page my-4 px-lg-4"
+                id="sat_gps_tracking"
+                t-att-data-url="data_url"
+                t-att-data-tiles-url="tiles_url"
+            >
+
+                <!-- CABECERA -->
+
                 <div class="sat-hero">
+
                     <div>
-                        <h1>Seguimiento de su servicio</h1>
-                        <div class="sat-subtitle" t-esc="visita.name"/>
+                        <h1>
+                            Seguimiento de su servicio
+                        </h1>
+
+                        <div
+                            class="sat-subtitle"
+                            t-esc="visita.name"
+                        />
                     </div>
-                    <span class="sat-live"><span class="sat-live-dot"/> Ubicación en tiempo real</span>
+
+                    <span class="sat-live">
+                        <span class="sat-live-dot"/>
+                        Seguimiento GPS
+                    </span>
+
                 </div>
-                <section class="sat-map-shell" id="sat_gps_map_shell" aria-label="Mapa de seguimiento GPS">
+
+                <!-- MAPA PRINCIPAL -->
+
+                <section
+                    class="sat-map-shell"
+                    id="sat_gps_map_shell"
+                    aria-label="Mapa de seguimiento GPS"
+                >
+
                     <div id="sat_gps_map"/>
-                    <div class="sat-toolbar" role="toolbar" aria-label="Controles del mapa">
-                        <button type="button" id="sat_gps_fit">◫ Ver todo</button>
-                        <button type="button" id="sat_gps_destination">⌖ Destino</button>
-                        <button type="button" id="sat_gps_fullscreen" aria-label="Activar pantalla completa" aria-pressed="false">⛶ Pantalla completa</button>
+
+                    <!-- CONTROLES -->
+
+                    <div
+                        class="sat-toolbar"
+                        role="toolbar"
+                        aria-label="Controles del mapa"
+                    >
+
+                        <button
+                            type="button"
+                            id="sat_gps_fit"
+                        >
+                            ◫ Ver todo
+                        </button>
+
+                        <button
+                            type="button"
+                            id="sat_gps_destination"
+                        >
+                            ⌖ Destino
+                        </button>
+
+                        <button
+                            type="button"
+                            id="sat_gps_fullscreen"
+                            aria-label="Activar pantalla completa"
+                            aria-pressed="false"
+                        >
+                            ⛶ Pantalla completa
+                        </button>
+
                     </div>
-                    <div class="sat-map-note">● Ruta registrada por GPS · Puede mover y acercar el mapa</div>
+
+                    <!-- LEYENDA -->
+
+                    <div class="sat-map-note">
+                        ● Ruta registrada por GPS ·
+                        Puede mover y acercar el mapa
+                    </div>
+
                 </section>
-                <div class="sat-status" role="status" aria-live="polite">
+
+                <!-- ESTADO GPS -->
+
+                <div
+                    class="sat-status"
+                    role="status"
+                    aria-live="polite"
+                >
+
                     <span class="sat-status-dot"/>
-                    <span id="sat_gps_status">Consultando posiciones del servicio…</span>
+
+                    <span id="sat_gps_status">
+                        Consultando posiciones del servicio…
+                    </span>
+
                 </div>
-                <div id="sat_gps_tecnicos" class="sat-cards" aria-label="Técnicos asignados"/>
-                <p class="sat-footer-note">La ubicación depende de la última señal GPS recibida. Las líneas unen las posiciones reportadas; no representan necesariamente un recorrido ajustado a las calles.</p>
+
+                <!-- TÉCNICOS -->
+
+                <div
+                    id="sat_gps_tecnicos"
+                    class="sat-cards"
+                    aria-label="Técnicos asignados"
+                />
+
+                <!-- AVISO -->
+
+                <p class="sat-footer-note">
+                    La ubicación depende de la última señal
+                    GPS recibida.
+
+                    Las líneas unen las posiciones reportadas
+                    por Traccar; no representan necesariamente
+                    un recorrido ajustado a las calles.
+                </p>
+
             </main>
-            <script type="text/javascript" src="/sat/static/src/js/sat_gps_tracking.js"></script>
+
+            <!-- JAVASCRIPT -->
+
+            <script
+                type="text/javascript"
+                src="/sat/static/src/js/sat_gps_tracking.js"
+            ></script>
+
         </t>
+
     </template>
+
 </odoo>
