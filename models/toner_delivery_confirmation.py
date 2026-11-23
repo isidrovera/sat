@@ -6,11 +6,12 @@ import json
 import pytz
 import base64
 from odoo.exceptions import ValidationError, UserError
+from odoo import _
 
 _logger = logging.getLogger(__name__)
 
 class TonerDeliveryConfirmation(models.Model):
-    """Modelo para confirmar entregas de tóner y actualizar stock"""
+    """Confirma recepciones reales. El kardex es la única fuente de stock."""
     _name = 'toner.delivery.confirmation'
     _description = 'Confirmación de Entregas de Tóner'
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -480,7 +481,7 @@ class TonerDeliveryConfirmation(models.Model):
             diff_info = f"<br/><br/><b>⚠️ Diferencias vs Programado:</b><br/>{', '.join(diff_list)}"
         
         body = f"""
-        ✅ <b>Entrega Confirmada</b><br/><br/>
+        📋 <b>Registro de recepción de tóner (borrador)</b><br/><br/>
         
         <b>📋 Información:</b><br/>
         • <b>Programación:</b> {self.schedule_id.secuencia if self.schedule_id else 'Sin programación'}<br/>
@@ -513,147 +514,237 @@ class TonerDeliveryConfirmation(models.Model):
         )
 
     # ==========================================
-    # MÉTODOS DE ACCIÓN
+    # REGLAS DE INTEGRIDAD Y KARDEX
+    # ==========================================
+
+    _TONER_QUANTITY_FIELDS = (
+        'toner_black_delivered', 'toner_cyan_delivered',
+        'toner_magenta_delivered', 'toner_yellow_delivered',
+    )
+
+    @api.constrains(*_TONER_QUANTITY_FIELDS)
+    def _check_positive_delivered_quantities(self):
+        for record in self:
+            for field_name in record._TONER_QUANTITY_FIELDS:
+                if getattr(record, field_name) < 0:
+                    raise ValidationError(
+                        _('Las cantidades realmente recibidas no pueden ser negativas.')
+                    )
+
+    @api.constrains('schedule_id', 'state')
+    def _check_one_processed_confirmation_per_schedule(self):
+        for record in self:
+            if record.state != 'processed' or not record.schedule_id:
+                continue
+            other = self.search([
+                ('schedule_id', '=', record.schedule_id.id),
+                ('state', '=', 'processed'),
+                ('id', '!=', record.id),
+            ], limit=1)
+            if other:
+                raise ValidationError(_(
+                    'Esta programación ya tiene otra confirmación procesada (%s). '
+                    'No es posible contabilizar la entrega dos veces.'
+                ) % other.secuencia)
+
+    def write(self, vals):
+        # Un asiento confirmado no debe alterarse editando el formulario.
+        # Las correcciones físicas se registran como movimientos auditados.
+        protected = set(self._TONER_QUANTITY_FIELDS) | {
+            'schedule_id', 'delivery_date', 'state',
+            'stock_before_black', 'stock_before_cyan',
+            'stock_before_magenta', 'stock_before_yellow',
+        }
+        for record in self:
+            if record.state == 'processed' and protected.intersection(vals):
+                # Permitir escritura idempotente del mismo estado únicamente.
+                changed = protected.intersection(vals)
+                if changed == {'state'} and vals.get('state') == 'processed':
+                    continue
+                raise UserError(_(
+                    'La recepción ya fue procesada y no puede editarse. '
+                    'Registre una corrección en el kardex si hubo diferencias.'
+                ))
+        if 'state' in vals and vals['state'] == 'processed' and not self.env.context.get('toner_processing_confirmation'):
+            raise UserError(_('Para procesar una recepción utilice el botón Procesar.'))
+        return super().write(vals)
+
+    def unlink(self):
+        if any(record.state == 'processed' for record in self):
+            raise UserError(_(
+                'No se puede eliminar una confirmación procesada: '
+                'sus movimientos de kardex deben conservar trazabilidad.'
+            ))
+        return super().unlink()
+
+    def _validate_receipt(self):
+        self.ensure_one()
+        if not self.schedule_id or not self.schedule_id.exists():
+            raise UserError(_('La confirmación debe tener una programación válida.'))
+        if not self.equipment_id:
+            raise UserError(_('La programación no tiene una máquina vinculada.'))
+        if self.total_delivered <= 0:
+            raise UserError(_('Debe confirmar al menos un cartucho recibido.'))
+        if not (self.received_by_name or '').strip():
+            raise UserError(_('Indique quién recibió físicamente el tóner.'))
+        for field_name in self._TONER_QUANTITY_FIELDS:
+            if getattr(self, field_name) < 0:
+                raise UserError(_('No se aceptan cantidades negativas.'))
+        if self.validation_status == 'rejected':
+            raise UserError(_('La confirmación fue rechazada. Debe revisarse antes de procesar.'))
+        # Una programación tiene una recepción contabilizable. Las entregas
+        # parciales posteriores necesitan otra programación identificable.
+        others = self.search([
+            ('schedule_id', '=', self.schedule_id.id),
+            ('state', '=', 'processed'),
+            ('id', '!=', self.id),
+        ], limit=1)
+        if others:
+            raise UserError(_(
+                'La programación ya contiene una recepción procesada (%s). '
+                'Para otra entrega parcial cree una programación independiente.'
+            ) % others.secuencia)
+        if self.schedule_id.confirmation_id and self.schedule_id.confirmation_id != self:
+            raise UserError(_(
+                'La programación está asociada a otra confirmación. '
+                'Revise el historial antes de continuar.'
+            ))
+
+    # ==========================================
+    # ACCIONES
     # ==========================================
 
     def action_confirm(self):
-        """Confirma la entrega"""
         self.ensure_one()
-        
-        # Validaciones básicas
-        if self.total_delivered == 0:
-            raise UserError("Debe entregar al menos una unidad de tóner.")
-        
-        if not self.received_by_name:
-            raise UserError("Debe especificar quién recibió la entrega.")
-        
-        self.state = 'confirmed'
-        self.message_post(
-            body="✅ Entrega confirmada - Lista para procesar",
-            message_type='notification'
-        )
-        
+        if self.state == 'confirmed':
+            return True
+        if self.state != 'draft':
+            raise UserError(_('Solo puede confirmar una recepción en borrador.'))
+        self._validate_receipt()
+        self.write({'state': 'confirmed'})
+        self.message_post(body=_('Recepción física confirmada, pendiente de contabilizar.'),
+                          message_type='notification', subtype_xmlid='mail.mt_note')
         return True
 
     def action_process(self):
-        """Procesa y actualiza stock del equipo"""
+        """Contabilización: solo el kardex mueve stock, nunca alquiler.write().
+
+        El hook de la programación sincroniza con toner.stock.movement
+        al estar state='entregado' y confirmation_id vinculada. Esta
+        operación se ejecuta en una misma transacción: si falla el
+        asiento, tampoco queda marcada como entregada la programación.
+        """
         self.ensure_one()
-        
+        if self.state == 'processed':
+            return True
         if self.state != 'confirmed':
-            raise UserError("Solo se pueden procesar entregas confirmadas.")
-        
-        # Actualizar stock en el equipo
-        self._update_equipment_stock()
-        
-        # Marcar programación como entregada
-        if self.schedule_id:
-            self.schedule_id.state = 'entregado'  # ✅ CAMBIAR 'delivered' por 'entregado'
-            self.schedule_id.confirmation_id = self.id  # ✅ También cambiar delivery_confirmation_id por confirmation_id
-        
-        self.state = 'processed'
+            raise UserError(_('Solo se pueden procesar recepciones confirmadas.'))
+        self._validate_receipt()
+        schedule = self.schedule_id
+        # Escribir ambas referencias en una sola operación: el hook
+        # toner_delivery_schedule_stock_integration sincronizará al kardex.
+        schedule.write({
+            'confirmation_id': self.id,
+            'state': 'entregado',
+            'delivery_date_actual': self.delivery_date,
+        })
+        # Confirmar también cuando el hook se haya deshabilitado por contexto
+        # o la programación ya estaba en estado entregado. La clave de
+        # idempotencia delivery:<id>:<color> impide entradas duplicadas.
+        schedule._sync_client_toner_stock()
+        # Consultar movimientos directamente, sin depender de una posible caché
+        # del campo calculado en la transacción actual.
+        quantities = schedule._get_confirmed_toner_quantities(strict=True)
+        movements = self.env['toner.stock.movement'].sudo().search([
+            ('delivery_id', '=', schedule.id),
+            ('movement_type', '=', 'delivery'),
+            ('state', '=', 'posted'),
+        ])
+        recorded = {movement.color: movement.quantity for movement in movements}
+        reconciled = all(recorded.get(color, 0) == qty for color, qty in quantities.items())
+        reconciled = reconciled and all(quantities.get(color, 0) == qty for color, qty in recorded.items())
+        if not reconciled:
+            raise UserError(_(
+                'El stock del cliente no quedó conciliado con las cantidades '
+                'recibidas; no se procesará esta confirmación.'
+            ))
+        self.with_context(toner_processing_confirmation=True).write({'state': 'processed'})
         self.message_post(
-            body="🔄 Entrega procesada - Stock del equipo actualizado",
-            message_type='notification'
+            body=_('Recepción procesada y contabilizada en el kardex del cliente.'),
+            message_type='notification', subtype_xmlid='mail.mt_note',
         )
-        
         return True
 
     def action_confirm_complete(self):
-        """Confirma y procesa la entrega en un solo paso visible.
-
-        Conserva action_confirm() y action_process() para que se ejecuten las
-        validaciones y actualización de stock ya existentes.
-        """
         self.ensure_one()
-
-        if self.state == "draft":
+        if self.state == 'draft':
             self.action_confirm()
-        if self.state == "confirmed":
+        if self.state == 'confirmed':
             self.action_process()
-
         submission = self.schedule_id.submission_id if self.schedule_id else False
-        if submission and submission.state != "entregada":
+        if submission and submission.state != 'entregada':
             submission.action_mark_delivered()
-
-        return {"type": "ir.actions.act_window_close"}
+        return {'type': 'ir.actions.act_window_close'}
 
     def action_validate(self):
-        """Valida la entrega"""
         self.ensure_one()
-        
-        self.validation_status = 'validated'
-        self.validated_by = self.env.user
-        self.validation_date = fields.Datetime.now()
-        
-        self.message_post(
-            body=f"✅ Entrega validada por {self.env.user.name}",
-            message_type='notification'
-        )
-        
+        if self.state == 'processed' and self.validation_status == 'rejected':
+            raise UserError(_('No se puede validar una recepción rechazada y procesada.'))
+        self.write({
+            'validation_status': 'validated',
+            'validated_by': self.env.user.id,
+            'validation_date': fields.Datetime.now(),
+        })
+        self.message_post(body=_('Recepción validada por %s') % self.env.user.name,
+                          message_type='notification', subtype_xmlid='mail.mt_note')
         return True
 
     def action_reject(self):
-        """Rechaza la entrega"""
         self.ensure_one()
-        
-        self.validation_status = 'rejected'
-        self.validated_by = self.env.user
-        self.validation_date = fields.Datetime.now()
-        
-        self.message_post(
-            body=f"❌ Entrega rechazada por {self.env.user.name}",
-            message_type='notification'
-        )
-        
+        if self.state == 'processed':
+            raise UserError(_(
+                'No se puede rechazar una recepción ya contabilizada. '
+                'Utilice una corrección de kardex.'
+            ))
+        self.write({
+            'validation_status': 'rejected',
+            'validated_by': self.env.user.id,
+            'validation_date': fields.Datetime.now(),
+        })
+        self.message_post(body=_('Recepción rechazada por %s') % self.env.user.name,
+                          message_type='notification', subtype_xmlid='mail.mt_note')
         return True
 
     def action_reset_to_draft(self):
-        """Regresa a estado borrador"""
         self.ensure_one()
-        
         if self.state == 'processed':
-            raise UserError("No se puede regresar a borrador una entrega ya procesada.")
-        
-        self.state = 'draft'
-        self.validation_status = 'pending'
-        self.validated_by = False
-        self.validation_date = False
-        self.validation_notes = False
-        
-        self.message_post(
-            body="🔄 Entrega regresada a estado borrador",
-            message_type='notification'
-        )
-        
+            raise UserError(_('No se puede devolver a borrador una recepción contabilizada.'))
+        self.write({
+            'state': 'draft',
+            'validation_status': 'pending',
+            'validated_by': False,
+            'validation_date': False,
+            'validation_notes': False,
+        })
+        self.message_post(body=_('Recepción devuelta a borrador.'),
+                          message_type='notification', subtype_xmlid='mail.mt_note')
         return True
 
     def _update_equipment_stock(self):
-        """Actualiza el stock de tóner en el equipo"""
+        """Compatibilidad con llamadas antiguas: sincroniza el kardex.
+
+        Los campos stock_cliente_toner_* de alquiler se calculan desde el
+        kardex, por lo que NO se pueden actualizar mediante write().
+        """
         self.ensure_one()
-        
-        if not self.equipment_id:
-            return
-        
-        # Calcular nuevo stock
-        new_stock_black = self.stock_before_black + self.toner_black_delivered
-        new_stock_cyan = self.stock_before_cyan + self.toner_cyan_delivered
-        new_stock_magenta = self.stock_before_magenta + self.toner_magenta_delivered
-        new_stock_yellow = self.stock_before_yellow + self.toner_yellow_delivered
-        
-        # Actualizar el equipo
-        self.equipment_id.write({
-            'stock_cliente_toner_black': new_stock_black,
-            'stock_cliente_toner_cyan': new_stock_cyan,
-            'stock_cliente_toner_magenta': new_stock_magenta,
-            'stock_cliente_toner_yellow': new_stock_yellow,
-            # ✅ ELIMINAR ESTA LÍNEA: 'fecha_ultima_entrega_toner': self.delivery_date,
-        })
-        
-        _logger.info(
-            "Stock actualizado para equipo %s: Negro=%d, Cian=%d, Magenta=%d, Amarillo=%d",
-            self.equipment_id.serie or self.equipment_id.id,
-            new_stock_black, new_stock_cyan, new_stock_magenta, new_stock_yellow
-        )
+        if self.state not in ('confirmed', 'processed'):
+            raise UserError(_('La recepción debe estar confirmada.'))
+        if not self.schedule_id or self.schedule_id.state != 'entregado':
+            raise UserError(_('La programación debe estar entregada.'))
+        if self.schedule_id.confirmation_id != self:
+            raise UserError(_('La programación no está vinculada a esta confirmación.'))
+        return self.schedule_id._sync_client_toner_stock()
+
     def action_view_equipment(self):
         """Muestra el equipo relacionado"""
         self.ensure_one()

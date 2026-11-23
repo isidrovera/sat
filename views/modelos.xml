@@ -532,6 +532,9 @@
 
                                             <group string="Catálogo maestro">
 
+                                                <field name="modelo_toner_black_id"
+                                                       string="Referencia para motor Odoo / n8n (negro)"
+                                                       options="{'no_create': True}"/>
                                                 <field name="toner_black_id"
 
                                                        placeholder="Seleccione el modelo de tóner negro"/>
@@ -596,6 +599,9 @@
 
                                             <group string="Catálogo maestro">
 
+                                                <field name="modelo_toner_cyan_id"
+                                                       string="Referencia para motor Odoo / n8n (cian)"
+                                                       options="{'no_create': True}"/>
                                                 <field name="toner_cyan_id"
 
                                                        placeholder="Seleccione el modelo de tóner cian"/>
@@ -660,6 +666,9 @@
 
                                             <group string="Catálogo maestro">
 
+                                                <field name="modelo_toner_magenta_id"
+                                                       string="Referencia para motor Odoo / n8n (magenta)"
+                                                       options="{'no_create': True}"/>
                                                 <field name="toner_magenta_id"
 
                                                        placeholder="Seleccione el modelo de tóner magenta"/>
@@ -724,6 +733,9 @@
 
                                             <group string="Catálogo maestro">
 
+                                                <field name="modelo_toner_yellow_id"
+                                                       string="Referencia para motor Odoo / n8n (amarillo)"
+                                                       options="{'no_create': True}"/>
                                                 <field name="toner_yellow_id"
 
                                                        placeholder="Seleccione el modelo de tóner amarillo"/>

@@ -3,6 +3,8 @@
 import json
 import logging
 
+import requests
+
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 
@@ -470,6 +472,22 @@ class TonerMonitoringEvent(models.Model):
         index=True,
         copy=False,
         tracking=True,
+    )
+
+    # Control explícito de reemplazos: la fuente automática, por sí sola,
+    # no confirma que un cartucho físico haya sido instalado.
+    physical_replacement_confirmed = fields.Boolean(
+        string="Reemplazo físico confirmado",
+        default=False,
+        tracking=True,
+        help="Solo marcar tras confirmación física del técnico o cliente autorizado.",
+    )
+    toner_engine_used = fields.Selection(
+        [("odoo", "Odoo"), ("n8n", "n8n + IA")],
+        string="Motor de decisión utilizado", readonly=True, copy=False,
+    )
+    ai_decision_json = fields.Text(
+        string="Decisión n8n / IA (auditoría)", readonly=True, copy=False,
     )
 
     # ============================================================
@@ -1124,6 +1142,113 @@ class TonerMonitoringEvent(models.Model):
         }
 
     # ============================================================
+    # CONTROL ÚNICO DE REPOSICIÓN / SELECCIÓN DE MOTOR
+    # ============================================================
+
+    def _toner_engine(self):
+        """Compartido con toner.counter.submission. Modo por defecto: Odoo."""
+        self.ensure_one()
+        config = self.env["ir.config_parameter"].sudo()
+        value = (config.get_param("sat.toner_control_engine", "odoo") or "odoo").strip().lower()
+        return value if value in ("odoo", "n8n") else "odoo"
+
+    def _reserve_snapshot(self):
+        """Distinguir saldo físico confirmado de inventario desconocido.
+
+        El instalado y el material en tránsito NO forman parte de este saldo.
+        """
+        self.ensure_one()
+        Movement = self.env["toner.stock.movement"].sudo()
+        last = Movement.search([
+            ("equipment_id", "=", self.equipment_id.id),
+            ("color", "=", self.color),
+            ("state", "=", "posted"),
+        ], order="movement_date desc, id desc", limit=1)
+        return {
+            "stock_known": bool(last),
+            "stock_reserve": int(last.stock_after or 0) if last else None,
+            "last_movement_id": last.id if last else False,
+        }
+
+    def _has_confirmed_physical_replacement(self):
+        """Nunca convertir una alerta sin chip en instalación confirmada.
+
+        Exige evidencia explícita en todos los orígenes; la IA tampoco puede
+        conceder esta confirmación. Una confirmación humana puede registrar el
+        mismo evento marcando el booleano y reintentando su procesamiento.
+        """
+        self.ensure_one()
+        return bool(self.physical_replacement_confirmed)
+
+    def _get_n8n_recommendation(self, stock):
+        """Consulta sincrónica a n8n, con respuesta de decisión estricta.
+
+        n8n debe responder JSON: {"decision":"create_request|ignore|review",
+        "reason":"..."}. Se ignoran importes/stock enviados por la IA: la
+        decisión nunca salta las validaciones determinísticas de Odoo.
+        """
+        self.ensure_one()
+        config = self.env["ir.config_parameter"].sudo()
+        url = (config.get_param("sat.toner_n8n_webhook_url") or "").strip()
+        if not url or not url.startswith("https://"):
+            raise ValidationError(_(
+                "Motor n8n seleccionado, pero falta una URL HTTPS válida "
+                "en sat.toner_n8n_webhook_url."
+            ))
+        token = (config.get_param("sat.toner_n8n_api_key") or "").strip()
+        if not token:
+            raise ValidationError(_(
+                "Motor n8n seleccionado sin credencial en sat.toner_n8n_api_key."
+            ))
+        payload = {
+            "schema_version": 1,
+            "event_id": self.id,
+            "external_event_id": self.external_event_id or "",
+            "source": self.source,
+            "event_type": self.event_type,
+            "event_date": fields.Datetime.to_string(self.event_date),
+            "equipment_id": self.equipment_id.id,
+            "serial": self.equipment_serial or "",
+            "color": self.color,
+            "level_available": bool(self.level_available),
+            "level_percent": float(self.level_percent or 0),
+            "counter_bn_available": bool(self.counter_bn_available),
+            "counter_bn": int(self.counter_bn or 0),
+            "counter_color_available": bool(self.counter_color_available),
+            "counter_color": int(self.counter_color or 0),
+            "stock_known": stock["stock_known"],
+            "stock_reserve": stock["stock_reserve"],
+            "physical_replacement_confirmed": bool(self.physical_replacement_confirmed),
+        }
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                headers={"Authorization": "Bearer " + token,
+                         "Content-Type": "application/json"},
+                timeout=12,
+                allow_redirects=False,
+            )
+            response.raise_for_status()
+            result = response.json()
+        except (requests.RequestException, ValueError) as err:
+            raise ValidationError(_("n8n no devolvió una evaluación válida: %s") % err)
+        if not isinstance(result, dict):
+            raise ValidationError(_("n8n debe devolver un objeto JSON."))
+        decision = result.get("decision")
+        if decision not in ("create_request", "ignore", "review"):
+            raise ValidationError(_("Decisión desconocida de n8n: %s") % decision)
+        reason = str(result.get("reason") or "")[:2000]
+        self.write({
+            "ai_decision_json": json.dumps({
+                "decision": decision,
+                "reason": reason,
+                "event_id": self.id,
+            }, ensure_ascii=False),
+        })
+        return decision, reason
+
+    # ============================================================
     # PROCESAMIENTO CENTRAL
     # ============================================================
 
@@ -1306,6 +1431,16 @@ class TonerMonitoringEvent(models.Model):
         """
         self.ensure_one()
 
+        # EMPTY es una alerta de monitoreo, no una prueba de consumo físico.
+        # En equipos sin chip o con fuentes inciertas no se cierra el ciclo;
+        # la reposición se evalúa separadamente contra stock físico real.
+        if not self._has_confirmed_physical_replacement():
+            return self._process_request_trigger(
+                final_message_prefix=_(
+                    "EMPTY sin confirmación física: ciclo conservado."
+                )
+            )
+
         History = self.env[
             "toner.installation.history"
         ].sudo()
@@ -1369,6 +1504,14 @@ class TonerMonitoringEvent(models.Model):
             - no crear solicitud nueva.
         """
         self.ensure_one()
+
+        if not self._has_confirmed_physical_replacement():
+            self._mark_pending(_(
+                "REPLACED registrado como señal sin confirmación física. "
+                "No se creó ciclo ni se descontó stock. "
+                "Confirmar físicamente y reintentar el evento si corresponde."
+            ))
+            return False
 
         History = self.env[
             "toner.installation.history"
@@ -1484,6 +1627,15 @@ class TonerMonitoringEvent(models.Model):
                     "No se infirió reemplazo y no se modificó stock."
                 )
             )
+            return True
+
+        # Una recuperación del porcentaje no demuestra reemplazo físico.
+        # Especialmente importante en cartuchos sin chip.
+        if not self._has_confirmed_physical_replacement():
+            self._mark_processed(_(
+                "Nivel registrado. No se infirió reemplazo físico ni se "
+                "descontó stock por variación de porcentaje."
+            ))
             return True
 
         History = self.env[
@@ -1626,6 +1778,45 @@ class TonerMonitoringEvent(models.Model):
             return True
 
         # --------------------------------------------------------
+        # Barrera común de ambos motores: stock físico real del cliente.
+        # Stock mínimo referencial = 1, pero un cliente puede tener 2, 5 o
+        # más; la reposición ordinaria se considera tras usar el último.
+        # --------------------------------------------------------
+        stock = self._reserve_snapshot()
+        engine = self._toner_engine()
+        self.write({"toner_engine_used": engine})
+
+        if not stock["stock_known"]:
+            self._mark_pending(_(
+                "Inventario del cliente no conciliado: sin kardex para "
+                "este equipo/color. No se asume stock cero ni se crea pedido."
+            ))
+            return False
+        if stock["stock_reserve"] > 0:
+            self.write({"submission_created": False})
+            self._mark_processed(_(
+                "No corresponde reposición: existen %s repuesto(s) "
+                "disponibles en el cliente para este color."
+            ) % stock["stock_reserve"])
+            return True
+
+        if engine == "n8n":
+            try:
+                decision, reason = self._get_n8n_recommendation(stock)
+            except ValidationError as exc:
+                self._mark_pending(str(exc))
+                return False
+            if decision == "review":
+                self._mark_pending(_("n8n + IA solicita revisión: %s") % reason)
+                return False
+            if decision == "ignore":
+                self.write({"submission_created": False})
+                self._mark_processed(_("n8n + IA descarta reposición: %s") % reason)
+                return True
+            # create_request: continúa, pero TODAS las validaciones de Odoo
+            # siguen siendo obligatorias.
+
+        # --------------------------------------------------------
         # Validar nivel REAL antes de crear una solicitud nueva.
         # Las alertas LOW/CRITICAL/EMPTY pueden provenir de PrintTracker
         # aunque el nivel actual informado siga siendo alto.
@@ -1634,18 +1825,19 @@ class TonerMonitoringEvent(models.Model):
         threshold_percent = 15.0
         prefix = (final_message_prefix + " ") if final_message_prefix else ""
 
-        if not self.level_available:
+        if not self.level_available and not (
+            self.event_type == "empty" and self.physical_replacement_confirmed
+        ):
             self._mark_pending(
-                prefix
-                + _(
-                    "El evento fue registrado, pero no contiene un porcentaje "
-                    "de tóner verificable. No se creó solicitud automática."
+                prefix + _(
+                    "Alerta sin porcentaje confiable. No se creó "
+                    "solicitud automática."
                 )
             )
             return False
 
-        level_percent = float(self.level_percent)
-        if not (0.0 <= level_percent <= 100.0):
+        level_percent = float(self.level_percent or 0)
+        if self.level_available and not (0.0 <= level_percent <= 100.0):
             self._mark_pending(
                 prefix
                 + _(
@@ -1655,7 +1847,7 @@ class TonerMonitoringEvent(models.Model):
             )
             return False
 
-        if level_percent >= threshold_percent:
+        if self.level_available and level_percent >= threshold_percent:
             self.write({"submission_created": False})
             self._mark_processed(
                 prefix
@@ -1837,6 +2029,7 @@ class TonerMonitoringEvent(models.Model):
         vals = {
             "equipment_id": self.equipment_id.id,
             "source": "api",
+            "control_engine": engine,
             "client_name": _(
                 "Monitoreo automático - %s"
             )

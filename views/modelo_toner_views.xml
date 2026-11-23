@@ -5,7 +5,6 @@
         <!-- ========================================================= -->
         <!-- LISTA                                                     -->
         <!-- ========================================================= -->
-
         <record id="modelo_toner_list_view" model="ir.ui.view">
             <field name="name">modelo.toner.list</field>
             <field name="model">modelo.toner</field>
@@ -16,6 +15,7 @@
                     <field name="color"/>
                     <field name="codigo_parte"/>
                     <field name="codigo_parte_alternativo" optional="hide"/>
+                    <field name="tipo_chip" string="Chip" optional="show"/>
                     <field name="duracion_fabricante" string="Duración fabricante" optional="show"/>
                     <field name="duracion_referencial" string="Duración referencial" optional="show"/>
                     <field name="duracion_aplicable" string="Duración aplicable" optional="show"/>
@@ -31,14 +31,12 @@
         <!-- ========================================================= -->
         <!-- FORMULARIO                                                -->
         <!-- ========================================================= -->
-
         <record id="modelo_toner_form_view" model="ir.ui.view">
             <field name="name">modelo.toner.form</field>
             <field name="model">modelo.toner</field>
             <field name="arch" type="xml">
                 <form string="Modelo de tóner">
                     <sheet>
-
                         <div class="oe_button_box" name="button_box">
                             <button name="action_view_modelos_maquina" type="object" class="oe_stat_button" icon="fa-print" invisible="not id">
                                 <field name="modelo_maquina_count" string="Modelos compatibles" widget="statinfo"/>
@@ -71,8 +69,19 @@
                             </group>
                         </group>
 
-                        <notebook>
+                        <group string="Identificación electrónica y confiabilidad del monitoreo">
+                            <group>
+                                <field name="tipo_chip"/>
+                            </group>
+                            <group>
+                                <div class="alert alert-info" role="alert">
+                                    La identificación electrónica orienta la evaluación de lecturas de PrintTracker.
+                                    Un aviso de nivel bajo o reemplazo no confirma por sí solo que el cartucho se haya cambiado físicamente.
+                                </div>
+                            </group>
+                        </group>
 
+                        <notebook>
                             <page string="Compatibilidad" name="compatibilidad">
                                 <field name="modelo_maquina_ids" widget="many2many_tags" options="{'no_create': True}"/>
                             </page>
@@ -96,7 +105,6 @@
                                         <field name="fecha_verificacion"/>
                                         <field name="url_referencia" widget="url"/>
                                     </group>
-
                                     <group>
                                         <field name="usar_para_analisis_consumo" widget="boolean_toggle"/>
                                         <field name="validado_internamente" widget="boolean_toggle"/>
@@ -104,14 +112,11 @@
                                         <field name="usuario_validacion_id" readonly="1" invisible="not validado_internamente"/>
                                     </group>
                                 </group>
-
                                 <group string="Observaciones">
                                     <field name="observaciones" nolabel="1" placeholder="Notas técnicas, equivalencias, referencias regionales o información pendiente..."/>
                                 </group>
                             </page>
-
                         </notebook>
-
                     </sheet>
                 </form>
             </field>
@@ -120,7 +125,6 @@
         <!-- ========================================================= -->
         <!-- BÚSQUEDA                                                  -->
         <!-- ========================================================= -->
-
         <record id="modelo_toner_search_view" model="ir.ui.view">
             <field name="name">modelo.toner.search</field>
             <field name="model">modelo.toner</field>
@@ -133,6 +137,7 @@
                     <field name="codigo_parte_alternativo"/>
                     <field name="codigo_fabricante"/>
                     <field name="modelo_maquina_ids"/>
+                    <field name="tipo_chip"/>
 
                     <separator/>
 
@@ -143,15 +148,18 @@
                     <filter string="Cian" name="cyan" domain="[('color', '=', 'cyan')]"/>
                     <filter string="Magenta" name="magenta" domain="[('color', '=', 'magenta')]"/>
                     <filter string="Amarillo" name="yellow" domain="[('color', '=', 'yellow')]"/>
+                    <filter string="Sin chip" name="without_chip" domain="[('tipo_chip', '=', 'without_chip')]"/>
+                    <filter string="Con chip" name="with_chip" domain="[('tipo_chip', '=', 'with_chip')]"/>
+                    <filter string="Chip por determinar" name="chip_unknown" domain="[('tipo_chip', '=', 'unknown')]"/>
 
                     <group>
                         <filter string="Marca" name="group_brand" context="{'group_by': 'marca_id'}"/>
                         <filter string="Color" name="group_color" context="{'group_by': 'color'}"/>
                         <filter string="Fuente" name="group_source" context="{'group_by': 'fuente_informacion'}"/>
+                        <filter string="Tipo de chip" name="group_chip" context="{'group_by': 'tipo_chip'}"/>
                     </group>
                 </search>
             </field>
         </record>
-
     </data>
 </odoo>

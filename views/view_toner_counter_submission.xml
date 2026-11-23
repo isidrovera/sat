@@ -26,7 +26,7 @@
                     <field name="days_since_last_delivery" string="Días"/>
                     <field name="last_delivery_date" string="Última Entrega" optional="hide"/>
                     <field name="analysis_result" string="Análisis" widget="badge" decoration-success="analysis_result == 'normal'" decoration-warning="analysis_result == 'early_consumption'" decoration-info="analysis_result == 'no_history'" decoration-danger="analysis_result == 'duplicate'"/>
-                    <field name="requires_evidence" string="Revisión anticipada" widget="boolean_toggle" optional="show"/>
+                    <field name="control_engine" string="Motor" widget="badge" optional="show"/><field name="requires_evidence" string="Revisión anticipada" widget="boolean_toggle" optional="show"/>
                     <field name="state" string="Estado" widget="badge" decoration-info="state in ['recibida', 'evaluacion', 'pendiente_gerencia', 'confirmacion_ventas']" decoration-success="state in ['aprobada_gerencia', 'lista_despacho', 'entregada']" decoration-warning="state in ['devuelta', 'en_despacho']" decoration-danger="state in ['rechazada_gerencia', 'cancelada']"/>
                 </list>
             </field>
@@ -52,15 +52,7 @@
                         <button name="action_send_dispatch" type="object" string="Marcar como enviado" class="btn-primary" invisible="delivery_state != 'preparando'" icon="fa-truck"/>
                         <button name="action_register_delivery" type="object" string="Registrar entrega" class="btn-success" invisible="state != 'en_despacho' or delivery_state not in ['preparando', 'enviado']" icon="fa-check-circle"/>
                         <button name="action_cancel" type="object" string="Cancelar" class="btn-secondary" invisible="state in ['entregada', 'cancelada']" icon="fa-ban"/>
-                        <button
-    name="action_rebuild_legacy_color_history"
-    type="object"
-    string="Actualizar historial por color"
-    class="btn-secondary"
-    icon="fa-refresh"
-    confirm="¿Desea reconstruir el historial de contadores por color de las solicitudes antiguas?"
-    groups="base.group_system"
-/>
+                        <button name="action_rebuild_legacy_color_history" type="object" string="Actualizar historial por color" class="btn-secondary" icon="fa-refresh" confirm="¿Desea reconstruir el historial de contadores por color de las solicitudes antiguas?" groups="base.group_system"/>
                         <field name="state" widget="statusbar" statusbar_visible="recibida,evaluacion,pendiente_gerencia,aprobada_gerencia,confirmacion_ventas,lista_despacho,en_despacho,entregada"/>
                     </header>
                     <sheet>
@@ -451,7 +443,7 @@
                                 </div>
                                 <group class="o_toner_panel">
                                     <group string="Resultado Automático" class="o_toner_inner_group">
-                                        <field name="analysis_result" widget="badge" readonly="1" decoration-success="analysis_result == 'normal'" decoration-warning="analysis_result == 'early_consumption'" decoration-info="analysis_result == 'no_history'" decoration-danger="analysis_result == 'duplicate'"/>
+                                        <field name="control_engine" string="Motor de evaluación" readonly="1" widget="badge"/><field name="analysis_result" widget="badge" readonly="1" decoration-success="analysis_result == 'normal'" decoration-warning="analysis_result == 'early_consumption'" decoration-info="analysis_result == 'no_history'" decoration-danger="analysis_result == 'duplicate'"/>
                                         <field name="requires_evidence" readonly="1"/>
                                         <field name="duplicate_submission_id" readonly="1" invisible="not duplicate_submission_id"/>
                                     </group>
@@ -486,59 +478,41 @@
                                     </group>
                                 </group>
 
-                                <div class="alert alert-warning o_toner_notice"
-                                     role="alert"
-                                     invisible="not requires_evidence">
+                                <div class="alert alert-warning o_toner_notice" role="alert" invisible="not requires_evidence">
                                     <strong>Debe clasificar el motivo del consumo anticipado.</strong>
                                     Esto permite diferenciar un pedido para stock, un registro manual previo,
                                     una incidencia real de tóner u otra excepción.
                                     Las fotografías son opcionales.
                                 </div>
 
-                                <group string="Clasificación de la excepción"
-                                       class="o_toner_panel"
-                                       invisible="not requires_evidence">
+                                <group string="Clasificación de la excepción" class="o_toner_panel" invisible="not requires_evidence">
                                     <group class="o_toner_inner_group">
-                                        <field name="early_request_type"
-                                               string="Motivo del consumo anticipado"
-                                               />
+                                        <field name="early_request_type" string="Motivo del consumo anticipado"/>
                                     </group>
                                     <group class="o_toner_inner_group">
-                                        <field name="early_request_reason"
-                                               string="Detalle / justificación"
-                                               placeholder="Agregue una explicación adicional si corresponde..."
-                                               />
+                                        <field name="early_request_reason" string="Detalle / justificación" placeholder="Agregue una explicación adicional si corresponde..."/>
                                     </group>
                                 </group>
 
-                                <div class="alert alert-info o_toner_notice"
-                                     role="alert"
-                                     invisible="not requires_evidence or early_request_type != 'client_stock'">
+                                <div class="alert alert-info o_toner_notice" role="alert" invisible="not requires_evidence or early_request_type != 'client_stock'">
                                     <strong>Pedido para stock:</strong>
                                     esta solicitud puede procesarse aunque el rendimiento consumido sea bajo,
                                     porque el tóner fue solicitado como reserva para el cliente.
                                 </div>
 
-                                <div class="alert alert-info o_toner_notice"
-                                     role="alert"
-                                     invisible="not requires_evidence or early_request_type != 'previous_manual'">
+                                <div class="alert alert-info o_toner_notice" role="alert" invisible="not requires_evidence or early_request_type != 'previous_manual'">
                                     <strong>Pedido registrado manualmente:</strong>
                                     la diferencia de rendimiento puede deberse a que el pedido manual se registró
                                     antes de que el proceso automático realizara la evaluación.
                                 </div>
 
-                                <div class="alert alert-warning o_toner_notice"
-                                     role="alert"
-                                     invisible="not requires_evidence or early_request_type != 'other'">
+                                <div class="alert alert-warning o_toner_notice" role="alert" invisible="not requires_evidence or early_request_type != 'other'">
                                     <strong>Detalle obligatorio:</strong>
                                     al seleccionar "Otro" debe indicar la justificación antes de enviar a gerencia.
                                 </div>
 
                                 <group string="Evaluación y Recomendación" class="o_toner_panel">
-                                    <field name="review_notes"
-                                           nolabel="1"
-                                           placeholder="Explique si corresponde aprobar, qué cantidad recomienda y cualquier observación comercial..."
-                                           readonly="state not in ['evaluacion', 'devuelta']"/>
+                                    <field name="review_notes" nolabel="1" placeholder="Explique si corresponde aprobar, qué cantidad recomienda y cualquier observación comercial..." readonly="state not in ['evaluacion', 'devuelta']"/>
                                 </group>
 
                                 <div class="alert alert-info o_toner_notice" role="alert">
@@ -569,7 +543,7 @@
                                     la sugerencia comercial, los contadores,
                                     el rendimiento y la evidencia antes de decidir.
                                 </div>
-                            </page>
+                            <group string="Registro de decisión de gerencia" class="o_toner_panel"><field name="management_decision" readonly="1"/><field name="management_decision_name" readonly="1"/></group></page>
                             <page string="Stock y Despacho" name="dispatch">
                                 <div class="o_toner_section_heading">
                                     <i aria-hidden="true" class="fa fa-truck"/>
@@ -601,7 +575,7 @@
                                     disponibilidad del cliente y fecha tentativa
                                     antes de liberar el pedido para despacho.
                                 </div>
-                            </page>
+                            <group string="Confirmación física y seguimiento" class="o_toner_panel"><field name="stock_confirmed_by_id" readonly="1"/><field name="stock_confirmation_date" readonly="1"/><field name="stock_confirmation_notes" readonly="state not in ['confirmacion_ventas', 'lista_despacho']"/><field name="tracking_message_sent_at" readonly="1" invisible="not tracking_message_sent_at"/></group></page>
                             <page string="Stock y Nivel Reportado" name="stock">
                                 <div class="o_toner_section_heading">
                                     <i aria-hidden="true" class="fa fa-cubes"/>
@@ -692,26 +666,17 @@
 
                                 <group class="o_toner_panel">
                                     <group string="Foto del Contador (opcional)" class="o_toner_inner_group">
-                                        <field name="photo_counter"
-                                               widget="image"
-                                               class="o_toner_evidence_image"
-                                               readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
+                                        <field name="photo_counter" widget="image" class="o_toner_evidence_image" readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
                                         <field name="photo_counter_filename" invisible="1"/>
                                     </group>
                                     <group string="Foto del Tóner (opcional)" class="o_toner_inner_group">
-                                        <field name="photo_toner"
-                                               widget="image"
-                                               class="o_toner_evidence_image"
-                                               readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
+                                        <field name="photo_toner" widget="image" class="o_toner_evidence_image" readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
                                         <field name="photo_toner_filename" invisible="1"/>
                                     </group>
                                 </group>
 
                                 <group string="Observaciones del Cliente" class="o_toner_panel">
-                                    <field name="notes"
-                                           nolabel="1"
-                                           placeholder="Observaciones recibidas desde el portal..."
-                                           readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
+                                    <field name="notes" nolabel="1" placeholder="Observaciones recibidas desde el portal..." readonly="state not in ['recibida', 'evaluacion', 'devuelta']"/>
                                 </group>
                             </page>
                         </notebook>
@@ -949,7 +914,7 @@
         <search>
 
             <!-- CAMPOS DE BÚSQUEDA -->
-            <field name="secuencia"/>
+            <field name="control_engine" string="Motor"/><field name="secuencia"/>
             <field name="partner_id"/>
             <field name="equipment_id"/>
             <field name="equipment_serie" string="Serie"/>
@@ -961,107 +926,63 @@
             <separator/>
 
             <!-- FILTROS DE ENTREGA -->
-            <filter string="Sin entregar"
-                    name="not_delivered"
-                    domain="[('state', '!=', 'entregada')]"/>
+            <filter string="Sin entregar" name="not_delivered" domain="[('state', '!=', 'entregada')]"/>
 
-            <filter string="Entregadas"
-                    name="delivered"
-                    domain="[('state', '=', 'entregada')]"/>
+            <filter string="Entregadas" name="delivered" domain="[('state', '=', 'entregada')]"/>
 
             <separator/>
 
             <!-- FILTROS POR ESTADO -->
-            <filter string="Recibidas"
-                    name="received"
-                    domain="[('state', '=', 'recibida')]"/>
+            <filter string="Recibidas" name="received" domain="[('state', '=', 'recibida')]"/>
 
-            <filter string="En evaluación"
-                    name="review"
-                    domain="[('state', '=', 'evaluacion')]"/>
+            <filter string="En evaluación" name="review" domain="[('state', '=', 'evaluacion')]"/>
 
-            <filter string="Pendientes de gerencia"
-                    name="management"
-                    domain="[('state', '=', 'pendiente_gerencia')]"/>
+            <filter string="Pendientes de gerencia" name="management" domain="[('state', '=', 'pendiente_gerencia')]"/>
 
-            <filter string="Pendientes de stock"
-                    name="sales"
-                    domain="[('state', '=', 'confirmacion_ventas')]"/>
+            <filter string="Pendientes de stock" name="sales" domain="[('state', '=', 'confirmacion_ventas')]"/>
 
-            <filter string="Listas para despacho"
-                    name="ready_dispatch"
-                    domain="[('state', '=', 'lista_despacho')]"/>
+            <filter string="Listas para despacho" name="ready_dispatch" domain="[('state', '=', 'lista_despacho')]"/>
 
-            <filter string="En despacho"
-                    name="dispatch"
-                    domain="[('state', '=', 'en_despacho')]"/>
+            <filter string="En despacho" name="dispatch" domain="[('state', '=', 'en_despacho')]"/>
 
             <separator/>
 
             <!-- FILTROS DE ANÁLISIS -->
-            <filter string="Consumo anticipado"
-                    name="early"
-                    domain="[('analysis_result', '=', 'early_consumption')]"/>
+            <filter string="Consumo anticipado" name="early" domain="[('analysis_result', '=', 'early_consumption')]"/>
 
-            <filter string="Requiere revisión"
-                    name="evidence"
-                    domain="[('requires_evidence', '=', True)]"/>
+            <filter string="Requiere revisión" name="evidence" domain="[('requires_evidence', '=', True)]"/>
 
-            <filter string="Pedido para stock"
-                    name="stock_exception"
-                    domain="[('early_request_type', '=', 'client_stock')]"/>
+            <filter string="Pedido para stock" name="stock_exception" domain="[('early_request_type', '=', 'client_stock')]"/>
 
-            <filter string="Sin historial"
-                    name="no_history"
-                    domain="[('analysis_result', '=', 'no_history')]"/>
+            <filter string="Sin historial" name="no_history" domain="[('analysis_result', '=', 'no_history')]"/>
 
-            <filter string="Duplicadas"
-                    name="duplicates"
-                    domain="[('analysis_result', '=', 'duplicate')]"/>
+            <filter string="Duplicadas" name="duplicates" domain="[('analysis_result', '=', 'duplicate')]"/>
 
             <separator/>
 
             <!-- FILTROS POR FECHA -->
-            <filter string="Hoy"
-                    name="today"
-                    domain="[('submission_date', '&gt;=', context_today())]"/>
+            <filter string="Hoy" name="today" domain="[('submission_date', '&gt;=', context_today())]"/>
 
-            <filter string="Últimos 7 días"
-                    name="last_7_days"
-                    domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
+            <filter string="Últimos 7 días" name="last_7_days" domain="[('submission_date', '&gt;=', (context_today() - datetime.timedelta(days=7)).strftime('%Y-%m-%d'))]"/>
 
-            <filter string="Este mes"
-                    name="month"
-                    domain="[('submission_date', '&gt;=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"/>
+            <filter string="Este mes" name="month" domain="[('submission_date', '&gt;=', context_today().replace(day=1).strftime('%Y-%m-%d'))]"/>
 
             <!-- AGRUPACIONES -->
-            <group name="groupby">
+            <filter string="Motor n8n + IA" name="motor_n8n" domain="[('control_engine', '=', 'n8n')]"/><group name="groupby">
 
-                <filter string="Estado"
-                        name="group_state"
-                        context="{'group_by': 'state'}"/>
+                <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
 
-                <filter string="Resultado"
-                        name="group_analysis"
-                        context="{'group_by': 'analysis_result'}"/>
+                <filter string="Resultado" name="group_analysis" context="{'group_by': 'analysis_result'}"/>
 
-                <filter string="Motivo anticipado"
-                        name="group_early_type"
-                        context="{'group_by': 'early_request_type'}"/>
+                <filter string="Motivo anticipado" name="group_early_type" context="{'group_by': 'early_request_type'}"/>
 
-                <filter string="Cliente"
-                        name="group_partner"
-                        context="{'group_by': 'partner_id'}"/>
+                <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
 
-                <filter string="Equipo"
-                        name="group_equipment"
-                        context="{'group_by': 'equipment_id'}"/>
+                <filter string="Equipo" name="group_equipment" context="{'group_by': 'equipment_id'}"/>
 
-                <filter string="Fecha"
-                        name="group_date"
-                        context="{'group_by': 'submission_date:day'}"/>
+                <filter string="Fecha" name="group_date" context="{'group_by': 'submission_date:day'}"/>
 
-            </group>
+            <filter string="Motor de evaluación" name="group_control_engine" context="{'group_by': 'control_engine'}"/></group>
 
         </search>
     </field>

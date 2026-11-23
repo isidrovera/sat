@@ -43,6 +43,8 @@
                     <field name="counter_color"
                            invisible="not counter_color_available"/>
                     <field name="processing_state"/>
+                    <field name="toner_engine_used" string="Motor" optional="show"/>
+                    <field name="physical_replacement_confirmed" string="Reemplazo confirmado" optional="show"/>
                     <field name="submission_id"/>
                     <field name="installation_history_id"/>
                     <field name="stock_movement_id"/>
@@ -222,6 +224,18 @@
                                     </group>
                                 </group>
 
+                                <group string="Control y motor de decisión">
+                                    <group>
+                                        <field name="toner_engine_used" readonly="1"/>
+                                        <field name="physical_replacement_confirmed"
+                                               readonly="processing_state in ['processed', 'ignored']"/>
+                                    </group>
+                                    <group>
+                                        <field name="ai_decision_json" readonly="1"
+                                               invisible="toner_engine_used != 'n8n'"/>
+                                    </group>
+                                </group>
+
                                 <group>
                                     <field name="processing_message" readonly="1"/>
                                     <field name="processing_error" readonly="1"/>
@@ -392,6 +406,7 @@
                     <field name="copies_produced"/>
                     <field name="expected_yield"/>
                     <field name="yield_percent"/>
+                    <field name="learning_eligible" string="Apto aprendizaje" optional="show"/>
                     <field name="days_in_use"/>
                     <field name="start_source"/>
                     <field name="end_reason"/>
@@ -554,6 +569,9 @@
                                     <group>
                                         <field name="yield_percent" readonly="1"/>
                                         <field name="days_in_use" readonly="1"/>
+                                        <field name="learning_eligible" readonly="1"/>
+                                        <field name="learning_exclusion_reason" readonly="1"
+                                               invisible="learning_eligible"/>
                                     </group>
                                 </group>
                             </page>

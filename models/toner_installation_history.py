@@ -327,6 +327,98 @@ class TonerInstallationHistory(models.Model):
     )
 
     # ============================================================
+    # CALIDAD DEL HISTORIAL PARA APRENDIZAJE
+    # ============================================================
+    # No se modifica el rendimiento del fabricante. Solo los ciclos con
+    # evidencia física y contadores válidos se usan para estadísticas.
+    learning_eligible = fields.Boolean(
+        string="Apto para aprender rendimiento",
+        compute="_compute_learning_quality",
+        store=False,
+    )
+    learning_exclusion_reason = fields.Char(
+        string="Motivo de exclusión del aprendizaje",
+        compute="_compute_learning_quality",
+        store=False,
+    )
+
+    @api.depends(
+        "state", "start_counter", "end_counter", "start_is_estimated",
+        "end_is_estimated", "start_event_id", "end_event_id",
+        "end_reason", "start_date", "end_date",
+    )
+    def _compute_learning_quality(self):
+        for cycle in self:
+            reason = False
+            if cycle.state != "finished":
+                reason = _("Ciclo no finalizado")
+            elif cycle.start_is_estimated or cycle.end_is_estimated:
+                reason = _("El inicio o fin fue estimado")
+            elif not cycle.start_counter or not cycle.end_counter:
+                reason = _("Faltan contadores comprobables")
+            elif cycle.end_counter <= cycle.start_counter:
+                reason = _("El consumo medido no es positivo")
+            elif cycle.end_reason not in ("empty", "replaced"):
+                reason = _("Cierre no corresponde a un agotamiento confirmado")
+            elif cycle.end_event_id and (
+                "physical_replacement_confirmed" in cycle.end_event_id._fields
+                and not cycle.end_event_id.physical_replacement_confirmed
+            ):
+                reason = _("El evento de fin no tiene confirmación física")
+            elif cycle.start_event_id and (
+                "physical_replacement_confirmed" in cycle.start_event_id._fields
+                and not cycle.start_event_id.physical_replacement_confirmed
+            ):
+                reason = _("El evento de inicio no tiene confirmación física")
+            cycle.learning_eligible = not bool(reason)
+            cycle.learning_exclusion_reason = reason or False
+
+    @api.model
+    def get_learned_yield(self, equipment, color, minimum_cycles=3, maximum_cycles=12):
+        """Mediana de ciclos confiables de esta máquina y color.
+
+        No altera los snapshots existentes. Devuelve False si el historial no
+        es suficiente. Aísla valores extremos cuando se dispone de 5+ ciclos.
+        Solo deben considerarse cartuchos del mismo tipo: si se conocen
+        códigos de parte diferentes, no se mezclan.
+        """
+        if not equipment or color not in dict(self.COLOR_SELECTION):
+            return False
+        minimum_cycles = max(3, int(minimum_cycles or 3))
+        maximum_cycles = max(minimum_cycles, int(maximum_cycles or 12))
+        cycles = self.sudo().search([
+            ("equipment_id", "=", equipment.id),
+            ("color", "=", color),
+            ("state", "=", "finished"),
+            ("end_reason", "in", ("empty", "replaced")),
+            ("start_counter", ">", 0),
+            ("end_counter", ">", 0),
+            ("start_is_estimated", "=", False),
+            ("end_is_estimated", "=", False),
+        ], order="end_date desc, id desc", limit=maximum_cycles * 4)
+        # Use the most recent clearly identified part as a comparable cohort.
+        reliable = [c for c in cycles if c.learning_eligible]
+        if not reliable:
+            return False
+        reference_part = (reliable[0].part_number or "").strip().upper()
+        reference_brand = reliable[0].toner_brand_id.id or False
+        comparable = [
+            c for c in reliable
+            if (c.part_number or "").strip().upper() == reference_part
+            and (c.toner_brand_id.id or False) == reference_brand
+        ][:maximum_cycles]
+        values = sorted(int(c.end_counter - c.start_counter) for c in comparable)
+        if len(values) < minimum_cycles:
+            return False
+        median = (values[(len(values) - 1) // 2] + values[len(values) // 2]) / 2.0
+        if len(values) >= 5:
+            filtered = [v for v in values if median * 0.4 <= v <= median * 2.5]
+            if len(filtered) >= minimum_cycles:
+                values = filtered
+                median = (values[(len(values) - 1) // 2] + values[len(values) // 2]) / 2.0
+        return max(1, int(round(median)))
+
+    # ============================================================
     # CONTROL / AUDITORÍA
     # ============================================================
 
@@ -1000,6 +1092,14 @@ class TonerInstallationHistory(models.Model):
                 _("No se puede cerrar un ciclo cancelado.")
             )
 
+        if end_event and (
+            "physical_replacement_confirmed" in end_event._fields
+            and not end_event.physical_replacement_confirmed
+        ):
+            raise ValidationError(_(
+                "El evento no confirma un reemplazo físico; no puede cerrar un ciclo."
+            ))
+
         counter = max(
             0,
             int(end_counter or 0),
@@ -1039,6 +1139,14 @@ class TonerInstallationHistory(models.Model):
                 else fields.Datetime.now()
             )
         )
+
+        if self.start_date and end_date and (
+            fields.Datetime.to_datetime(end_date)
+            < fields.Datetime.to_datetime(self.start_date)
+        ):
+            raise ValidationError(_(
+                "La fecha del evento es anterior al inicio de este cartucho."
+            ))
 
         vals = {
             "state": "finished",
@@ -1115,6 +1223,16 @@ class TonerInstallationHistory(models.Model):
         REPLACED.
         """
         if not event:
+            return self.browse()
+
+        if (
+            "physical_replacement_confirmed" in event._fields
+            and not event.physical_replacement_confirmed
+        ):
+            _logger.warning(
+                "[TONER HISTORY] EMPTY no confirmado event=%s; ciclo intacto",
+                event.id,
+            )
             return self.browse()
 
         if event.event_type != "empty":
@@ -1209,6 +1327,16 @@ class TonerInstallationHistory(models.Model):
            toner.stock.movement en el siguiente paso.
         """
         if not event:
+            return self.browse()
+
+        if (
+            "physical_replacement_confirmed" in event._fields
+            and not event.physical_replacement_confirmed
+        ):
+            _logger.warning(
+                "[TONER HISTORY] REPLACED no confirmado event=%s; ciclo intacto",
+                event.id,
+            )
             return self.browse()
 
         if event.event_type != "replaced":
@@ -1367,6 +1495,14 @@ class TonerInstallationHistory(models.Model):
         explícitamente REPLACED.
         """
         if not event:
+            return self.browse()
+
+        # Una recuperación de porcentaje sin confirmación del cartucho
+        # no representa una instalación física (frecuente sin chip).
+        if (
+            "physical_replacement_confirmed" in event._fields
+            and not event.physical_replacement_confirmed
+        ):
             return self.browse()
 
         if event.event_type not in (

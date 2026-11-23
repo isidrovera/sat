@@ -195,4 +195,42 @@ if config:
         <field name="active">True</field>
     </record>
     </data>
+     <!-- Motor de control: odoo / n8n -->
+        <record id="param_toner_control_engine" model="ir.config_parameter">
+            <field name="key">sat.toner_control_engine</field>
+            <field name="value">odoo</field>
+        </record>
+
+        <!-- Integración n8n -->
+        <record id="param_toner_n8n_webhook_url" model="ir.config_parameter">
+            <field name="key">sat.toner_n8n_webhook_url</field>
+            <field name="value"></field>
+        </record>
+
+        <record id="param_toner_n8n_api_key" model="ir.config_parameter">
+            <field name="key">sat.toner_n8n_api_key</field>
+            <field name="value"></field>
+        </record>
+
+        <record id="param_toner_n8n_timeout" model="ir.config_parameter">
+            <field name="key">sat.toner_n8n_timeout</field>
+            <field name="value">30</field>
+        </record>
+
+        <!-- Seguimiento del pedido -->
+        <record id="param_toner_tracking_enabled" model="ir.config_parameter">
+            <field name="key">sat.toner_tracking_enabled</field>
+            <field name="value">True</field>
+        </record>
+
+        <record id="param_toner_tracking_single_message" model="ir.config_parameter">
+            <field name="key">sat.toner_tracking_single_message</field>
+            <field name="value">True</field>
+        </record>
+
+        <!-- Rendimiento y consumo -->
+        <record id="param_toner_early_consumption_percent" model="ir.config_parameter">
+            <field name="key">sat.toner_early_consumption_percent</field>
+            <field name="value">50</field>
+        </record>
 </odoo>

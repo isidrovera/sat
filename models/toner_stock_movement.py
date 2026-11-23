@@ -494,8 +494,10 @@ class TonerStockMovement(models.Model):
         """
         Devuelve el stock vigente del cliente para equipo/color.
 
-        Se toma el último movimiento confirmado.
-        Si no existe historial, devuelve 0.
+        Se toma el último movimiento REGISTRADO, no el de mayor fecha
+        operativa. Un evento antiguo puede llegar después de otro reciente:
+        su fecha histórica se conserva, pero el saldo es siempre el último
+        asiento de kardex aplicado. Si no existe historial, devuelve 0.
         """
         if not equipment or color not in dict(self.COLOR_SELECTION):
             return 0
@@ -506,7 +508,7 @@ class TonerStockMovement(models.Model):
                 ("color", "=", color),
                 ("state", "=", "posted"),
             ],
-            order="movement_date desc, id desc",
+            order="id desc",
             limit=1,
         )
 
@@ -599,12 +601,28 @@ class TonerStockMovement(models.Model):
             )
 
         if quantity == 0 and movement_type not in (
+            "initial",
             "correction",
             "installation",
         ):
             raise ValidationError(
                 _("La cantidad del movimiento no puede ser cero.")
             )
+
+        # --------------------------------------------------------
+        # CONCURRENCIA / TRANSACCIÓN
+        # --------------------------------------------------------
+        # Bloqueamos la fila del equipo antes de leer el saldo y antes de
+        # consultar la clave de idempotencia. Así, dos trabajadores de Odoo
+        # no pueden calcular el mismo stock_before al mismo tiempo.
+        # El bloqueo se libera automáticamente al terminar la transacción.
+        equipment = equipment.exists()
+        if not equipment:
+            raise ValidationError(_("El equipo no existe."))
+        self.env.cr.execute(
+            'SELECT id FROM "alquiler" WHERE id = %s FOR UPDATE',
+            (equipment.id,),
+        )
 
         # --------------------------------------------------------
         # IDEMPOTENCIA
@@ -808,95 +826,86 @@ class TonerStockMovement(models.Model):
 
     @api.model
     def create_delivery_movements(self, delivery):
+        """Añade ÚNICAMENTE las unidades físicamente recibidas.
+
+        El estado 'entregado' y la confirmación ya validada son obligatorios.
+        Una programación de 5 con recepción de 3 incorpora solo 3 unidades.
+        No se utiliza toner_*_qty porque es una cantidad PLANIFICADA.
+        Las entregas parciales adicionales requieren una nueva confirmación/
+        programación de entrega, no editar un asiento histórico registrado.
         """
-        Registra stock SOLO cuando toner.delivery.schedule está ENTREGADO.
-
-        Nunca se incrementa stock por:
-            - aprobación;
-            - confirmación de ventas;
-            - preparación;
-            - envío.
-
-        La entrega debe tener state == 'entregado'.
-
-        Devuelve los movimientos creados/reutilizados.
-        """
-        if not delivery:
-            raise ValidationError(
-                _("Debe indicar la entrega.")
-            )
-
+        if not delivery or not delivery.exists():
+            raise ValidationError(_("Debe indicar una entrega existente."))
+        delivery.ensure_one()
         if delivery.state != "entregado":
-            raise ValidationError(
-                _(
-                    "El stock del cliente solo puede incrementarse "
-                    "cuando la entrega está confirmada como entregada."
-                )
-            )
-
+            raise ValidationError(_(
+                "El stock del cliente solo aumenta al confirmar recepción."
+            ))
         equipment = delivery.equipment_id
-
         if not equipment:
-            raise ValidationError(
-                _("La entrega no tiene equipo relacionado.")
-            )
-
-        submission = (
-            delivery.submission_id
-            if (
-                "submission_id" in delivery._fields
-                and delivery.submission_id
-            )
-            else False
-        )
-
-        movement_date = (
-            delivery.delivery_date_actual
-            if (
-                "delivery_date_actual" in delivery._fields
-                and delivery.delivery_date_actual
-            )
-            else fields.Datetime.now()
-        )
-
-        quantity_fields = {
-            "black": "toner_black_qty",
-            "cyan": "toner_cyan_qty",
-            "magenta": "toner_magenta_qty",
-            "yellow": "toner_yellow_qty",
+            raise ValidationError(_("La entrega no tiene equipo relacionado."))
+        confirmation = delivery.confirmation_id if "confirmation_id" in delivery._fields else False
+        if not confirmation or confirmation.schedule_id != delivery:
+            raise ValidationError(_(
+                "La entrega carece de una confirmación de recepción válida. "
+                "No se puede registrar el stock desde cantidades programadas."
+            ))
+        if confirmation.state not in ("confirmed", "processed"):
+            raise ValidationError(_(
+                "La recepción física debe estar confirmada antes de sumar stock."
+            ))
+        submission = delivery.submission_id if "submission_id" in delivery._fields else False
+        movement_date = confirmation.delivery_date or fields.Date.today()
+        qty_fields = {
+            "black": "toner_black_delivered",
+            "cyan": "toner_cyan_delivered",
+            "magenta": "toner_magenta_delivered",
+            "yellow": "toner_yellow_delivered",
         }
-
+        # Validar todas las cantidades ANTES de generar movimientos.
+        quantities = {}
+        for color, field_name in qty_fields.items():
+            quantity = int(getattr(confirmation, field_name, 0) or 0)
+            if quantity < 0:
+                raise ValidationError(_(
+                    "La cantidad realmente entregada de %s no puede ser negativa."
+                ) % dict(self.COLOR_SELECTION)[color])
+            quantities[color] = quantity
+        if not any(quantities.values()):
+            raise ValidationError(_(
+                "La recepción no registra ninguna unidad de tóner entregada."
+            ))
+        # No alterar jamás entradas anteriores. Si la cantidad confirmada
+        # cambia posteriormente, se requiere un ajuste documentado.
+        existing = self.sudo().search([
+            ("delivery_id", "=", delivery.id),
+            ("movement_type", "=", "delivery"),
+        ])
+        existing_by_color = {record.color: record for record in existing}
+        for item in existing:
+            if item.state != "posted" or item.quantity != quantities[item.color]:
+                raise ValidationError(_(
+                    "La entrega ya tiene un asiento de %(color)s por %(old)s, "
+                    "pero la confirmación indica %(new)s. No se reescribe el "
+                    "historial; registre una corrección de stock."
+                ) % {
+                    "color": dict(self.COLOR_SELECTION)[item.color],
+                    "old": item.quantity,
+                    "new": quantities[item.color],
+                })
         movements = self.browse()
-
-        for color, field_name in quantity_fields.items():
-            if field_name not in delivery._fields:
-                continue
-
-            qty = int(
-                getattr(
-                    delivery,
-                    field_name,
-                    0,
-                )
-                or 0
-            )
-
+        for color, qty in quantities.items():
             if qty <= 0:
                 continue
-
-            toner_brand = False
-
-            if (
-                submission
-                and (
-                    "toner_brand_%s_id" % color
-                ) in submission._fields
-            ):
-                toner_brand = getattr(
-                    submission,
-                    "toner_brand_%s_id" % color,
-                )
-
+            if color in existing_by_color:
+                movements |= existing_by_color[color]
+                continue
+            brand_field = "toner_brand_%s_id" % color
+            toner_brand = (
+                getattr(submission, brand_field)
+                if submission and brand_field in submission._fields
+                else False
+            )
             movement = self.create_stock_movement(
                 equipment=equipment,
                 color=color,
@@ -904,24 +913,19 @@ class TonerStockMovement(models.Model):
                 movement_type="delivery",
                 source="delivery",
                 movement_date=movement_date,
-                external_key=(
-                    "delivery:%s:%s"
-                    % (
-                        delivery.id,
-                        color,
-                    )
-                ),
+                external_key="delivery:%s:%s" % (delivery.id, color),
                 submission=submission,
                 delivery=delivery,
                 toner_brand=toner_brand,
-                notes=_(
-                    "Entrada automática por entrega confirmada."
+                notes=_("Recepción física confirmada %s: %s unidad(es).") % (
+                    confirmation.secuencia or confirmation.id, qty,
                 ),
-                prevent_negative=True,
             )
-
+            if movement.state != "posted" or movement.quantity != qty:
+                raise ValidationError(_(
+                    "Existe un asiento incompatible con la recepción física."
+                ))
             movements |= movement
-
         return movements
 
     # ============================================================
@@ -962,19 +966,21 @@ class TonerStockMovement(models.Model):
                 _("Color de tóner inválido.")
             )
 
-        if monitoring_event:
-            event_key = (
-                monitoring_event.external_event_id
-                or monitoring_event.id
+        if installation_history:
+            # El ciclo físico es la unidad de consumo. Dos eventos distintos
+            # asociados al MISMO cartucho no generan dos salidas.
+            external_key = "installation-cycle:%s:%s" % (
+                installation_history.id, color,
+            )
+        elif monitoring_event:
+            # Incluir ID del equipo y fuente para evitar colisiones entre
+            # identificadores externos de distintos dispositivos.
+            event_key = monitoring_event.id
+            external_key = "installation-event:%s:%s:%s" % (
+                equipment.id, event_key, color,
             )
 
-            external_key = (
-                "installation-event:%s:%s"
-                % (
-                    event_key,
-                    color,
-                )
-            )
+        if monitoring_event:
 
             movement_date = (
                 movement_date
@@ -993,14 +999,6 @@ class TonerStockMovement(models.Model):
             )
 
         elif installation_history:
-            external_key = (
-                "installation-cycle:%s:%s"
-                % (
-                    installation_history.id,
-                    color,
-                )
-            )
-
             movement_date = (
                 movement_date
                 or installation_history.start_date
@@ -1014,9 +1012,31 @@ class TonerStockMovement(models.Model):
             )
 
         else:
-            # Un consumo manual necesita una clave basada en fecha.
+            # Requiere una confirmación real en el flujo manual. Sin evento
+            # ni ciclo se permite ajuste explícito con trazabilidad.
             external_key = False
             source = source or "manual"
+
+        # Si se migraron movimientos antiguos con clave por evento, reutilizar
+        # el consumo ya aplicado al ciclo, sin descontar por segunda vez.
+        if installation_history:
+            existing_cycle = self.sudo().search([
+                ("installation_history_id", "=", installation_history.id),
+                ("color", "=", color),
+                ("movement_type", "=", "installation"),
+                ("state", "=", "posted"),
+            ], limit=1)
+            if existing_cycle:
+                return existing_cycle
+        if monitoring_event:
+            existing_event = self.sudo().search([
+                ("monitoring_event_id", "=", monitoring_event.id),
+                ("color", "=", color),
+                ("movement_type", "=", "installation"),
+                ("state", "=", "posted"),
+            ], limit=1)
+            if existing_event:
+                return existing_event
 
         return self.create_stock_movement(
             equipment=equipment,
@@ -1080,6 +1100,11 @@ class TonerStockMovement(models.Model):
             raise ValidationError(
                 _("El evento no tiene un color válido.")
             )
+        if ("physical_replacement_confirmed" in event._fields
+                and not event.physical_replacement_confirmed):
+            raise ValidationError(_(
+                "No se descuenta stock: el reemplazo físico no está confirmado."
+            ))
 
         submission = (
             event.submission_id

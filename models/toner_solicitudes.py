@@ -1,4 +1,8 @@
 # -*- coding: utf-8 -*-
+# Actualización conservadora sobre el modelo original: rendimiento catálogo,
+# saldo de respaldo, selección del motor y soporte de mensaje único.
+# El enlace público y el selector visual se activarán al actualizar los
+# archivos existentes correspondientes; no habilitar tracking antes.
 
 import json
 import logging
@@ -58,6 +62,23 @@ class TonerCounterSubmission(models.Model):
 
     equipment_serie = fields.Char(related="equipment_id.serie", string="Serie", readonly=True)
     history_snapshot_json = fields.Text(string="Referencia histórica por color", readonly=True, copy=False)
+    # Configuración efectiva capturada al crear la solicitud. El selector visual
+    # de res.config.settings y el controlador n8n se integran en sus archivos.
+    control_engine = fields.Selection(
+        [("odoo", "Motor Odoo"), ("n8n", "Motor n8n + IA")],
+        string="Motor que originó la evaluación",
+        default=lambda self: self._get_toner_control_engine(),
+        readonly=True, copy=False, index=True,
+    )
+    tracking_access_token = fields.Char(
+        string="Token de seguimiento del cliente", readonly=True,
+        copy=False, index=True, groups="base.group_system",
+    )
+    tracking_message_sent_at = fields.Datetime(
+        string="Fecha de mensaje único de seguimiento", readonly=True,
+        copy=False,
+    )
+
     toner_brand_black_id = fields.Many2one("toner.brand", string="Marca del tóner a enviar", tracking=True, ondelete="restrict", copy=False)
     history_available_black = fields.Boolean(string="Con historial", compute="_compute_color_analysis")
     base_counter_black = fields.Integer(string="Contador anterior", compute="_compute_color_analysis")
@@ -842,49 +863,102 @@ class TonerCounterSubmission(models.Model):
         return "cantidad_aprobada_%s" % color
 
     @api.model
+    def _get_toner_control_engine(self):
+        """Lee el selector central. No crea dependencias con n8n."""
+        value = (self.env["ir.config_parameter"].sudo().get_param(
+            "sat.toner_control_engine", "odoo") or "odoo").strip().lower()
+        return value if value in ("odoo", "n8n") else "odoo"
+
+    @api.model
     def _get_expected_yield(self, equipment, color):
-        """
-        Busca el rendimiento sin imponer un único nombre de campo.
-        Usa el primer campo existente y con valor.
+        """Rendimiento del tóner asociado al modelo antes que defaults antiguos.
+
+        La duración fabricante y la duración referencial se conservan en el
+        catálogo. Un eventual rendimiento aprendido se incorpora a esta misma
+        función cuando el historial tenga suficientes ciclos validados.
         """
         model = equipment.name
-        candidates = {
-            "black": [
-                "durabilidad_toner_black",
-                "rendimiento_toner_black",
-                "rendimiento_black",
-            ],
-            "cyan": [
-                "durabilidad_toner_cyan",
-                "rendimiento_toner_cyan",
-                "rendimiento_cyan",
-            ],
-            "magenta": [
-                "durabilidad_toner_magenta",
-                "rendimiento_toner_magenta",
-                "rendimiento_magenta",
-            ],
-            "yellow": [
-                "durabilidad_toner_yellow",
-                "rendimiento_toner_yellow",
-                "rendimiento_yellow",
-            ],
-        }
-
-        for field_name in candidates[color]:
-            if field_name in model._fields:
-                value = int(getattr(model, field_name) or 0)
+        if model:
+            # Campos de relación usados por el catálogo de modelo de máquina.
+            # Solo se lee cuando la relación apunta realmente a modelo.toner.
+            candidates = (
+                "toner_modelo_%s" % color,
+                "modelo_toner_%s_id" % color,
+                "toner_%s_id" % color,
+            )
+            for name in candidates:
+                field = model._fields.get(name)
+                if not field or getattr(field, "comodel_name", None) != "modelo.toner":
+                    continue
+                toner = model[name]
+                if not toner or not toner.exists():
+                    continue
+                if toner.color and toner.color != color:
+                    continue
+                if not toner.usar_para_analisis_consumo:
+                    continue
+                value = int(toner.duracion_aplicable or 0)
                 if value > 0:
                     return value
 
+            legacy_fields = {
+                "black": ("durabilidad_toner_black", "rendimiento_toner_black", "rendimiento_black"),
+                "cyan": ("durabilidad_toner_cyan", "rendimiento_toner_cyan", "rendimiento_cyan"),
+                "magenta": ("durabilidad_toner_magenta", "rendimiento_toner_magenta", "rendimiento_magenta"),
+                "yellow": ("durabilidad_toner_yellow", "rendimiento_toner_yellow", "rendimiento_yellow"),
+            }
+            for field_name in legacy_fields[color]:
+                if field_name in model._fields:
+                    value = int(getattr(model, field_name) or 0)
+                    if value > 0:
+                        return value
         parameter = self.env["ir.config_parameter"].sudo()
-        default_value = int(
-            parameter.get_param(
+        try:
+            default_value = int(parameter.get_param(
                 "sat.toner_default_yield_%s" % color,
                 "10000" if color == "black" else "8000",
-            )
-        )
+            ) or 0)
+        except (TypeError, ValueError):
+            default_value = 10000 if color == "black" else 8000
         return max(default_value, 1)
+
+    @api.model
+    def _get_customer_reserve(self, equipment, color):
+        """Saldo del kardex sin sumar cartucho instalado ni material en tránsito.
+
+        Si no hay movimientos, stock_known=False: 0 no se interpreta como un
+        inventario físico confirmado.
+        """
+        Movement = self.env["toner.stock.movement"].sudo()
+        last = Movement.search([
+            ("equipment_id", "=", equipment.id),
+            ("color", "=", color),
+            ("state", "=", "posted"),
+        ], order="movement_date desc, id desc", limit=1)
+        return {
+            "stock_known": bool(last),
+            "stock_reserve": max(int(last.stock_after or 0), 0) if last else 0,
+            "last_movement_id": last.id if last else False,
+        }
+
+    @api.model
+    def _get_stock_replenishment_context(self, equipment, colors):
+        """La referencia mínima es uno; no limita stock real del cliente."""
+        result = {}
+        model = equipment.name
+        for color in colors:
+            minimum_field = "stock_minimo_%s" % color
+            configured = 1
+            if model and minimum_field in model._fields:
+                configured = max(int(model[minimum_field] or 0), 1)
+            entry = self._get_customer_reserve(equipment, color)
+            entry["stock_minimum"] = configured
+            # Solo stock 0 confirmado dispara reposición automática ordinaria.
+            entry["needs_replenishment"] = (
+                entry["stock_known"] and entry["stock_reserve"] == 0
+            )
+            result[color] = entry
+        return result
 
     @api.model
     def _find_open_duplicate(self, equipment_id, color, exclude_submission_id=False):
@@ -1392,6 +1466,38 @@ class TonerCounterSubmission(models.Model):
                     "color": int(web_data.get("previous_counter_color", 0) or 0),
                 },
             )
+
+            # Las solicitudes provenientes del motor central no deben crear
+            # reposiciones por LOW/EMPTY si aún existen cartuchos de respaldo.
+            # El portal y el registro manual siguen permitiendo excepciones
+            # justificadas que evalúa la asesora/gerencia.
+            stock_context = self._get_stock_replenishment_context(
+                equipment,
+                [c for c, selected in requested_toners.items() if selected],
+            )
+            validation["customer_stock"] = stock_context
+            is_automatic = bool(web_data.get("automation_event_id"))
+            if is_automatic:
+                stock_sufficient = [
+                    c for c, item in stock_context.items()
+                    if item["stock_known"] and item["stock_reserve"] > 0
+                ]
+                stock_unknown = [
+                    c for c, item in stock_context.items()
+                    if not item["stock_known"]
+                ]
+                # En esta fase los eventos mixtos o sin saldo confirmado se
+                # dejan para revisión; jamás se inventa un stock cero.
+                if stock_sufficient or stock_unknown:
+                    return {
+                        "success": False, "blocked": True,
+                        "reason": "stock_sufficient" if stock_sufficient else "stock_unknown",
+                        "error": _(
+                            "No se crea una solicitud automática: stock de "
+                            "respaldo disponible o sin conciliación física."
+                        ),
+                        "validation": validation,
+                    }
 
             if not validation.get("can_create"):
                 return {
@@ -2259,6 +2365,8 @@ class TonerCounterSubmission(models.Model):
                     "source",
                     "manual",
                 )
+                vals.setdefault("control_engine", self._get_toner_control_engine())
+                vals.setdefault("tracking_access_token", secrets.token_urlsafe(32))
                 vals.setdefault(
                     "client_name",
                     current_user.name or "",
@@ -3213,11 +3321,9 @@ class TonerCounterSubmission(models.Model):
                         if not requested.get(legacy_color):
                             continue
 
-                        history = json.loads(history_json or "{}").get(
-                            legacy_color, {}
-                        )
+                        history_item = history.get(legacy_color, {})
                         color_results.append({
-                            **(history or {}),
+                            **(history_item or {}),
                             "color": legacy_color,
                             "label": record.COLOR_LABELS[legacy_color],
                             "status": "no_history",
@@ -3231,11 +3337,11 @@ class TonerCounterSubmission(models.Model):
                             "consumption_percent": 0.0,
                             "days_since_last_delivery": 0,
                             "base_counter": int(
-                                (history or {}).get("base_counter", 0) or 0
+                                (history_item or {}).get("base_counter", 0) or 0
                             ),
                             "base_source": (
                                 "history"
-                                if (history or {}).get("history_available")
+                                if (history_item or {}).get("history_available")
                                 else "none"
                             ),
                             "manual_base": False,
@@ -3904,8 +4010,42 @@ class TonerCounterSubmission(models.Model):
         )
         return False
 
+    def get_customer_tracking_url(self):
+        """URL preparada para el controlador público de seguimiento.
+
+        Debe habilitarse solo después de añadir la ruta al controlador
+        existente. Nunca se utiliza el token de decisión de gerencia.
+        """
+        self.ensure_one()
+        token = self.tracking_access_token
+        if not token:
+            token = secrets.token_urlsafe(32)
+            self.with_context(toner_analysis_write=True).write({
+                "tracking_access_token": token,
+            })
+        base_url = self.env["ir.config_parameter"].sudo().get_param("web.base.url", "")
+        return "%s/toner/seguimiento/%s" % (base_url.rstrip("/"), token)
+
     def send_whatsapp_received(self):
         for record in self:
+            tracking_enabled = (self.env["ir.config_parameter"].sudo().get_param(
+                "sat.toner_tracking_enabled", "False") or "False").lower() in ("1", "true", "yes")
+            if tracking_enabled:
+                if record.tracking_message_sent_at:
+                    continue
+                message = _(
+                    "*COPIER COMPANY S.A.C.*\n\n"
+                    "Su solicitud de tóner *%(sequence)s* fue registrada.\n"
+                    "Consulte su estado actualizado en este enlace:\n%(url)s"
+                ) % {
+                    "sequence": record.secuencia,
+                    "url": record.get_customer_tracking_url(),
+                }
+                if record.send_whatsapp_message(record.client_phone_clean, message):
+                    record.with_context(toner_analysis_write=True).write({
+                        "tracking_message_sent_at": fields.Datetime.now(),
+                    })
+                continue
             message = (
                 "*🏢 Soporte*\n\n"
                 "✅ *Solicitud de tóner recibida*\n\n"
@@ -3927,6 +4067,10 @@ class TonerCounterSubmission(models.Model):
 
     def send_whatsapp_management_approved(self):
         for record in self:
+            tracking_enabled = (self.env["ir.config_parameter"].sudo().get_param(
+                "sat.toner_tracking_enabled", "False") or "False").lower() in ("1", "true", "yes")
+            if tracking_enabled:
+                continue
             message = (
                 "*🏢 Soporte*\n\n"
                 "✅ *Solicitud aprobada por gerencia*\n\n"
@@ -3937,6 +4081,10 @@ class TonerCounterSubmission(models.Model):
 
     def send_whatsapp_management_rejected(self):
         for record in self:
+            tracking_enabled = (self.env["ir.config_parameter"].sudo().get_param(
+                "sat.toner_tracking_enabled", "False") or "False").lower() in ("1", "true", "yes")
+            if tracking_enabled:
+                continue
             message = (
                 "*🏢 Soporte*\n\n"
                 "❌ *Solicitud no aprobada*\n\n"
@@ -3950,6 +4098,10 @@ class TonerCounterSubmission(models.Model):
 
     def send_whatsapp_ready_for_dispatch(self):
         for record in self:
+            tracking_enabled = (self.env["ir.config_parameter"].sudo().get_param(
+                "sat.toner_tracking_enabled", "False") or "False").lower() in ("1", "true", "yes")
+            if tracking_enabled:
+                continue
             message = (
                 "*🏢 Soporte*\n\n"
                 "📦 *Pedido confirmado para preparación*\n\n"

@@ -2,6 +2,8 @@
 
 import json
 import logging
+import secrets
+from markupsafe import escape
 
 import requests
 
@@ -108,6 +110,154 @@ class TonerRequestController(http.Controller):
             "magenta": bool(post.get("toner_magenta")),
             "yellow": bool(post.get("toner_yellow")),
         }
+
+    # -------------------------------------------------------------------------
+    # Seguimiento público de una solicitud — solamente lectura
+    # -------------------------------------------------------------------------
+
+    def _tracking_enabled(self):
+        value = request.env["ir.config_parameter"].sudo().get_param(
+            "sat.toner_tracking_enabled", "False"
+        )
+        return str(value).strip().lower() in ("1", "true", "yes", "on")
+
+    def _tracking_response(self, content, status=200):
+        return request.make_response(
+            content,
+            status=status,
+            headers=[
+                ("Content-Type", "text/html; charset=utf-8"),
+                ("Cache-Control", "no-store, no-cache, must-revalidate, private"),
+                ("Pragma", "no-cache"),
+                ("X-Robots-Tag", "noindex, nofollow, noarchive"),
+                ("Referrer-Policy", "no-referrer"),
+                ("X-Content-Type-Options", "nosniff"),
+            ],
+        )
+
+    @http.route(
+        "/toner/seguimiento/<string:token>",
+        type="http", auth="public", website=False,
+        methods=["GET"], sitemap=False, csrf=False,
+    )
+    def toner_customer_tracking(self, token, **kwargs):
+        """La posesión del token da acceso SOLO al estado de esta solicitud.
+
+        No se muestra contacto, correo, DNI, IP, evaluación interna ni token
+        gerencial. La página se refresca sola y consulta siempre datos Odoo.
+        """
+        not_found = self._tracking_response(
+            "<!doctype html><html lang='es'><meta charset='utf-8'>"
+            "<title>Seguimiento no disponible</title>"
+            "<body><h2>Seguimiento no disponible</h2>"
+            "<p>Verifique el enlace recibido.</p></body></html>",
+            status=404,
+        )
+        if not token or len(token) < 32 or len(token) > 256:
+            return not_found
+        # El token no es un ID secuencial y no debe confundirse con el
+        # management_access_token usado para aprobar o rechazar solicitudes.
+        Submission = request.env["toner.counter.submission"].sudo()
+        if "tracking_access_token" not in Submission._fields:
+            _logger.error("[TONER][TRACKING] Falta tracking_access_token en modelo")
+            return not_found
+        submission = Submission.search([
+            ("tracking_access_token", "=", token)
+        ], limit=1)
+        if not submission or not secrets.compare_digest(
+            submission.tracking_access_token or "", token
+        ):
+            return not_found
+
+        labels = {
+            "recibida": "Solicitud recibida",
+            "evaluacion": "En evaluación",
+            "pendiente_gerencia": "En evaluación",
+            "aprobada_gerencia": "Aprobada",
+            "rechazada_gerencia": "No aprobada",
+            "devuelta": "Pendiente de corrección",
+            "confirmacion_ventas": "Confirmando disponibilidad",
+            "lista_despacho": "Preparando entrega",
+            "en_despacho": "En despacho",
+            "entregada": "Entregada",
+            "cancelada": "Cancelada",
+        }
+        status_label = labels.get(submission.state, "En proceso")
+        steps = [
+            ("recibida", "Solicitud recibida"),
+            ("evaluacion", "Evaluación"),
+            ("aprobada_gerencia", "Aprobación"),
+            ("lista_despacho", "Preparación"),
+            ("en_despacho", "Despacho"),
+            ("entregada", "Entrega"),
+        ]
+        stage_index = {
+            "recibida": 0, "evaluacion": 1, "pendiente_gerencia": 1,
+            "aprobada_gerencia": 2, "confirmacion_ventas": 3,
+            "lista_despacho": 3, "en_despacho": 4, "entregada": 5,
+        }.get(submission.state, -1)
+        terminal = submission.state in (
+            "rechazada_gerencia", "devuelta", "cancelada"
+        )
+        step_list = "".join(
+            '<li class="%s"><span class="dot">%s</span>%s</li>' % (
+                "complete" if not terminal and i <= stage_index else "",
+                i + 1, escape(title),
+            )
+            for i, (_, title) in enumerate(steps)
+        )
+        colors = [
+            ("black", "Negro"), ("cyan", "Cian"),
+            ("magenta", "Magenta"), ("yellow", "Amarillo"),
+        ]
+        color_info = []
+        for key, label in colors:
+            if getattr(submission, "requiere_toner_%s" % key, False):
+                requested = max(0, int(getattr(
+                    submission, "cantidad_solicitada_%s" % key, 0
+                ) or 0))
+                color_info.append("%s (%s)" % (label, requested))
+        delivery = submission.delivery_scheduled_id
+        tracking_number = ""
+        delivery_date = ""
+        if delivery:
+            tracking_number = delivery.tracking_number or ""
+            when = delivery.delivery_date_actual or delivery.delivery_date_planned
+            delivery_date = str(when) if when else ""
+        equipment = submission.equipment_id
+        model = equipment.name.name if equipment and equipment.name else "Equipo"
+        serial = equipment.serie if equipment else ""
+        safe = lambda x: str(escape(str(x or "")))
+        body = """<!doctype html><html lang="es"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="refresh" content="60">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>Seguimiento de tóner</title><style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#203040;background:#f4f6f9}
+body{margin:0;padding:24px 12px}main{max-width:650px;margin:auto;background:#fff;border-radius:16px;padding:24px;box-shadow:0 3px 22px #13263b12}
+h1{font-size:24px;margin:0 0 8px}h2{font-size:18px;margin:18px 0 8px}
+small{color:#617184}p{line-height:1.5}ul{padding-left:0;list-style:none}
+li{padding:10px;border-left:3px solid #d6dee8;margin-left:12px;color:#607184}
+li.complete{border-color:#1c925f;color:#1b6747;font-weight:600}
+.dot{display:inline-block;width:24px;color:#718096}.complete .dot{color:#1c925f}
+.state{background:#e8f1fd;border-radius:8px;padding:12px 14px;font-weight:700}
+.detail{border-top:1px solid #e5eaf0;padding-top:12px;margin-top:12px}
+strong{color:#263b50}</style></head><body><main>
+<h1>COPIER COMPANY S.A.C.</h1><small>Seguimiento de solicitud de tóner</small>
+<h2>Solicitud %s</h2><div class="state">%s</div>
+<div class="detail"><p><strong>Equipo:</strong> %s</p>
+<p><strong>Serie:</strong> %s</p><p><strong>Tóner solicitado:</strong> %s</p></div>
+<h2>Avance del pedido</h2><ul>%s</ul>
+%s%s
+<p><small>Información actualizada directamente desde Odoo. Esta página se refresca cada 60 segundos.</small></p>
+</main></body></html>""" % (
+            safe(submission.secuencia), safe(status_label),
+            safe(model), safe(serial), safe(", ".join(color_info) or "Sin detalle"),
+            step_list,
+            "<p><strong>Guía:</strong> %s</p>" % safe(tracking_number) if tracking_number else "",
+            "<p><strong>Fecha prevista/real:</strong> %s</p>" % safe(delivery_date) if delivery_date else "",
+        )
+        return self._tracking_response(body)
 
     # -------------------------------------------------------------------------
     # Formulario
@@ -535,7 +685,8 @@ class TonerRequestController(http.Controller):
             "⚠️ *Solicitud incompleta*\n\n"
             "No se registró la solicitud porque no se seleccionó ningún tóner.\n"
         )
-        self.send_whatsapp_message_toner(data["celular"], message)
+        if not self._tracking_enabled():
+            self.send_whatsapp_message_toner(data["celular"], message)
         return request.render(
             "sat.solicitud_toner_sin_seleccion",
             {"datos_formulario": data},
@@ -565,7 +716,8 @@ class TonerRequestController(http.Controller):
             data["modelo_maquina"],
             data["serie"],
         )
-        self.send_whatsapp_message_toner(data["celular"], message)
+        if not self._tracking_enabled():
+            self.send_whatsapp_message_toner(data["celular"], message)
 
         self._notify_internal_team_blocked(data, validation)
 
@@ -860,3 +1012,121 @@ class TonerRequestController(http.Controller):
     )
     def pagina_confirmacion(self, **kw):
         return request.render("sat.pagina_confirmacion_toner")
+
+    # -------------------------------------------------------------------------
+    # API privada de n8n + IA (sobre el controlador existente)
+    # -------------------------------------------------------------------------
+
+    def _n8n_json(self, payload, status=200):
+        response = self._json_response(payload, status=status)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
+
+    def _n8n_authenticate(self):
+        """Misma clave configurada para el webhook saliente.
+
+        La clave se envía exclusivamente en Authorization: Bearer ... o
+        x-api-key, nunca en un query string.
+        """
+        ICP = request.env["ir.config_parameter"].sudo()
+        configured = (ICP.get_param("sat.toner_n8n_api_key") or "").strip()
+        if not configured or len(configured) < 24:
+            return False
+        header = request.httprequest.headers.get("Authorization", "")
+        presented = header[7:].strip() if header.lower().startswith("bearer ") else ""
+        if not presented:
+            presented = request.httprequest.headers.get("X-API-Key", "").strip()
+        return bool(presented and secrets.compare_digest(configured, presented))
+
+    def _n8n_enabled(self):
+        ICP = request.env["ir.config_parameter"].sudo()
+        return (ICP.get_param("sat.toner_control_engine", "odoo") or "odoo").strip().lower() == "n8n"
+
+    @http.route(
+        "/toner/n8n/health", type="http", auth="public",
+        methods=["GET"], csrf=False, website=False, sitemap=False,
+    )
+    def toner_n8n_health(self, **kwargs):
+        """Permite comprobar credenciales y modo, sin filtrar datos."""
+        if not self._n8n_authenticate():
+            return self._n8n_json({"success": False, "error": "unauthorized"}, 401)
+        return self._n8n_json({
+            "success": True,
+            "engine": "n8n" if self._n8n_enabled() else "odoo",
+            "n8n_active": self._n8n_enabled(),
+            "schema_version": 1,
+        })
+
+    @http.route(
+        "/toner/n8n/context/<int:event_id>", type="http", auth="public",
+        methods=["GET"], csrf=False, website=False, sitemap=False,
+    )
+    def toner_n8n_context(self, event_id, **kwargs):
+        """Contexto de solo lectura para una evaluación de IA.
+
+        Los movimientos de stock y la autorización nunca se delegan a n8n.
+        """
+        if not self._n8n_authenticate():
+            return self._n8n_json({"success": False, "error": "unauthorized"}, 401)
+        if not self._n8n_enabled():
+            return self._n8n_json({"success": False, "error": "n8n_not_selected"}, 409)
+        Event = request.env["toner.monitoring.event"].sudo()
+        event = Event.browse(event_id).exists()
+        if not event:
+            return self._n8n_json({"success": False, "error": "not_found"}, 404)
+        equipment = event.equipment_id
+        if not equipment or event.color not in ("black", "cyan", "magenta", "yellow"):
+            return self._n8n_json({"success": False, "error": "invalid_event"}, 422)
+        # _reserve_snapshot proviene del modelo de monitoreo actualizado;
+        # en versiones anteriores, no se debe adivinar el stock.
+        if not hasattr(event, "_reserve_snapshot"):
+            return self._n8n_json({"success": False, "error": "missing_stock_engine"}, 503)
+        stock = event._reserve_snapshot()
+        Submission = request.env["toner.counter.submission"].sudo()
+        open_requests = Submission.search([
+            ("equipment_id", "=", equipment.id),
+            ("state", "in", Submission.OPEN_STATES),
+            ("requiere_toner_%s" % event.color, "=", True),
+        ], order="submission_date desc, id desc", limit=20)
+        data = {
+            "schema_version": 1,
+            "event_id": event.id,
+            "event_type": event.event_type,
+            "source": event.source,
+            "event_date": str(event.event_date or ""),
+            "color": event.color,
+            "level_available": bool(event.level_available),
+            "level_percent": float(event.level_percent or 0) if event.level_available else None,
+            "counter_bn": int(event.counter_bn or 0) if event.counter_bn_available else None,
+            "counter_color": int(event.counter_color or 0) if event.counter_color_available else None,
+            "physical_replacement_confirmed": bool(event.physical_replacement_confirmed),
+            "equipment": {"id": equipment.id, "serial": equipment.serie or "", "model": equipment.name.name if equipment.name else ""},
+            "stock": stock,
+            "open_requests": [{"id": r.id, "sequence": r.secuencia, "state": r.state} for r in open_requests],
+            "allowed_decisions": ["create_request", "ignore", "review"],
+        }
+        return self._n8n_json({"success": True, "context": data})
+
+    @http.route(
+        "/toner/n8n/submission/<int:submission_id>", type="http",
+        auth="public", methods=["GET"], csrf=False, website=False,
+        sitemap=False,
+    )
+    def toner_n8n_submission_status(self, submission_id, **kwargs):
+        """Estado interno mínimo para correlación con los flujos n8n."""
+        if not self._n8n_authenticate():
+            return self._n8n_json({"success": False, "error": "unauthorized"}, 401)
+        if not self._n8n_enabled():
+            return self._n8n_json({"success": False, "error": "n8n_not_selected"}, 409)
+        submission = request.env["toner.counter.submission"].sudo().browse(submission_id).exists()
+        if not submission:
+            return self._n8n_json({"success": False, "error": "not_found"}, 404)
+        return self._n8n_json({
+            "success": True,
+            "submission_id": submission.id,
+            "sequence": submission.secuencia,
+            "state": submission.state,
+            "engine": submission.control_engine if "control_engine" in submission._fields else "odoo",
+            "delivery_state": submission.delivery_scheduled_id.state if submission.delivery_scheduled_id else None,
+        })

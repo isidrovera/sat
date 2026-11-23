@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import _, api, fields, models
+from statistics import median
 from odoo.exceptions import ValidationError
 
 
@@ -60,6 +61,23 @@ class ModeloToner(models.Model):
     active = fields.Boolean(
         string='Activo',
         default=True,
+    )
+
+    # Modalidad de detección del consumible. No se infiere desde las alertas
+    # porque la máquina puede usar cartuchos compatibles sin chip.
+    tipo_chip = fields.Selection(
+        [
+            ('unknown', 'No determinado'),
+            ('with_chip', 'Con chip'),
+            ('without_chip', 'Sin chip'),
+        ],
+        string='Identificación electrónica del tóner',
+        default='unknown',
+        tracking=True,
+        help=(
+            'Define la confiabilidad esperable de las alertas de nivel. '
+            'No confirma por sí solo ningún reemplazo físico.'
+        ),
     )
 
     # =========================================================
@@ -306,6 +324,85 @@ class ModeloToner(models.Model):
             record.modelo_maquina_count = len(
                 record.modelo_maquina_ids
             )
+
+    # =========================================================
+    # CONSULTA SEGURA DE RENDIMIENTO (NO MODIFICA HISTÓRICOS)
+    # =========================================================
+
+    def get_yield_reference_for_equipment(self, equipment=None, minimum_cycles=3):
+        """Obtiene la duración del catálogo o una estimación por ciclos físicos.
+
+        Devuelve un diccionario con pages, source y cycles. El valor nominal
+        del fabricante y la duración referencial nunca se sobrescriben.
+
+        Solo aprende con ciclos COMPLETADOS, confiables, de la misma máquina,
+        color y referencia de parte. Si no hay parte inequívoca o suficientes
+        ciclos, utiliza duracion_aplicable y NO inventa correspondencias.
+        """
+        self.ensure_one()
+        nominal = max(0, int(self.duracion_aplicable or 0))
+        fallback = {
+            'pages': nominal,
+            'source': 'catalog' if nominal else 'unavailable',
+            'cycles': 0,
+            'manufacturer_pages': max(0, int(self.duracion_fabricante or 0)),
+        }
+        if not equipment or not equipment.exists() or not self.usar_para_analisis_consumo:
+            return fallback
+        if self.color not in ('black', 'cyan', 'magenta', 'yellow'):
+            return fallback
+        # Una ficha comercial sin código de parte no identifica un cartucho
+        # con la precisión necesaria para promediar rendimientos.
+        valid_parts = {
+            (part or '').strip().upper()
+            for part in (self.codigo_parte, self.codigo_parte_alternativo)
+            if (part or '').strip()
+        }
+        if not valid_parts:
+            return fallback
+        try:
+            min_cycles = max(3, int(minimum_cycles))
+        except (TypeError, ValueError):
+            min_cycles = 3
+        History = self.env['toner.installation.history'].sudo()
+        cycles = History.search(
+            [
+                ('equipment_id', '=', equipment.id),
+                ('color', '=', self.color),
+                ('state', '=', 'finished'),
+                ('part_number', 'in', list(valid_parts)),
+                ('start_is_estimated', '=', False),
+                ('end_is_estimated', '=', False),
+            ],
+            order='end_date desc, id desc',
+            limit=60,
+        )
+        values = []
+        for cycle in cycles:
+            if not cycle.learning_eligible:
+                continue
+            if (cycle.part_number or '').strip().upper() not in valid_parts:
+                continue
+            copies = int(cycle.end_counter or 0) - int(cycle.start_counter or 0)
+            if copies > 0:
+                values.append(copies)
+            if len(values) >= 12:
+                break
+        if len(values) < min_cycles:
+            fallback['cycles'] = len(values)
+            return fallback
+        typical = float(median(values))
+        if len(values) >= 5:
+            trimmed = [v for v in values if typical * 0.4 <= v <= typical * 2.5]
+            if len(trimmed) >= min_cycles:
+                values = trimmed
+                typical = float(median(values))
+        return {
+            'pages': max(1, int(round(typical))),
+            'source': 'confirmed_cycles',
+            'cycles': len(values),
+            'manufacturer_pages': fallback['manufacturer_pages'],
+        }
 
     # =========================================================
     # ONCHANGE

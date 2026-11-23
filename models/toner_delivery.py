@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+"""Programación de entregas de tóner — archivo completo Odoo 19.
+
+Se conserva el modelo y su API actual. No crea módulos nuevos.
+El único origen de movimientos positivos de stock es la RECEPCIÓN
+confirmada, a través de toner.delivery.confirmation y la integración
+stock de toner.delivery.schedule.
+"""
 
 import logging
 from datetime import timedelta, datetime, date
@@ -17,6 +24,24 @@ class TonerDeliverySchedule(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _order = 'delivery_date_planned desc'
     _rec_name = 'display_name'
+
+    @api.model
+    def _toner_tracking_only_enabled(self):
+        """Una sola notificación inicial cuando el portal esté habilitado.
+
+        Flag compartido con toner.counter.submission. No se fuerza a True
+        mientras no exista la ruta pública segura de seguimiento.
+        """
+        value = self.env['ir.config_parameter'].sudo().get_param(
+            'sat.toner_tracking_enabled', 'False'
+        )
+        return str(value).strip().lower() in ('true', '1', 'yes', 'on')
+
+    @api.model
+    def _clean_delivery_phone(self, value):
+        value = ''.join(char for char in str(value or '') if char.isdigit())
+        return ('51' + value) if len(value) == 9 and not value.startswith('51') else value
+
 
     # ==========================================
     # CAMPO DISPLAY NAME
@@ -583,67 +608,44 @@ class TonerDeliverySchedule(models.Model):
 
     @api.constrains('equipment_id', 'toner_cyan_qty', 'toner_magenta_qty', 'toner_yellow_qty')
     def _check_color_toners_for_mono(self):
-        """Valida que no se programen tóners color para máquinas monocromáticas"""
+        """El valor real de tipo_maquina_id en alquiler es 'color'."""
         for record in self:
-            if (record.equipment_id and 
-                record.equipment_id.tipo_maquina_id == 'monocromatica' and
-                (record.toner_cyan_qty > 0 or record.toner_magenta_qty > 0 or record.toner_yellow_qty > 0)):
-                raise ValidationError("No se pueden programar tóners de color para máquinas monocromáticas.")
-    @api.constrains('equipment_id', 'toner_black_qty', 'toner_cyan_qty', 'toner_magenta_qty', 'toner_yellow_qty')
+            if (record.equipment_id
+                    and record.equipment_id.tipo_maquina_id != 'color'
+                    and any((record.toner_cyan_qty, record.toner_magenta_qty,
+                             record.toner_yellow_qty))):
+                raise ValidationError(
+                    'No se pueden programar tóneres de color para una máquina B/N.'
+                )
+
+    @api.constrains('equipment_id', 'calculation_basis', 'submission_id',
+                    'toner_black_qty', 'toner_cyan_qty', 'toner_magenta_qty', 'toner_yellow_qty')
     def _validate_toner_necessity(self):
-        """Valida que la entrega sea realmente necesaria basada en stock actual"""
+        """Impide generar despachos preventivos DIRECTOS con respaldo suficiente.
+
+        El control de necesidad comercial ya se realiza al aprobar una solicitud
+        y puede contener excepciones (falla, provincia, stock adicional). No
+        corresponde reabrir esa evaluación al crear el despacho aprobado.
+        """
         for record in self:
-            if record.calculation_basis == 'manual':
-                continue  # No validar entregas manuales
-                
             if not record.equipment_id or not record.equipment_id.name:
                 continue
-                
-            equipment = record.equipment_id
-            modelo = equipment.name
-            
-            # Solo validar si la gestión automática está activada
-            if not modelo.gestionar_toner_automatico:
-                continue
-            
-            validation_errors = []
-            
-            # Validar tóner negro
-            if record.toner_black_qty > 0:
-                if equipment.stock_total_toner_black >= modelo.stock_minimo_black + 1:
-                    validation_errors.append(
-                        f"Tóner Negro: Stock actual ({equipment.stock_total_toner_black}) supera el mínimo ({modelo.stock_minimo_black})"
+            if record.submission_id:
+                if record.submission_id.equipment_id != record.equipment_id:
+                    raise ValidationError(
+                        'La solicitud aprobada y la entrega deben pertenecer al mismo equipo.'
                     )
-            
-            # Validar tóners color para máquinas color
-            if equipment.tipo_maquina_id == 'color':
-                if record.toner_cyan_qty > 0:
-                    if equipment.stock_total_toner_cyan >= (modelo.stock_minimo_cyan or 1) + 1:
-                        validation_errors.append(
-                            f"Tóner Cian: Stock actual ({equipment.stock_total_toner_cyan}) supera el mínimo ({modelo.stock_minimo_cyan or 1})"
-                        )
-                
-                if record.toner_magenta_qty > 0:
-                    if equipment.stock_total_toner_magenta >= (modelo.stock_minimo_magenta or 1) + 1:
-                        validation_errors.append(
-                            f"Tóner Magenta: Stock actual ({equipment.stock_total_toner_magenta}) supera el mínimo ({modelo.stock_minimo_magenta or 1})"
-                        )
-                
-                if record.toner_yellow_qty > 0:
-                    if equipment.stock_total_toner_yellow >= (modelo.stock_minimo_yellow or 1) + 1:
-                        validation_errors.append(
-                            f"Tóner Amarillo: Stock actual ({equipment.stock_total_toner_yellow}) supera el mínimo ({modelo.stock_minimo_yellow or 1})"
-                        )
-            
-            if validation_errors:
-                raise ValidationError(
-                    f"La entrega programada para {equipment.serie} puede ser innecesaria:\n\n" + 
-                    "\n".join([f"• {error}" for error in validation_errors]) +
-                    f"\n\nSi desea proceder de todos modos, cambie la 'Base de Cálculo' a 'Creación Manual'."
-                )
-    # ==========================================
-    # MÉTODOS DE ACCIÓN - CAMBIO DE ESTADO
-    # ==========================================
+                continue
+            if record.calculation_basis != 'stock_minimo':
+                continue
+            # Política general: stock mínimo de 1 repuesto disponible. Llegar
+            # a 1 NO crea una nueva entrega; la reposición se evalúa al llegar
+            # a 0, y debe pasar por la solicitud y aprobación habituales.
+            raise ValidationError(
+                'No está permitido crear directamente un despacho por stock mínimo '
+                'sin una solicitud aprobada. Genere primero la solicitud de tóner '
+                'mediante el motor seleccionado (Odoo o n8n + IA).'
+            )
 
     def action_confirm(self):
         """Confirma la programación de entrega"""
@@ -675,49 +677,47 @@ class TonerDeliverySchedule(models.Model):
             )
 
     def action_send(self):
-        """Marca como enviado"""
+        """Despacha sin dar por recibidos los consumibles ni enviar mensajes dobles."""
         for record in self:
             if record.state != 'preparando':
                 raise UserError("Solo se pueden enviar entregas en preparación.")
-            
-            record.write({
-                'state': 'enviado',
-                'delivery_date_actual': fields.Date.today()
-            })
-            
+            record.write({'state': 'enviado'})
             record.message_post(
-                body=f"🚚 Entrega enviada por {self.env.user.name}",
-                message_type='notification'
+                body='🚚 Entrega enviada por %s' % self.env.user.name,
+                message_type='notification', subtype_xmlid='mail.mt_note'
             )
-            
-            # Enviar notificación al cliente
-            try:
-                record.send_shipping_notification()
-            except Exception as e:
-                _logger.error("Error enviando notificación de envío: %s", str(e))
+            # Modo enlace único: la notificación inicial sale de la solicitud,
+            # y el portal muestra el estado actualizado al abrir ese enlace.
+            if not record._toner_tracking_only_enabled():
+                try:
+                    record.send_shipping_notification()
+                except Exception:
+                    _logger.exception('Error notificando despacho %s', record.secuencia)
 
     def action_deliver(self):
-        """Marca como entregado y abre formulario de confirmación"""
+        """Abre UNA confirmación editable; todavía NO registra stock."""
         self.ensure_one()
-        
-        if self.state not in ['enviado', 'preparando']:
-            raise UserError("Solo se pueden entregar envíos en estado 'Enviado' o 'Preparando'.")
-        
-        # Crear confirmación de entrega
-        confirmation_vals = {
-            'schedule_id': self.id,
-            'equipment_id': self.equipment_id.id,
-            'delivery_date': fields.Date.today(),
-            'toner_black_delivered': self.toner_black_qty,
-            'toner_cyan_delivered': self.toner_cyan_qty,
-            'toner_magenta_delivered': self.toner_magenta_qty,
-            'toner_yellow_delivered': self.toner_yellow_qty,
-            'delivered_by_user': self.env.user.id
-        }
-        
-        confirmation = self.env['toner.delivery.confirmation'].create(confirmation_vals)
-        self.confirmation_id = confirmation.id
-        
+        if self.state not in ('enviado', 'preparando'):
+            raise UserError(
+                "Solo se pueden confirmar envíos en estado 'Enviado' o 'Preparando'."
+            )
+        if self.confirmation_id and self.confirmation_id.exists():
+            confirmation = self.confirmation_id
+            if confirmation.state == 'processed':
+                raise UserError('Esta entrega ya fue recibida y contabilizada.')
+        else:
+            # Las cantidades programadas son una SUGERENCIA editable: solo las
+            # entregadas y confirmadas se contabilizan en el kardex.
+            confirmation = self.env['toner.delivery.confirmation'].create({
+                'schedule_id': self.id,
+                'delivery_date': fields.Date.today(),
+                'toner_black_delivered': self.toner_black_qty,
+                'toner_cyan_delivered': self.toner_cyan_qty,
+                'toner_magenta_delivered': self.toner_magenta_qty,
+                'toner_yellow_delivered': self.toner_yellow_qty,
+                'delivered_by_user': self.env.user.id,
+            })
+            self.write({'confirmation_id': confirmation.id})
         return {
             'name': 'Confirmar Entrega',
             'view_mode': 'form',
@@ -725,7 +725,7 @@ class TonerDeliverySchedule(models.Model):
             'res_id': confirmation.id,
             'type': 'ir.actions.act_window',
             'target': 'new',
-            'context': {'default_schedule_id': self.id}
+            'context': {'default_schedule_id': self.id},
         }
 
     def action_reschedule(self):
@@ -896,152 +896,53 @@ class TonerDeliverySchedule(models.Model):
                 "success": False,
             }
     def send_shipping_notification(self):
-        """Envía notificación de envío al cliente"""
+        """Compatibilidad: nunca generar segundo mensaje con enlace único."""
         self.ensure_one()
-        
-        # Limpiar número de teléfono
-        phone = self.contact_phone
+        if self._toner_tracking_only_enabled():
+            return False
+        phone = self._clean_delivery_phone(self.contact_phone)
         if not phone:
-            _logger.warning("No hay teléfono para notificar envío - Entrega: %s", self.secuencia)
             return False
-        
-        # Limpiar número
-        phone = phone.replace('+', '').replace(' ', '').replace('-', '')
-        phone = ''.join(filter(str.isdigit, phone))
-        
-        if not phone.startswith('51') and len(phone) == 9:
-            phone = '51' + phone
-        
-        try:
-            # Construir lista de tóners
-            toners_list = []
-            if self.toner_black_qty > 0:
-                toners_list.append(f"{self.toner_black_qty} tóner(es) negro")
-            if self.toner_cyan_qty > 0:
-                toners_list.append(f"{self.toner_cyan_qty} tóner(es) cian")
-            if self.toner_magenta_qty > 0:
-                toners_list.append(f"{self.toner_magenta_qty} tóner(es) magenta")
-            if self.toner_yellow_qty > 0:
-                toners_list.append(f"{self.toner_yellow_qty} tóner(es) amarillo")
-            
-            toners_text = ", ".join(toners_list) if toners_list else "tóner"
-            
-            # Determinar saludo según la hora
-            lima_tz = pytz.timezone('America/Lima')
-            current_time = datetime.now(lima_tz)
-            current_hour = current_time.hour
-
-            if 5 <= current_hour < 12:
-                saludo = "👋 Buenos días"
-            elif 12 <= current_hour < 18:
-                saludo = "👋 Buenas tardes"
-            else:
-                saludo = "👋 Buenas noches"
-
-            # Construir mensaje
-            equipment_name = self.equipment_id.name.name if self.equipment_id and self.equipment_id.name.name else 'su equipo'
-            
-            message = (
-                f"*🏢 Soporte*\n\n"
-                f"{saludo}!\n\n"
-                f"Le informamos que su pedido de tóner ha sido enviado:\n\n"
-                f"📋 *Orden:* {self.secuencia}\n"
-                f"🖨️ *Equipo:* {equipment_name}\n"
-                f"📦 *Contenido:* {toners_text}\n"
-                f"📅 *Fecha de envío:* {fields.Date.today().strftime('%d/%m/%Y')}\n"
-                f"📍 *Dirección:* {self.delivery_address or 'Dirección registrada'}\n"
-            )
-            
-            if self.tracking_number:
-                message += f"🔍 *Número de seguimiento:* {self.tracking_number}\n"
-            
-            if self.delivery_method == 'mensajeria':
-                message += f"\n📞 *El mensajero se comunicará con usted para coordinar la entrega.*\n"
-            elif self.delivery_method == 'tecnico':
-                message += f"\n👨‍🔧 *Nuestro técnico se comunicará para coordinar la entrega.*\n"
-            
-            message += (
-                f"\nSi tiene alguna consulta, no dude en contactarnos.\n\n"
-                
-            )
-
-            # Enviar mensaje
-            response = self.send_whatsapp_message(phone, message)
-            
-            if response and not response.get('error'):
-                self.message_post(
-                    body=f"✅ Notificación de envío enviada a {phone}",
-                    message_type='notification'
-                )
-                _logger.info("WhatsApp de envío enviado exitosamente - Entrega: %s, Teléfono: %s", 
-                           self.secuencia, phone)
-                return True
-            else:
-                error_msg = response.get('error', 'Error desconocido') if response else 'Sin respuesta'
-                self.message_post(
-                    body=f"❌ Error enviando notificación a {phone}: {error_msg}",
-                    message_type='notification'
-                )
-                _logger.error("Error enviando WhatsApp - Entrega: %s, Error: %s", self.secuencia, error_msg)
-                return False
-                
-        except Exception as e:
-            _logger.exception("Error en send_shipping_notification - Entrega: %s", self.secuencia)
-            self.message_post(
-                body=f"❌ Excepción enviando notificación: {str(e)}",
-                message_type='notification'
-            )
-            return False
+        toners = [
+            '%s %s' % (getattr(self, 'toner_%s_qty' % c), label)
+            for c, label in (
+                ('black', 'negro'), ('cyan', 'cian'),
+                ('magenta', 'magenta'), ('yellow', 'amarillo')
+            ) if getattr(self, 'toner_%s_qty' % c) > 0
+        ]
+        message = (
+            '*COPIER COMPANY S.A.C.*\n\n'
+            'Su entrega de tóner %s ha sido despachada.\n'
+            'Equipo: %s\nContenido: %s\n'
+        ) % (
+            self.secuencia,
+            self.equipment_id.name.name if self.equipment_id.name else 'Equipo',
+            ', '.join(toners),
+        )
+        if self.tracking_number:
+            message += 'Guía: %s\n' % self.tracking_number
+        response = self.send_whatsapp_message(phone, message)
+        return bool(response and response.get('success') and not response.get('error'))
 
     def send_delivery_reminder(self):
-        """Envía recordatorio de entrega próxima"""
+        """En modo enlace único no enviar recordatorios adicionales."""
         self.ensure_one()
-        
-        phone = self.contact_phone
+        if self._toner_tracking_only_enabled():
+            return False
+        phone = self._clean_delivery_phone(self.contact_phone)
         if not phone:
             return False
-        
-        # Limpiar número
-        phone = phone.replace('+', '').replace(' ', '').replace('-', '')
-        phone = ''.join(filter(str.isdigit, phone))
-        
-        if not phone.startswith('51') and len(phone) == 9:
-            phone = '51' + phone
-        
-        try:
-            # Construir mensaje de recordatorio
-            equipment_name = self.equipment_id.name.name if self.equipment_id and self.equipment_id.name.name else 'su equipo'
-            
-            message = (
-                f"*🏢 Soporte*\n\n"
-                f"👋 Recordatorio de entrega de tóner:\n\n"
-                f"📋 *Orden:* {self.secuencia}\n"
-                f"🖨️ *Equipo:* {equipment_name}\n"
-                f"📅 *Fecha programada:* {self.delivery_date_planned.strftime('%d/%m/%Y')}\n"
-                f"📍 *Dirección:* {self.delivery_address or 'Dirección registrada'}\n\n"
-                f"Por favor, asegúrese de que haya alguien disponible para recibir la entrega.\n\n"
-                f"Si necesita reprogramar, contáctenos:\n"
-               
-            )
-
-            response = self.send_whatsapp_message(phone, message)
-            
-            if response and not response.get('error'):
-                self.message_post(
-                    body=f"🔔 Recordatorio enviado a {phone}",
-                    message_type='notification'
-                )
-                return True
-            else:
-                return False
-                
-        except Exception as e:
-            _logger.exception("Error enviando recordatorio - Entrega: %s", self.secuencia)
-            return False
-
-    # ==========================================
-    # MÉTODOS DE REPORTE Y ANÁLISIS
-    # ==========================================
+        message = (
+            '*COPIER COMPANY S.A.C.*\n\n'
+            'Recordatorio: entrega %s programada para %s.\n'
+            'Equipo: %s'
+        ) % (
+            self.secuencia,
+            self.delivery_date_planned or 'Fecha pendiente',
+            self.equipment_id.name.name if self.equipment_id.name else 'Equipo',
+        )
+        response = self.send_whatsapp_message(phone, message)
+        return bool(response and response.get('success') and not response.get('error'))
 
     @api.model
     def get_pending_deliveries_count(self):
@@ -1053,10 +954,10 @@ class TonerDeliverySchedule(models.Model):
 
     @api.model
     def get_overdue_deliveries(self):
-        """Obtiene entregas atrasadas"""
+        """Buscar por fecha almacenada, no por campo compute no almacenado."""
         return self.search([
-            ('is_overdue', '=', True),
-            ('state', 'not in', ['entregado', 'cancelado'])
+            ('delivery_date_planned', '<', fields.Date.today()),
+            ('state', 'not in', ['entregado', 'cancelado']),
         ])
 
     @api.model
@@ -1108,92 +1009,70 @@ class TonerDeliverySchedule(models.Model):
 
     @api.model
     def send_daily_delivery_reminders(self):
-        """Envía recordatorios diarios de entregas próximas (para cron)"""
+        """Cron legado: sin mensajes repetidos si seguimiento está activado."""
+        if self._toner_tracking_only_enabled():
+            return 0
         tomorrow = fields.Date.today() + timedelta(days=1)
-        
-        # Buscar entregas para mañana
         deliveries = self.search([
             ('delivery_date_planned', '=', tomorrow),
             ('state', 'in', ['confirmado', 'preparando']),
         ])
-        
         sent_count = 0
         for delivery in deliveries:
             try:
                 if delivery.send_delivery_reminder():
                     sent_count += 1
-            except Exception as e:
-                _logger.error("Error enviando recordatorio para entrega %s: %s", delivery.secuencia, str(e))
-        
-        _logger.info("Recordatorios de entrega enviados: %d de %d", sent_count, len(deliveries))
+            except Exception:
+                _logger.exception('Error recordatorio entrega %s', delivery.secuencia)
         return sent_count
 
     @api.model
     def auto_create_delivery_from_low_stock(self):
-        """Crea entregas automáticas basadas en stock bajo (para cron)"""
-        # Buscar equipos con stock bajo
-        equipos_bajo_stock = self.env['alquiler'].search([
-            ('estado_alquiler_id', '=', 'alquilada'),
-            ('estado_stock_toner', 'in', ['critico', 'bajo']),
-            ('name.gestionar_toner_automatico', '=', True)
-        ])
-        
-        created_count = 0
-        for equipo in equipos_bajo_stock:
-            # Verificar si ya tiene una entrega programada pendiente
-            existing_delivery = self.search([
-                ('equipment_id', '=', equipo.id),
-                ('state', 'in', ['programado', 'confirmado', 'preparando', 'enviado']),
-            ], limit=1)
-            
-            if existing_delivery:
-                continue  # Ya tiene entrega pendiente
-            
-            try:
-                # Crear entrega automática
-                delivery_vals = self._prepare_auto_delivery_values(equipo)
-                if delivery_vals:
-                    self.create(delivery_vals)
-                    created_count += 1
-            except Exception as e:
-                _logger.error("Error creando entrega automática para equipo %s: %s", equipo.serie, str(e))
-        
-        _logger.info("Entregas automáticas creadas: %d", created_count)
-        return created_count
+        """Desactiva SOLO el atajo inseguro de despacho automático antiguo.
+
+        La reposición automática sigue entrando por toner.monitoring.event y
+        toner.counter.submission, conservando evaluación/gerencia. El cron
+        anterior intentaba crear entregas directamente, usando un campo
+        computado no almacenado y sin respetar solicitudes ni aprobación.
+        Nunca se debe registrar una entrega para un cliente sin autorización.
+        """
+        _logger.info(
+            '[TONER] Cron legado de despacho directo omitido: '
+            'la reposición debe pasar por solicitud y aprobación.'
+        )
+        return 0
 
     @api.model
     def _prepare_auto_delivery_values(self, equipo):
-        """Prepara valores para entrega automática"""
-        if not equipo.name:
-            return False
-        
-        modelo = equipo.name
-        
-        # Calcular fecha de entrega
-        delivery_date = fields.Date.today() + timedelta(days=(modelo.tiempo_entrega_dias or 2))
-        
-        # Determinar cantidades necesarias
-        qty_black = max(1, (modelo.stock_minimo_black or 1) - equipo.stock_total_toner_black + 1) if equipo.stock_total_toner_black <= (modelo.stock_minimo_black or 1) else 0
-        qty_cyan = max(1, (modelo.stock_minimo_cyan or 1) - equipo.stock_total_toner_cyan + 1) if equipo.tipo_maquina_id == 'color' and equipo.stock_total_toner_cyan <= (modelo.stock_minimo_cyan or 1) else 0
-        qty_magenta = max(1, (modelo.stock_minimo_magenta or 1) - equipo.stock_total_toner_magenta + 1) if equipo.tipo_maquina_id == 'color' and equipo.stock_total_toner_magenta <= (modelo.stock_minimo_magenta or 1) else 0
-        qty_yellow = max(1, (modelo.stock_minimo_yellow or 1) - equipo.stock_total_toner_yellow + 1) if equipo.tipo_maquina_id == 'color' and equipo.stock_total_toner_yellow <= (modelo.stock_minimo_yellow or 1) else 0
-        
-        # Verificar que haya algo que entregar
-        if qty_black + qty_cyan + qty_magenta + qty_yellow == 0:
-            return False
-        
-        return {
-            'equipment_id': equipo.id,
-            'delivery_date_planned': delivery_date,
-            'toner_black_qty': qty_black,
-            'toner_cyan_qty': qty_cyan,
-            'toner_magenta_qty': qty_magenta,
-            'toner_yellow_qty': qty_yellow,
-            'calculation_basis': 'stock_minimo',
-            'priority': 'alta' if equipo.estado_stock_toner == 'critico' else 'normal',
-            'notes': f"Entrega automática generada por stock {equipo.estado_stock_toner}"
-        }
+        """Prepara una propuesta NO ejecutable para el antiguo cron.
 
+        Se conserva la firma pública por compatibilidad, pero nunca crea
+        despachos sin el proceso de solicitud. El mínimo físico es 1 unidad
+        de respaldo; no se solicita si permanece al menos una.
+        """
+        if not equipo or equipo.estado_alquiler_id != 'alquilada' or not equipo.name:
+            return False
+        if 'get_current_stock' not in dir(self.env['toner.stock.movement']):
+            return False
+        Movement = self.env['toner.stock.movement'].sudo()
+        qty = {}
+        for color in ('black', 'cyan', 'magenta', 'yellow'):
+            if color != 'black' and equipo.tipo_maquina_id != 'color':
+                continue
+            available = Movement.get_current_stock(equipo, color)
+            if available <= 0:
+                qty['toner_%s_qty' % color] = 1
+        if not qty:
+            return False
+        days = int(getattr(equipo.name, 'tiempo_entrega_dias', 2) or 2)
+        vals = {
+            'equipment_id': equipo.id,
+            'delivery_date_planned': fields.Date.today() + timedelta(days=max(days, 0)),
+            'calculation_basis': 'stock_minimo',
+            'notes': 'Propuesta preliminar: requiere solicitud y aprobación.',
+        }
+        vals.update(qty)
+        return vals
 
     def action_view_equipment(self):
         """Muestra el equipo relacionado"""

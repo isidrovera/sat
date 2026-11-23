@@ -93,6 +93,13 @@ class UnidadAlquiler(models.Model):
         help="Stock de respaldo amarillo calculado desde el kardex.",
     )
 
+    stock_toner_confirmado = fields.Boolean(
+        string="Stock con historial confirmado",
+        compute="_compute_toner_dashboard_fields",
+        store=False,
+        help="Se verifica que exista al menos un movimiento de stock por cada color aplicable.",
+    )
+
     # ============================================================
     # CARTUCHO INSTALADO - COMPATIBILIDAD
     # ============================================================
@@ -278,6 +285,23 @@ class UnidadAlquiler(models.Model):
         compute="_compute_toner_levels",
         store=False,
     )
+
+    # La pantalla puede diferenciar 0% real de lectura ausente sin reemplazar
+    # los campos históricos nivel_toner_* que ya consumen las vistas.
+    nivel_toner_black_disponible = fields.Boolean(compute="_compute_toner_levels")
+    nivel_toner_cyan_disponible = fields.Boolean(compute="_compute_toner_levels")
+    nivel_toner_magenta_disponible = fields.Boolean(compute="_compute_toner_levels")
+    nivel_toner_yellow_disponible = fields.Boolean(compute="_compute_toner_levels")
+
+    _TONER_LEVEL_SOURCE = [
+        ("unknown", "No disponible"),
+        ("reported", "Lectura reportada"),
+        ("estimated", "Estimación por rendimiento"),
+    ]
+    fuente_nivel_toner_black = fields.Selection(_TONER_LEVEL_SOURCE, compute="_compute_toner_levels")
+    fuente_nivel_toner_cyan = fields.Selection(_TONER_LEVEL_SOURCE, compute="_compute_toner_levels")
+    fuente_nivel_toner_magenta = fields.Selection(_TONER_LEVEL_SOURCE, compute="_compute_toner_levels")
+    fuente_nivel_toner_yellow = fields.Selection(_TONER_LEVEL_SOURCE, compute="_compute_toner_levels")
 
     # ============================================================
     # TOTAL FÍSICO
@@ -470,58 +494,68 @@ class UnidadAlquiler(models.Model):
         )
 
     def _get_latest_toner_level_event(self, color):
-        self.ensure_one()
+        """Última lectura REAL de nivel, nunca un cero por dato ausente.
 
-        return self.env[
-            "toner.monitoring.event"
-        ].sudo().search(
+        level_available existe en toner.monitoring.event y representa la
+        disponibilidad real del porcentaje. No se consideran eventos de
+        agotamiento inferido como si midieran el nivel del cartucho.
+        """
+        self.ensure_one()
+        return self.env["toner.monitoring.event"].sudo().search(
             [
                 ("equipment_id", "=", self.id),
                 ("color", "=", color),
+                ("level_available", "=", True),
                 ("level_percent", ">=", 0),
-                (
-                    "event_type",
-                    "in",
-                    [
-                        "level",
-                        "normal",
-                        "low",
-                        "critical",
-                        "empty",
-                        "replaced",
-                    ],
-                ),
+                ("level_percent", "<=", 100),
+                ("event_type", "in", [
+                    "level", "normal", "low", "critical", "empty", "replaced",
+                ]),
             ],
             order="event_date desc, id desc",
             limit=1,
         )
 
     def _get_toner_min_stock(self, color):
-        """
-        Stock mínimo se interpreta como stock de respaldo esperado
-        en el cliente, no como cartucho instalado.
+        """Mínimo de respaldo: al menos 1; no es un máximo de unidades.
+
+        Tener 1 repuesto significa contar con el respaldo mínimo. Para la
+        política acordada, la reposición ordinaria comienza al utilizarlo
+        (saldo 0), salvo un caso excepcional evaluado por ventas/gerencia.
         """
         self.ensure_one()
-
-        if not self.name:
-            return 1
-
+        configured = 1
         field_name = "stock_minimo_%s" % color
+        if self.name and field_name in self.name._fields:
+            configured = int(getattr(self.name, field_name, 1) or 0)
+        return max(1, configured)
 
-        if field_name in self.name._fields:
-            return max(
-                0,
-                int(
-                    getattr(
-                        self.name,
-                        field_name,
-                        0,
-                    )
-                    or 0
-                ),
-            )
+    def _get_toner_reserve_snapshot(self, color):
+        """Saldo físico de respaldo y bandera de inventario conocido.
 
-        return 1
+        No se infiere inventario cero cuando jamás se registró un movimiento.
+        Los cartuchos instalados y las entregas en tránsito no se suman.
+        """
+        self.ensure_one()
+        Movement = self.env["toner.stock.movement"].sudo()
+        latest = Movement.search([
+            ("equipment_id", "=", self.id),
+            ("color", "=", color),
+            ("state", "=", "posted"),
+        ], order="id desc", limit=1)
+        return {
+            "known": bool(latest),
+            "reserve": max(0, int(latest.stock_after or 0)) if latest else 0,
+            "last_movement_id": latest.id if latest else False,
+        }
+
+    def _get_toner_expected_yield(self, color):
+        """Misma fuente de rendimiento para Odoo y para datos enviados a IA."""
+        self.ensure_one()
+        if not self.name:
+            return 0
+        Submission = self.env["toner.counter.submission"].sudo()
+        return max(0, int(Submission._get_expected_yield(self, color) or 0))
 
     # ============================================================
     # COMPATIBILIDAD: CICLO ACTUAL
@@ -698,77 +732,46 @@ class UnidadAlquiler(models.Model):
     # ============================================================
 
     def _compute_toner_levels(self):
+        """Nivel informado o estimado para la interfaz, sin falsos 0%.
+
+        En máquinas sin chip, el porcentaje de PrintTracker puede ser
+        inexacto: se prefiere la proyección del ciclo cuando está validado.
+        Cuando no se sabe el nivel, se conserva el 0 del campo heredado
+        únicamente por compatibilidad y se marca disponible=False.
+        """
         for record in self:
             for color in record._toner_colors():
-                event = (
-                    record._get_latest_toner_level_event(
-                        color
-                    )
-                )
-
-                level = False
-
-                if event:
-                    level = float(
-                        event.level_percent
-                        or 0.0
-                    )
-
-                # Si no hay lectura de nivel, estimar desde rendimiento
-                # del ciclo únicamente para visualización.
-                if not event:
-                    cycle = (
-                        record._get_active_toner_cycle(
-                            color
-                        )
-                    )
-
-                    if cycle:
-                        expected = int(
-                            cycle.expected_yield
-                            or 0
-                        )
-
-                        if expected > 0:
-                            current = (
-                                record._get_current_counter(
-                                    color
-                                )
-                            )
-
-                            used = max(
-                                0,
-                                current
-                                - int(
-                                    cycle.start_counter
-                                    or 0
-                                ),
-                            )
-
-                            level = max(
-                                0.0,
-                                min(
-                                    100.0,
-                                    (
-                                        (
-                                            expected
-                                            - used
-                                        )
-                                        / expected
-                                    )
-                                    * 100.0,
-                                ),
-                            )
-
-                setattr(
-                    record,
-                    "nivel_toner_%s" % color,
-                    float(
-                        level
-                        if level is not False
-                        else 0.0
-                    ),
-                )
+                reported = record._get_latest_toner_level_event(color)
+                cycle = record._get_active_toner_cycle(color)
+                reliable_chip = True
+                if record.name:
+                    for field_name in (
+                        "toner_modelo_%s" % color,
+                        "modelo_toner_%s_id" % color,
+                        "toner_%s_id" % color,
+                    ):
+                        field = record.name._fields.get(field_name)
+                        if field and getattr(field, "type", None) == "many2one" and getattr(field, "comodel_name", None) == "modelo.toner":
+                            toner = record.name[field_name]
+                            if toner and toner.tipo_chip == "without_chip":
+                                reliable_chip = False
+                            break
+                level = None
+                source = "unknown"
+                if reported and reliable_chip:
+                    level = max(0.0, min(100.0, float(reported.level_percent)))
+                    source = "reported"
+                if level is None and cycle and not cycle.start_is_estimated:
+                    expected = int(cycle.expected_yield or 0) or record._get_toner_expected_yield(color)
+                    current = record._get_current_counter(color)
+                    start = int(cycle.start_counter or 0)
+                    if expected > 0 and current >= start and current > 0 and start > 0:
+                        used = current - start
+                        level = max(0.0, min(100.0, 100.0 * (expected - used) / expected))
+                        source = "estimated"
+                setattr(record, "nivel_toner_%s" % color, float(level) if level is not None else 0.0)
+                setattr(record, "nivel_toner_%s_disponible" % color, level is not None)
+                setattr(record, "fuente_nivel_toner_%s" % color, source)
 
     # ============================================================
     # STOCK Y ESTADO GENERAL
@@ -835,8 +838,11 @@ class UnidadAlquiler(models.Model):
                 ]
 
             states = []
+            known_stock_colors = []
 
             for color in colors_to_evaluate:
+                snapshot = record._get_toner_reserve_snapshot(color)
+                known_stock_colors.append(snapshot["known"])
                 client_stock = int(
                     stock.get(
                         color,
@@ -863,6 +869,7 @@ class UnidadAlquiler(models.Model):
                 else:
                     states.append("normal")
 
+            record.stock_toner_confirmado = bool(known_stock_colors) and all(known_stock_colors)
             if "critico" in states:
                 record.estado_stock_toner = "critico"
             elif "bajo" in states:
@@ -1264,340 +1271,120 @@ class UnidadAlquiler(models.Model):
     # ============================================================
 
     def _calcular_dias_restantes_toner(self):
-        """
-        Estimación conservadora para el tóner negro activo.
+        """Días estimados hasta agotar el cartucho negro instalado.
 
-        Se utiliza solamente como apoyo preventivo. Nunca crea despacho.
-
-        Se calcula usando:
-            - ciclo activo;
-            - contador actual;
-            - rendimiento esperado;
-            - consumo promedio de solicitudes históricas cuando existe.
+        None significa 'dato insuficiente', NUNCA equivale a 0 días.
+        Esta estimación se usa solo para alerta preventiva, no para
+        registrar consumo físico ni disminuir el kardex.
         """
         self.ensure_one()
-
-        cycle = self._get_active_toner_cycle(
-            "black"
-        )
-
-        if not cycle:
-            return 0
-
-        current = self._get_current_counter(
-            "black"
-        )
-
-        start = int(
-            cycle.start_counter
-            or 0
-        )
-
-        expected = int(
-            cycle.expected_yield
-            or 0
-        )
-
+        cycle = self._get_active_toner_cycle("black")
+        if not cycle or cycle.start_is_estimated:
+            return None
+        start = int(cycle.start_counter or 0)
+        current = self._get_current_counter("black")
+        if start <= 0 or current <= 0 or current < start:
+            return None
+        # Una sincronización reciente no es garantía de contador reciente.
+        latest_date = getattr(self, "fecha_ultima_actualizacion", False)
+        if not latest_date:
+            return None
+        dt = fields.Datetime.to_datetime(latest_date)
+        if dt > fields.Datetime.now() or dt < fields.Datetime.now() - timedelta(days=3):
+            return None
+        expected = int(cycle.expected_yield or 0) or self._get_toner_expected_yield("black")
         if expected <= 0:
-            expected = int(
-                self.env[
-                    "toner.installation.history"
-                ].sudo()._get_expected_yield_for_equipment(
-                    self,
-                    "black",
-                )
-                or 0
-            )
-
-        if expected <= 0:
-            return 30
-
-        used = max(
-            0,
-            current - start,
-        )
-
-        remaining = max(
-            0,
-            expected - used,
-        )
-
-        if remaining <= 0:
+            return None
+        remaining = max(0, expected - (current - start))
+        if remaining == 0:
             return 0
-
-        submissions = self.env[
-            "toner.counter.submission"
-        ].sudo().search(
-            [
-                ("equipment_id", "=", self.id),
-                (
-                    "state",
-                    "in",
-                    [
-                        "entregada",
-                        "en_despacho",
-                        "lista_despacho",
-                        "confirmacion_ventas",
-                        "aprobada_gerencia",
-                    ],
-                ),
-                ("counter_bn", ">", 0),
-            ],
-            order="submission_date desc, id desc",
-            limit=5,
-        )
-
-        if len(submissions) < 2:
-            delivery_days = (
-                int(
-                    getattr(
-                        self.name,
-                        "tiempo_entrega_dias",
-                        0,
-                    )
-                    or 0
-                )
-                if self.name
-                else 0
-            )
-
-            safety_days = (
-                int(
-                    getattr(
-                        self.name,
-                        "margen_seguridad_dias",
-                        0,
-                    )
-                    or 0
-                )
-                if self.name
-                else 0
-            )
-
-            return max(
-                1,
-                delivery_days
-                + safety_days
-                or 7,
-            )
-
-        total_days = 0
-        total_copies = 0
-
-        ordered = submissions.sorted(
-            key=lambda record: (
-                record.submission_date
-                or fields.Datetime.now()
-            ),
-            reverse=True,
-        )
-
-        for index in range(
-            len(ordered) - 1
-        ):
-            newer = ordered[index]
-            older = ordered[index + 1]
-
-            if (
-                not newer.submission_date
-                or not older.submission_date
-            ):
-                continue
-
-            days = (
-                fields.Datetime.to_datetime(
-                    newer.submission_date
-                )
-                - fields.Datetime.to_datetime(
-                    older.submission_date
-                )
-            ).days
-
-            copies = (
-                int(
-                    newer.counter_bn
-                    or 0
-                )
-                - int(
-                    older.counter_bn
-                    or 0
-                )
-            )
-
-            if days > 0 and copies > 0:
-                total_days += days
-                total_copies += copies
-
-        if (
-            total_days <= 0
-            or total_copies <= 0
-        ):
-            return 30
-
-        daily_average = (
-            total_copies
-            / total_days
-        )
-
-        if daily_average <= 0:
-            return 30
-
-        return max(
-            0,
-            int(
-                remaining
-                / daily_average
-            ),
-        )
+        Submission = self.env["toner.counter.submission"].sudo()
+        samples = Submission.search([
+            ("equipment_id", "=", self.id),
+            ("counter_bn", ">", 0),
+        ], order="submission_date desc, id desc", limit=8)
+        observed = []
+        ordered = samples.sorted(key=lambda r: r.submission_date or fields.Datetime.now())
+        previous = False
+        for sample in ordered:
+            if previous and sample.submission_date and previous.submission_date:
+                days = (fields.Datetime.to_datetime(sample.submission_date) -
+                        fields.Datetime.to_datetime(previous.submission_date)).total_seconds() / 86400.0
+                copies = int(sample.counter_bn or 0) - int(previous.counter_bn or 0)
+                if days >= 1 and copies > 0:
+                    observed.append(copies / days)
+            previous = sample
+        if not observed:
+            return None
+        from statistics import median
+        daily = median(observed)
+        return max(0, int(remaining / daily)) if daily > 0 else None
 
     def _crear_alerta_toner_preventiva(self):
-        """
-        La lógica antigua creaba toner.delivery.schedule directamente.
+        """Alerta preventiva sin despachos, duplicados ni stock ficticio.
 
-        La nueva lógica genera un toner.monitoring.event LOW que, a su vez,
-        crea/enlaza toner.counter.submission y respeta aprobación de gerencia.
-
-        Devuelve True solamente si creó un nuevo evento preventivo.
+        La modalidad Odoo/n8n se decide en toner.monitoring.event.
+        Nunca se crea una reposición automática si hay al menos un
+        cartucho de respaldo. La alerta LOW preventiva tampoco se emite
+        sin kardex conciliado o sin estimación sustentada de días.
         """
         self.ensure_one()
-
-        if not self.name:
+        if not self.name or self.estado_alquiler_id != "alquilada":
             return False
-
-        days_remaining = (
-            self._calcular_dias_restantes_toner()
-        )
-
-        critical_days = int(
-            getattr(
-                self.name,
-                "tiempo_total_prevencion",
-                0,
-            )
-            or 7
-        )
-
+        stock = self._get_toner_reserve_snapshot("black")
+        if not stock["known"] or stock["reserve"] >= 1:
+            return False
+        days_remaining = self._calcular_dias_restantes_toner()
+        if days_remaining is None:
+            return False
+        critical_days = int(getattr(self.name, "tiempo_total_prevencion", 0) or 7)
         if days_remaining > critical_days:
             return False
-
-        # Si ya existe solicitud negra abierta, no generar otro evento.
-        Submission = self.env[
-            "toner.counter.submission"
-        ].sudo()
-
-        open_states = getattr(
-            Submission,
-            "OPEN_STATES",
-            [
-                "recibida",
-                "evaluacion",
-                "pendiente_gerencia",
-                "aprobada_gerencia",
-                "confirmacion_ventas",
-                "lista_despacho",
-                "en_despacho",
-            ],
-        )
-
-        existing_submission = (
-            Submission.search(
-                [
-                    (
-                        "equipment_id",
-                        "=",
-                        self.id,
-                    ),
-                    (
-                        "state",
-                        "in",
-                        open_states,
-                    ),
-                    (
-                        "requiere_toner_black",
-                        "=",
-                        True,
-                    ),
-                ],
-                limit=1,
-            )
-        )
-
+        Submission = self.env["toner.counter.submission"].sudo()
+        open_states = getattr(Submission, "OPEN_STATES", [])
+        existing_submission = Submission.search([
+            ("equipment_id", "=", self.id),
+            ("state", "in", open_states),
+            ("requiere_toner_black", "=", True),
+        ], limit=1)
         if existing_submission:
             return False
-
-        today_key = fields.Date.to_string(
-            fields.Date.context_today(
-                self
-            )
-        )
-
-        external_event_id = (
-            "preventive:%s:black:%s"
-            % (
-                self.id,
-                today_key,
-            )
-        )
-
-        Event = self.env[
-            "toner.monitoring.event"
-        ].sudo()
-
-        existing_event = Event.search(
-            [
-                (
-                    "source",
-                    "=",
-                    "manual",
-                ),
-                (
-                    "external_event_id",
-                    "=",
-                    external_event_id,
-                ),
-            ],
-            limit=1,
-        )
-
-        if existing_event:
+        # Incluir protección de envío ya en curso, aunque no haya solicitud
+        # antigua asociada por migración de datos.
+        Delivery = self.env["toner.delivery.schedule"].sudo()
+        dispatch = Delivery.search([
+            ("equipment_id", "=", self.id),
+            ("state", "in", ["programado", "confirmado", "preparando", "enviado", "reprogramado"]),
+            ("toner_black_qty", ">", 0),
+        ], limit=1)
+        if dispatch:
             return False
-
-        counter_bn = (
-            self._get_current_counter(
-                "black"
+        today_key = fields.Date.to_string(fields.Date.context_today(self))
+        key = "preventive:%s:black:%s" % (self.id, today_key)
+        Event = self.env["toner.monitoring.event"].sudo()
+        if Event.search([
+            ("source", "=", "manual"),
+            ("external_event_id", "=", key),
+        ], limit=1):
+            return False
+        event = Event.create_normalized_event({
+            "equipment_id": self.id,
+            "source": "manual",
+            "external_event_id": key,
+            "event_type": "low",
+            "color": "black",
+            "event_date": fields.Datetime.now(),
+            "counter_bn": self._get_current_counter("black"),
+            "counter_bn_available": True,
+            "raw_description": _("Prevención: %s día(s) restantes, reserva confirmada 0.") % days_remaining,
+        })
+        if event:
+            self.message_post(
+                body=_("Alerta preventiva de tóner negro registrada: %s día(s) estimados. "
+                       "La evaluación se realizará en el motor seleccionado.") % days_remaining,
+                message_type="notification",
+                subtype_xmlid="mail.mt_note",
             )
-        )
-
-        event = (
-            Event.create_normalized_event(
-                {
-                    "equipment_id": self.id,
-                    "source": "manual",
-                    "external_event_id": external_event_id,
-                    "event_type": "low",
-                    "color": "black",
-                    "event_date": fields.Datetime.now(),
-                    "counter_bn": counter_bn,
-                    "raw_description": _(
-                        "Alerta preventiva: se estiman "
-                        "%s día(s) restantes."
-                    )
-                    % days_remaining,
-                }
-            )
-        )
-
-        self.message_post(
-            body=_(
-                "🔔 Alerta preventiva de tóner creada. "
-                "Estimación: %s día(s) restantes. "
-                "El evento fue enviado al flujo normal "
-                "de solicitud y aprobación."
-            )
-            % days_remaining,
-            message_type="notification",
-        )
-
         return bool(event)
 
     @api.model
@@ -1687,27 +1474,10 @@ class UnidadAlquiler(models.Model):
             ],
         )
 
+        rented = self.search(base_domain)
         return {
-            "equipos_criticos": self.search_count(
-                base_domain
-                + [
-                    (
-                        "estado_stock_toner",
-                        "=",
-                        "critico",
-                    )
-                ]
-            ),
-            "equipos_bajo_stock": self.search_count(
-                base_domain
-                + [
-                    (
-                        "estado_stock_toner",
-                        "=",
-                        "bajo",
-                    )
-                ]
-            ),
+            "equipos_criticos": sum(1 for rec in rented if rec.estado_stock_toner == "critico"),
+            "equipos_bajo_stock": sum(1 for rec in rented if rec.estado_stock_toner == "bajo"),
             "entregas_pendientes": self.env[
                 "toner.delivery.schedule"
             ].sudo().search_count(
