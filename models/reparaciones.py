@@ -247,9 +247,22 @@ class Reparaciones(models.Model):
                 vals['name'] = self.env['ir.sequence'].sudo().next_by_code('reparaciones.reparaciones') or '/'
                 _logger.info("Número secuencial asignado al campo 'name': %s", vals['name'])
 
-            if 'contometrok_id' in vals:
-                vals['contometro_inicial'] = vals['contometrok_id']
-                _logger.info("Asignado 'contometro_inicial' a partir de 'contometrok_id': %s", vals['contometro_inicial'])
+            # Copiar automáticamente el contómetro inicial de la máquina
+            if 'contometro_inicial' not in vals:
+                if 'contometrok_id' in vals:
+                    vals['contometro_inicial'] = vals['contometrok_id']
+                elif vals.get('maquina_id'):
+                    maquina = self.env['sat.sat'].browse(
+                        vals['maquina_id']
+                    ).exists()
+
+                    if maquina:
+                        vals['contometro_inicial'] = maquina.contometro
+
+            _logger.info(
+                "Contómetro inicial asignado: %s",
+                vals.get('contometro_inicial')
+            )
 
         try:
             records = super(Reparaciones, self).create(vals_list)
