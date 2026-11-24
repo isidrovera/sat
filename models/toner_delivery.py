@@ -895,14 +895,30 @@ class TonerDeliverySchedule(models.Model):
                 "error": str(e),
                 "success": False,
             }
+    def _get_delivery_customer_recipient(self):
+        """Nombre del destinatario para mensajes de logística (no el remitente).
+
+        Priorizamos la persona de contacto del equipo, porque los avisos se envían
+        a ese teléfono. Si falta, usamos al solicitante y luego al cliente.
+        """
+        self.ensure_one()
+        contact = (self.contact_person or '').strip()
+        requester = (
+            (self.submission_id.client_name or '').strip()
+            if self.submission_id else ''
+        )
+        company = (self.partner_id.name or '').strip() if self.partner_id else ''
+        return contact or requester or company or 'cliente', company
+
     def send_shipping_notification(self):
-        """Compatibilidad: nunca generar segundo mensaje con enlace único."""
+        """Aviso de despacho solo en modo legado; nunca duplicar enlace único."""
         self.ensure_one()
         if self._toner_tracking_only_enabled():
             return False
         phone = self._clean_delivery_phone(self.contact_phone)
         if not phone:
             return False
+        recipient, company = self._get_delivery_customer_recipient()
         toners = [
             '%s %s' % (getattr(self, 'toner_%s_qty' % c), label)
             for c, label in (
@@ -911,34 +927,41 @@ class TonerDeliverySchedule(models.Model):
             ) if getattr(self, 'toner_%s_qty' % c) > 0
         ]
         message = (
-            '*COPIER COMPANY S.A.C.*\n\n'
-            'Su entrega de tóner %s ha sido despachada.\n'
+            'Estimado/a *%s*,\n\n'
+            'Su entrega de tóner *%s* ha sido despachada.\n'
+            '%s'
             'Equipo: %s\nContenido: %s\n'
         ) % (
+            recipient,
             self.secuencia,
+            'Empresa: %s\n' % company if company else '',
             self.equipment_id.name.name if self.equipment_id.name else 'Equipo',
             ', '.join(toners),
         )
         if self.tracking_number:
-            message += 'Guía: %s\n' % self.tracking_number
+            message += 'Guía: %s\n' % self.tracking_number        
         response = self.send_whatsapp_message(phone, message)
         return bool(response and response.get('success') and not response.get('error'))
 
     def send_delivery_reminder(self):
-        """En modo enlace único no enviar recordatorios adicionales."""
+        """Aviso de programación solo en modo legado, sin enlaces duplicados."""
         self.ensure_one()
         if self._toner_tracking_only_enabled():
             return False
         phone = self._clean_delivery_phone(self.contact_phone)
         if not phone:
             return False
+        recipient, company = self._get_delivery_customer_recipient()
         message = (
-            '*COPIER COMPANY S.A.C.*\n\n'
-            'Recordatorio: entrega %s programada para %s.\n'
-            'Equipo: %s'
+            'Estimado/a *%s*,\n\n'
+            'Le recordamos que la entrega *%s* está programada para *%s*.\n'
+            '%s'
+            'Equipo: %s\n\n'            
         ) % (
+            recipient,
             self.secuencia,
-            self.delivery_date_planned or 'Fecha pendiente',
+            self.delivery_date_planned or 'fecha pendiente',
+            'Empresa: %s\n' % company if company else '',
             self.equipment_id.name.name if self.equipment_id.name else 'Equipo',
         )
         response = self.send_whatsapp_message(phone, message)

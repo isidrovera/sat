@@ -4033,12 +4033,54 @@ class TonerCounterSubmission(models.Model):
             if tracking_enabled:
                 if record.tracking_message_sent_at:
                     continue
-                message = _(
-                    "*COPIER COMPANY S.A.C.*\n\n"
-                    "Su solicitud de tóner *%(sequence)s* fue registrada.\n"
-                    "Consulte su estado actualizado en este enlace:\n%(url)s"
+                # Cliente contractual del equipo y contacto que presentó el pedido.
+                # No confundir la empresa remitente con la empresa solicitante.
+                customer_name = (record.partner_id.name or "").strip() if record.partner_id else ""
+                requester_name = (record.client_name or "").strip()
+                if not customer_name:
+                    customer_name = "Cliente"
+                if not requester_name:
+                    requester_name = customer_name
+
+                color_quantities = (
+                    ("black", "Negro", "⚫"),
+                    ("cyan", "Cian", "🔵"),
+                    ("magenta", "Magenta", "🟣"),
+                    ("yellow", "Amarillo", "🟡"),
+                )
+                toner_lines = []
+                for color_key, color_label, color_icon in color_quantities:
+                    quantity = max(0, int(getattr(
+                        record, "cantidad_solicitada_%s" % color_key, 0
+                    ) or 0))
+                    if quantity:
+                        toner_lines.append("%s %s: %s" % (color_icon, color_label, quantity))
+                toner_detail = "\n".join(toner_lines) if toner_lines else "Por confirmar"
+                model_name = (
+                    record.equipment_id.name.name
+                    if record.equipment_id and record.equipment_id.name
+                    else "Sin modelo"
+                )
+                serial = record.equipment_id.serie if record.equipment_id else ""
+                message = (
+                    "📦 *SOLICITUD DE TÓNER REGISTRADA*\n\n"
+                    "Estimado/a *%(requester)s*,\n"
+                    "Hemos recibido su solicitud para *%(customer)s*.\n\n"
+                    "📋 *Solicitud:* %(sequence)s\n"
+                    "🖨️ *Equipo:* %(model)s\n"
+                    "🔢 *Serie:* %(serial)s\n\n"
+                    "*Tóner solicitado:*\n%(toners)s\n\n"
+                    "🔗 *Consulte el estado de su pedido aquí:*\n%(url)s\n\n"
+                    "Este enlace le permitirá revisar el avance sin solicitar "
+                    "actualizaciones por WhatsApp.\n\n"
+                    
                 ) % {
-                    "sequence": record.secuencia,
+                    "requester": requester_name,
+                    "customer": customer_name,
+                    "sequence": record.secuencia or "",
+                    "model": model_name,
+                    "serial": serial or "Sin serie",
+                    "toners": toner_detail,
                     "url": record.get_customer_tracking_url(),
                 }
                 if record.send_whatsapp_message(record.client_phone_clean, message):
