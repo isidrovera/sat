@@ -841,7 +841,7 @@ class ModelosMaquina(models.Model):
     def _onchange_modelo_referencia(self):
         if not self.modelo_referencia_id:
             return
-        if not self.id or isinstance(self.id, models.NewId):
+        if not isinstance(self.id, int) or self.id <= 0:
             comp_count = self.env[
                 'modelo.maquina.componente'
             ].search_count(
@@ -905,7 +905,7 @@ class ModelosMaquina(models.Model):
                 'componentes': 0,
                 'accesorios': 0,
             }
-        if not self.id or isinstance(self.id, models.NewId):
+        if not isinstance(self.id, int) or self.id <= 0:
             return {
                 'componentes': 0,
                 'accesorios': 0,

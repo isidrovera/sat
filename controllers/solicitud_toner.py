@@ -370,7 +370,7 @@ $company_row
 <div class="steps">$steps</div></section></div>
 <div class="notice">$info_icon<div><strong>$status_label</strong><p>$status_description</p></div></div>
 $delivery_html
-<div class="footer">$refresh_icon<span>Información actualizada desde Odoo. Esta página se actualiza cada 60 segundos.</span></div>
+<div class="footer">$refresh_icon<span>Esta página se actualiza cada 60 segundos.</span></div>
 </main></body></html>""").substitute(
             printer_icon=icons["printer"], document_icon=icons["document"],
             barcode_icon=icons["barcode"], check_icon=(icons["info"] if is_exception else icons["check"]),
