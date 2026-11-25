@@ -420,6 +420,29 @@ class SatVisitaTecnica(models.Model):
             ('estado', 'in', ESTADOS_ACTIVOS),
         ], limit=1)
 
+    @api.model
+    def _gps_siguiente_visita_principal(self, tecnico, desde, hasta):
+        """Prioridad: recorrido activo (incluso de otro día), luego agenda de hoy.
+        Un apoyo activo impide iniciar otro recorrido principal.
+        """
+        visitas = self.sudo()
+        activa = visitas.search([
+            ('tecnico_id', '=', tecnico.id),
+            ('estado', 'in', ESTADOS_ACTIVOS),
+        ], order='agenda asc, id asc', limit=1)
+        if activa:
+            return activa
+        apoyo = self.env['sat.visita.tecnico'].sudo().search([
+            ('tecnico_id', '=', tecnico.id), ('estado', 'in', ESTADOS_ACTIVOS),
+        ], limit=1)
+        if apoyo:
+            return visitas.browse()
+        return visitas.search([
+            ('tecnico_id', '=', tecnico.id), ('estado', '=', 'programada'),
+            ('agenda', '>=', desde), ('agenda', '<=', hasta),
+            ('ticket_ids.estado', '=', 'proceso'),
+        ], order='agenda asc, id asc', limit=1)
+
     def _validar_siguiente_ruta(self):
         self.ensure_one()
 
@@ -592,6 +615,9 @@ class SatVisitaTecnica(models.Model):
         fecha = self._validar_fecha(fecha_evento, 'Inicio GPS de ruta')
         self._validar_fuente('traccar', referencia)
         self._validar_siguiente_ruta()
+        desde, hasta = self.env['ticket.alquiler']._get_rango_hoy()
+        if self._gps_siguiente_visita_principal(self.tecnico_id, desde, hasta) != self:
+            return False
         self._validar_tickets()
         if self.estado != 'programada':
             return False
@@ -646,6 +672,10 @@ class SatVisitaTecnica(models.Model):
 
         self._validar_fuente(fuente, referencia)
         self._lock_tecnico()
+        if fuente == 'traccar':
+            desde, hasta = self.env['ticket.alquiler']._get_rango_hoy()
+            if self._gps_siguiente_visita_principal(self.tecnico_id, desde, hasta) != self:
+                return False
         self._validar_tickets()
 
         if self.fecha_llegada:
@@ -1063,8 +1093,12 @@ class TicketAlquilerVisita(models.Model):
             if ticket.gps_visita_id:
                 continue
 
-            desde = ticket.agenda - timedelta(minutes=30)
-            hasta = ticket.agenda + timedelta(minutes=30)
+            from datetime import datetime, time, timezone
+            from zoneinfo import ZoneInfo
+            lima = ZoneInfo('America/Lima')
+            dia = ticket.agenda.replace(tzinfo=timezone.utc).astimezone(lima).date()
+            desde = datetime.combine(dia, time.min, tzinfo=lima).astimezone(timezone.utc).replace(tzinfo=None)
+            hasta = datetime.combine(dia, time.max, tzinfo=lima).astimezone(timezone.utc).replace(tzinfo=None)
             candidatas = Visita.search([
                 ('partner_id', '=', ticket.partner_id.id),
                 ('agenda', '>=', desde),
@@ -1080,9 +1114,26 @@ class TicketAlquilerVisita(models.Model):
                     candidata.latitud, candidata.longitud,
                     ticket.equipo_latitud, ticket.equipo_longitud,
                 )
-                if distancia <= DISTANCIA_SEDE_MAXIMA:
-                    visita = candidata
-                    break
+                if distancia > DISTANCIA_SEDE_MAXIMA:
+                    continue
+                if candidata.tecnico_id != ticket.responsable or candidata.estado != 'programada':
+                    # Conservar la regla existente de apoyo/visita activa.
+                    if abs((candidata.agenda - ticket.agenda).total_seconds()) > 1800:
+                        continue
+                else:
+                    agendas = [t.agenda for t in candidata.ticket_ids if t.agenda] + [candidata.agenda, ticket.agenda]
+                    intermedios = self.sudo().search([
+                        ('responsable', '=', ticket.responsable.id),
+                        ('id', '!=', ticket.id), ('id', 'not in', candidata.ticket_ids.ids),
+                        ('agenda', '>=', min(agendas)), ('agenda', '<=', max(agendas)),
+                        ('estado', 'in', ['nuevo', 'proceso', 'en_ruta', 'en_sitio', 'en_revision']),
+                    ])
+                    if any(t.partner_id != ticket.partner_id or not Visita._coordenadas_validas(t.equipo_latitud, t.equipo_longitud)
+                           or Visita._distancia_metros(candidata.latitud, candidata.longitud, t.equipo_latitud, t.equipo_longitud) > DISTANCIA_SEDE_MAXIMA
+                           for t in intermedios):
+                        continue
+                visita = candidata
+                break
 
             if not visita:
                 visita = Visita.create({
@@ -1121,6 +1172,8 @@ class TicketAlquilerVisita(models.Model):
                 'gps_visita_id': visita.id,
             })
             ticket._gps_asegurar_responsable_participante()
+            if visita.estado == 'programada' and ticket.agenda < visita.agenda:
+                visita.write({'agenda': ticket.agenda})
             _logger.info(
                 '[SAT-GPS-VINCULO] ticket=%s visita=%s tecnico=%s estado_ticket=%s',
                 ticket.name, visita.id, ticket.responsable.id, ticket.estado,

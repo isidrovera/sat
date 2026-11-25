@@ -17,7 +17,7 @@ from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
 # Umbrales para confirmar salida física sin preguntar
-UMBRAL_MINUTOS_SITIO = 60   # minutos mínimos en sitio
+UMBRAL_MINUTOS_SITIO = 0    # sin permanencia mínima obligatoria
 UMBRAL_METROS_SALIDA = 150  # radio mínimo para comprobar el retiro físico
 
 
@@ -713,23 +713,29 @@ class TicketAlquilerTracking(models.Model):
 
     def action_en_revision(self):
         ahora = fields.Datetime.now()
+        procesados = self.browse()
         for ticket in self:
-            if ticket.estado not in ('en_sitio',):
-                raise UserError(_(
-                    "Solo se puede iniciar revision cuando el tecnico esta en sitio.\n"
-                    "Estado actual: %s"
-                ) % ticket.estado)
-            vals = {'estado': 'en_revision'}
-            if not ticket.fecha_inicio_revision:
-                vals['fecha_inicio_revision'] = ahora
-            ticket.write(vals)
-            ticket._registrar_evento(
-                f"Tecnico {ticket.responsable.name or 'N/A'} inicio revision"
-            )
+            if ticket in procesados:
+                continue
+            if ticket.estado != 'en_sitio':
+                raise UserError(_('Solo puede iniciar revisión desde En sitio.'))
+            participante = ticket._gps_participante_responsable()
+            if not participante or participante.estado != 'en_sitio' or participante.fecha_salida:
+                raise UserError(_('El técnico no tiene presencia física activa.'))
+            grupo = ticket.gps_visita_id.ticket_ids.filtered(
+                lambda t: t.responsable == ticket.responsable and t.estado == 'en_sitio')
+            for miembro in grupo:
+                vals = {'estado': 'en_revision'}
+                if not miembro.fecha_inicio_revision:
+                    vals['fecha_inicio_revision'] = ahora
+                miembro.write(vals)
+                miembro._registrar_evento('Inicio de revisión de la visita física')
+            procesados |= grupo
             try:
                 ticket.notificar_en_revision()
-            except Exception as e:
-                _logger.error("[TRACKING] Error notificando en_revision: %s", e)
+            except Exception:
+                _logger.exception('[TRACKING] Error notificando revisión visita=%s', ticket.gps_visita_id.id)
+        return True
 
     def action_registrar_salida_sitio(self, notificar=True, fecha_salida=None, fuente='manual'):
         """La visita confirma la salida; este método no finaliza servicios."""
@@ -863,72 +869,26 @@ class TicketAlquilerTracking(models.Model):
                     _logger.warning('[GPS-BLOQUEO] device=%s razon=fix_futuro fix=%s ahora=%s', device, instante, ahora)
                     continue
 
-                agenda_desde = ahora - timedelta(hours=2)
-                agenda_hasta = ahora + timedelta(hours=4)
-                visitas = Visita.search([
-                    ('tecnico_id', '=', tecnico.id),
-                    ('estado', '=', 'programada'),
-                    ('agenda', '>=', agenda_desde),
-                    ('agenda', '<=', agenda_hasta),
-                ])
-                # Diagnóstico de visitas fuera del filtro, sin cambiar la selección.
-                visitas_abiertas = Visita.search([
-                    ('tecnico_id', '=', tecnico.id),
-                    ('estado', 'in', ['programada', 'en_ruta', 'en_sitio', 'salida_pendiente']),
-                ], order='agenda desc', limit=30)
-                _logger.info('[GPS-DIAG] device=%s visitas_en_ventana=%s visitas_abiertas_muestra=%s '
-                             'agenda_desde=%s agenda_hasta=%s', device, len(visitas),
-                             len(visitas_abiertas), agenda_desde, agenda_hasta)
-                ids_en_ventana = set(visitas.ids)
-                for fuera in visitas_abiertas:
-                    if fuera.id not in ids_en_ventana:
-                        _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=fuera_filtro_visita '
-                                     'estado=%s agenda=%s tickets=%s', device, fuera.id,
-                                     fuera.estado, fuera.agenda, [(t.name, t.estado) for t in fuera.ticket_ids])
-                candidatas = Visita.browse()
-                for visita in visitas:
-                    tickets = visita.ticket_ids
-                    tickets_elegibles = tickets.filtered(lambda t: t.estado == 'proceso' and t.traccar_geofence_id)
-                    destino_valido = visita._coordenadas_validas(visita.latitud, visita.longitud)
-                    metros = (self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
-                              if destino_valido else None)
-                    motivos = []
-                    if not tickets:
-                        motivos.append('visita_sin_tickets')
-                    if not tickets_elegibles:
-                        motivos.append('sin_ticket_proceso_con_geocerca')
-                    if not destino_valido:
-                        motivos.append('destino_sin_coordenadas_validas')
-                    if metros is not None and metros < 150:
-                        motivos.append('distancia_menor_150m')
-                    if metros is not None and metros > 20000:
-                        motivos.append('distancia_mayor_20km')
-                    _logger.info('[GPS-DIAG] device=%s visita=%s estado_visita=%s agenda=%s '
-                                 'distancia_m=%s tickets=%s motivos=%s',
-                                 device, visita.id, visita.estado, visita.agenda,
-                                 round(metros, 1) if metros is not None else None,
-                                 [(t.name, t.estado, t.traccar_geofence_id, t.gps_visita_id.id) for t in tickets],
-                                 motivos or ['elegible'])
-                    if not motivos:
-                        candidatas |= visita
-                    else:
-                        _logger.warning('[GPS-BLOQUEO] device=%s visita=%s razones=%s',
-                                        device, visita.id, ','.join(motivos))
-
+                agenda_desde, agenda_hasta = self._get_rango_hoy()
                 clave = 'sat.gps.movimiento.%s' % device
-                if len(candidatas) != 1:
+                visita = Visita._gps_siguiente_visita_principal(tecnico, agenda_desde, agenda_hasta)
+                if not visita or visita.estado != 'programada':
                     Config.set_param(clave, '')
-                    _logger.warning('[GPS-BLOQUEO] device=%s razon=candidatas_no_unicas '
-                                    'cantidad=%s ids=%s anclaje_reiniciado=si',
-                                    device, len(candidatas), candidatas.ids)
+                    continue
+                tickets = visita.ticket_ids.filtered(lambda t: t.responsable == tecnico and t.estado == 'proceso')
+                if (not tickets or not any(t.traccar_geofence_id for t in tickets)
+                        or not visita._coordenadas_validas(visita.latitud, visita.longitud)):
+                    Config.set_param(clave, '')
+                    _logger.warning('[GPS-BLOQUEO] device=%s visita=%s primera_visita_no_elegible', device, visita.id)
+                    continue
+                metros = self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
+                _logger.info('[GPS-AGENDA] device=%s visita=%s agenda=%s distancia_m=%.1f tickets=%s',
+                             device, visita.id, visita.agenda, metros, tickets.mapped('name'))
+                if metros <= 150:
+                    # El cron de llegada verifica presencia sin inventar un recorrido.
+                    Config.set_param(clave, '')
                     continue
                 contadores['candidatas'] += 1
-                visita = candidatas[0]
-                if visita._otra_visita_activa():
-                    Config.set_param(clave, '')
-                    _logger.warning('[GPS-BLOQUEO] device=%s visita=%s razon=otra_visita_activa '
-                                    'anclaje_reiniciado=si', device, visita.id)
-                    continue
 
                 actual = {'visita': visita.id, 'lat': lat, 'lon': lon,
                           'ts': instante.isoformat(), 'pos_id': pos.get('id')}
@@ -1146,34 +1106,23 @@ class TicketAlquilerTracking(models.Model):
                 fix_utc = fix.astimezone(timezone.utc).replace(tzinfo=None)
                 if fix_utc > ahora + timedelta(minutes=2):
                     continue
-                visitas = Visita.search([
-                    ('tecnico_id', '=', vinculo.user_id.id),
-                    ('estado', 'in', ['programada', 'en_ruta']),
-                    ('agenda', '>=', ahora - timedelta(days=1)),
-                    ('agenda', '<=', ahora + timedelta(days=1)),
-                ])
-                candidatos = visitas.filtered(lambda v: (
-                    v.ticket_ids and v.latitud and v.longitud
-                    and self._haversine_metros(lat, lon, v.latitud, v.longitud) <= 100
-                    and any(t.traccar_geofence_id for t in v.ticket_ids)
-                ))
-                _logger.info('[GPS-DIAG] llegada device=%s visitas=%s candidatas=%s detalle=%s',
-                             vinculo.traccar_device_id, len(visitas), len(candidatos),
-                             [(v.id, v.estado, v.agenda, [(t.name, t.estado, t.traccar_geofence_id) for t in v.ticket_ids])
-                              for v in visitas])
-                if len(candidatos) != 1:
-                    _logger.info('[GPS-BLOQUEO] llegada device=%s razon=candidatas_no_unicas cantidad=%s',
-                                 vinculo.traccar_device_id, len(candidatos))
-                    if visitas and not candidatos:
-                        _logger.info('[CRON-LLEGADA] Técnico %s: ninguna visita coincide con GPS actual', vinculo.user_id.id)
+                desde, hasta = self._get_rango_hoy()
+                visita = Visita._gps_siguiente_visita_principal(vinculo.user_id, desde, hasta)
+                if not visita or visita.estado not in ('programada', 'en_ruta'):
                     continue
-                visita = candidatos[0]
+                clave = 'sat.gps.presencia.%s.%s' % (vinculo.traccar_device_id, visita.id)
+                if (not visita.ticket_ids or not visita._coordenadas_validas(visita.latitud, visita.longitud)
+                        or self._haversine_metros(lat, lon, visita.latitud, visita.longitud) > 100
+                        or not any(t.traccar_geofence_id for t in visita.ticket_ids)):
+                    parametros.set_param(clave, '')
+                    continue
                 # Verificar además la geocerca efectiva del ticket (no otro círculo).
                 gids = (pos.get('geofenceIds') if isinstance(pos.get('geofenceIds'), list) else None)
                 ids_visita = {t.traccar_geofence_id for t in visita.ticket_ids if t.traccar_geofence_id}
                 if gids is not None and not ids_visita.intersection(set(gids)):
                     _logger.info('[GPS-BLOQUEO] llegada visita=%s razon=geocerca_no_corresponde gps_ids=%s visita_ids=%s',
                                  visita.id, gids, sorted(ids_visita))
+                    parametros.set_param(clave, '')
                     continue
                 clave = 'sat.gps.presencia.%s.%s' % (vinculo.traccar_device_id, visita.id)
                 anterior = parametros.get_param(clave, default='')
@@ -1202,6 +1151,12 @@ class TicketAlquilerTracking(models.Model):
                     visita.ticket_ids.filtered(lambda t: t.responsable == visita.tecnico_id and
                         t.estado in ('proceso', 'en_ruta')).action_en_sitio(
                             notificar=False, fecha_evento=fix_utc)
+                    grupo = visita.ticket_ids.filtered(lambda t: t.responsable == visita.tecnico_id and t.estado == 'en_sitio')
+                    if grupo:
+                        try:
+                            grupo[0].notificar_en_sitio(tickets_grupo=grupo, ubicacion_actual={'latitude': lat, 'longitude': lon})
+                        except Exception:
+                            _logger.exception('[GPS] Error avisando llegada visita=%s', visita.id)
                     _logger.info('[CRON-LLEGADA] Llegada observada por doble posición: visita=%s tecnico=%s', visita.id, vinculo.user_id.id)
                 parametros.set_param(clave, '')
             except Exception:
@@ -1372,6 +1327,8 @@ class TicketAlquilerTracking(models.Model):
         actualizados = 0
         omitidos = 0
         for ticket in tickets:
+            if ticket.estado != 'en_sitio':
+                continue
             visita = ticket.gps_visita_id
             participante = ticket._gps_participante_responsable()
             # Si se detectó salida o la visita ya está cerrada, no iniciar revisión.
@@ -1531,6 +1488,11 @@ class TicketAlquilerTracking(models.Model):
             if participante and participante.estado == 'en_ruta':
                 participante.registrar_llegada(fecha, 'traccar', ref)
                 return candidatos
+            return resultado
+        desde, hasta = self._get_rango_hoy()
+        siguiente = visita._gps_siguiente_visita_principal(visita.tecnico_id, desde, hasta)
+        if siguiente != visita:
+            _logger.info('[GPS-AGENDA] Llegada ignorada fuera de secuencia visita=%s', visita.id)
             return resultado
         if visita.registrar_llegada_verificada(fecha, ref, 'traccar'):
             visita.ticket_ids.filtered(lambda t: t.responsable == visita.tecnico_id and
