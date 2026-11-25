@@ -811,6 +811,43 @@ class TicketAlquilerTracking(models.Model):
     # ═══════════════════════════════════════════════════════════════
 
     @api.model
+    def _gps_preparar_agenda_pendiente(self, tecnico, desde, hasta):
+        """Recupera vínculos faltantes, sin alterar fechas ni visitas con historial."""
+        pendientes = self.sudo().search([
+            ('responsable', '=', tecnico.id), ('estado', '=', 'proceso'),
+            ('agenda', '>=', desde), ('agenda', '<=', hasta),
+            ('tipo_servicio_id', '!=', 'remoto'),
+        ], order='agenda asc, id asc')
+        for ticket in pendientes:
+            try:
+                with self.env.cr.savepoint():
+                    visita = ticket.gps_visita_id
+                    # Solo recuperar un vínculo cancelado o cerrado sin evidencia propia.
+                    if visita and visita.estado in ('cancelada', 'salida_confirmada'):
+                        if any((ticket.fecha_en_ruta, ticket.fecha_llegada,
+                                ticket.fecha_inicio_revision, ticket.fecha_salida_sitio,
+                                ticket.fecha_finalizacion)):
+                            _logger.warning('[GPS-AGENDA] ticket=%s visita=%s requiere_revision_historial', ticket.name, visita.id)
+                            continue
+                        if any(p.fecha_en_ruta or p.fecha_llegada or p.fecha_salida
+                               for p in ticket.gps_participante_ids):
+                            _logger.warning('[GPS-AGENDA] ticket=%s visita=%s requiere_revision_participantes', ticket.name, visita.id)
+                            continue
+                        ticket.with_context(sat_gps_vinculacion_interna=True).write({
+                            'gps_visita_id': False, 'gps_participante_ids': [(5, 0, 0)],
+                        })
+                        _logger.info('[GPS-AGENDA] ticket=%s desvinculado_de_visita_inactiva=%s sin_historial', ticket.name, visita.id)
+                    if not ticket.gps_visita_id:
+                        ticket._gps_vincular_visita_si_corresponde()
+                        _logger.info('[GPS-AGENDA] ticket=%s recuperacion_vinculo=%s', ticket.name, ticket.gps_visita_id.id)
+                    if not ticket.gps_visita_id:
+                        _logger.warning('[GPS-BLOQUEO] ticket=%s sin_visita cliente=%s coordenadas=%s,%s',
+                                        ticket.name, ticket.partner_id.id, ticket.equipo_latitud, ticket.equipo_longitud)
+            except Exception:
+                _logger.exception('[GPS-AGENDA] error_recuperando ticket=%s', ticket.name)
+        return pendientes
+
+    @api.model
     def cron_gps_detectar_movimiento(self):
         """Diagnóstico integral del cron 113 sin modificar reglas de elegibilidad.
 
@@ -871,15 +908,17 @@ class TicketAlquilerTracking(models.Model):
 
                 agenda_desde, agenda_hasta = self._get_rango_hoy()
                 clave = 'sat.gps.movimiento.%s' % device
+                self._gps_preparar_agenda_pendiente(tecnico, agenda_desde, agenda_hasta)
                 visita = Visita._gps_siguiente_visita_principal(tecnico, agenda_desde, agenda_hasta)
                 if not visita or visita.estado != 'programada':
+                    _logger.info('[GPS-SECUENCIA] device=%s sin_siguiente_programada visita=%s estado=%s', device, visita.id, visita.estado)
                     Config.set_param(clave, '')
                     continue
                 tickets = visita.ticket_ids.filtered(lambda t: t.responsable == tecnico and t.estado == 'proceso')
                 if (not tickets or not any(t.traccar_geofence_id for t in tickets)
                         or not visita._coordenadas_validas(visita.latitud, visita.longitud)):
                     Config.set_param(clave, '')
-                    _logger.warning('[GPS-BLOQUEO] device=%s visita=%s primera_visita_no_elegible', device, visita.id)
+                    _logger.warning('[GPS-BLOQUEO] device=%s visita=%s primera_visita_no_elegible tickets=%s coordenadas=%s,%s', device, visita.id, [(t.name, t.estado, t.traccar_geofence_id) for t in tickets], visita.latitud, visita.longitud)
                     continue
                 metros = self._haversine_metros(lat, lon, visita.latitud, visita.longitud)
                 _logger.info('[GPS-AGENDA] device=%s visita=%s agenda=%s distancia_m=%.1f tickets=%s',
@@ -898,6 +937,24 @@ class TicketAlquilerTracking(models.Model):
                 except (ValueError, TypeError):
                     previo = None
                     _logger.warning('[GPS-DIAG] device=%s visita=%s anclaje_json_invalido', device, visita.id)
+                if not previo or previo.get('visita') != visita.id:
+                    salida_txt = Config.get_param('sat.gps.encadenamiento.%s' % device, default='')
+                    try:
+                        salida = json.loads(salida_txt) if salida_txt else {}
+                        salida_dt = datetime.fromisoformat(salida['confirmada']) if salida else None
+                        ancla = salida.get('ancla', {})
+                        anterior_dt = datetime.fromisoformat(ancla['ts']) if ancla else None
+                        if (salida_dt and anterior_dt and salida.get('tecnico') == tecnico.id
+                                and salida.get('visita') != visita.id
+                                and visita.agenda.date() >= agenda_desde.date()
+                                and 0 <= (instante - salida_dt).total_seconds() <= 600
+                                and 0 < (instante - anterior_dt).total_seconds() <= 600
+                                and str(ancla.get('pos_id')) != str(actual['pos_id'])):
+                            previo = dict(ancla, visita=visita.id)
+                            Config.set_param(clave, json.dumps(previo))
+                            _logger.info('[GPS-ENCADENAMIENTO] device=%s anterior=%s siguiente=%s anclaje_salida_reutilizado', device, salida['visita'], visita.id)
+                    except (ValueError, TypeError, KeyError):
+                        _logger.warning('[GPS-ENCADENAMIENTO] device=%s evidencia_invalida', device)
                 if not previo or previo.get('visita') != visita.id:
                     Config.set_param(clave, json.dumps(actual))
                     _logger.info('[GPS-DIAG] device=%s visita=%s primera_observacion pos_id=%s fix=%s',
@@ -936,8 +993,11 @@ class TicketAlquilerTracking(models.Model):
                              'desplazamiento=%.0fm acercamiento=%.0fm referencia=%s',
                              device, visita.id, [(t.name, t.estado) for t in visita.ticket_ids],
                              desplazamiento, distancia_antes - distancia_ahora, referencia)
-                if visita.registrar_inicio_ruta_gps(
-                        instante, referencia, ubicacion_actual={'latitude': lat, 'longitude': lon}):
+                with self.env.cr.savepoint():
+                    iniciado = visita.registrar_inicio_ruta_gps(
+                        instante, referencia, ubicacion_actual={'latitude': lat, 'longitude': lon})
+                if iniciado:
+                    Config.set_param('sat.gps.encadenamiento.%s' % device, '')
                     contadores['inicios'] += 1
                     _logger.info('[GPS-TRANSICION] EXITO device=%s visita=%s estado_visita=%s '
                                  'tickets_despues=%s', device, visita.id, visita.estado,
@@ -1303,6 +1363,14 @@ class TicketAlquilerTracking(models.Model):
                         confirmadas += 1
                         Config.set_param(clave, '')
                         _logger.info('[CRON-SALIDA] Confirmada visita=%s a %.0fm', visita.id, metros)
+                        # Guardar evidencia real del retiro, independiente de la agenda siguiente.
+                        Config.set_param('sat.gps.encadenamiento.%s' % vinculo.traccar_device_id, json.dumps({
+                            'tecnico': visita.tecnico_id.id, 'visita': visita.id,
+                            'confirmada': instante.isoformat(),
+                            'ancla': {'lat': anterior['lat'], 'lon': anterior['lon'],
+                                      'ts': anterior['ts'], 'pos_id': anterior['position_id']},
+                        }))
+                        _logger.info('[GPS-ENCADENAMIENTO] salida=%s device=%s evidencia_guardada', visita.id, vinculo.traccar_device_id)
             except Exception:
                 _logger.exception('[CRON-SALIDA] Error procesando visita=%s', visita.id)
         _logger.info('[CRON-SALIDA] abiertas=%s confirmadas=%s', len(visitas), confirmadas)

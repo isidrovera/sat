@@ -431,17 +431,36 @@ class SatVisitaTecnica(models.Model):
             ('estado', 'in', ESTADOS_ACTIVOS),
         ], order='agenda asc, id asc', limit=1)
         if activa:
+            _logger.info('[GPS-SECUENCIA] tecnico=%s visita_activa=%s estado=%s llegada=%s salida=%s',
+                         tecnico.id, activa.id, activa.estado, activa.fecha_llegada, activa.fecha_salida)
             return activa
         apoyo = self.env['sat.visita.tecnico'].sudo().search([
             ('tecnico_id', '=', tecnico.id), ('estado', 'in', ESTADOS_ACTIVOS),
         ], limit=1)
         if apoyo:
+            _logger.warning('[GPS-SECUENCIA] tecnico=%s apoyo_activo=%s visita=%s estado=%s',
+                            tecnico.id, apoyo.id, apoyo.visita_id.id, apoyo.estado)
             return visitas.browse()
-        return visitas.search([
-            ('tecnico_id', '=', tecnico.id), ('estado', '=', 'programada'),
+        # La agenda real del ticket manda, incluso si la agenda agregada quedó desactualizada.
+        pendientes = self.env['ticket.alquiler'].sudo().search([
+            ('responsable', '=', tecnico.id), ('estado', '=', 'proceso'),
             ('agenda', '>=', desde), ('agenda', '<=', hasta),
-            ('ticket_ids.estado', '=', 'proceso'),
-        ], order='agenda asc, id asc', limit=1)
+            ('tipo_servicio_id', '!=', 'remoto'),
+        ], order='agenda asc, id asc')
+        for ticket in pendientes:
+            _logger.info('[GPS-SECUENCIA] tecnico=%s ticket=%s agenda=%s visita=%s estado_visita=%s geocerca=%s',
+                         tecnico.id, ticket.name, ticket.agenda, ticket.gps_visita_id.id,
+                         ticket.gps_visita_id.estado, ticket.traccar_geofence_id)
+        if not pendientes:
+            _logger.info('[GPS-SECUENCIA] tecnico=%s sin_tickets_asignados_hoy', tecnico.id)
+            return visitas.browse()
+        primero = pendientes[0]
+        visita = primero.gps_visita_id
+        if not visita or visita.estado != 'programada' or visita.tecnico_id != tecnico:
+            _logger.warning('[GPS-SECUENCIA] tecnico=%s ticket=%s bloqueado_vinculo_o_estado visita=%s estado=%s principal=%s',
+                            tecnico.id, primero.name, visita.id, visita.estado, visita.tecnico_id.id)
+            return visitas.browse()
+        return visita
 
     def _validar_siguiente_ruta(self):
         self.ensure_one()
@@ -1116,7 +1135,9 @@ class TicketAlquilerVisita(models.Model):
                 )
                 if distancia > DISTANCIA_SEDE_MAXIMA:
                     continue
-                if candidata.tecnico_id != ticket.responsable or candidata.estado != 'programada':
+                if candidata.tecnico_id == ticket.responsable and candidata.estado != 'programada':
+                    continue  # No atribuir eventos pasados a un ticket nuevo.
+                if candidata.tecnico_id != ticket.responsable:
                     # Conservar la regla existente de apoyo/visita activa.
                     if abs((candidata.agenda - ticket.agenda).total_seconds()) > 1800:
                         continue
