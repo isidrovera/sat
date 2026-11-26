@@ -1,144 +1,131 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    
-        <!-- Template base para las páginas de mantenimiento -->
-        <template id="maintenance_layout" name="Maintenance Layout">
-            <t t-call="web.layout">
-                <t t-set="head">
-                    <link rel="stylesheet" type="text/css" href="/web/static/lib/bootstrap/css/bootstrap.css"/>
-                    <style>
-                        .maintenance-container {
-                            max-width: 600px;
-                            margin: 50px auto;
-                            padding: 20px;
-                            background-color: #ffffff;
-                            border-radius: 8px;
-                            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                        }
-                        .maintenance-header {
-                            text-align: center;
-                            margin-bottom: 30px;
-                        }
-                        .maintenance-content {
-                            padding: 20px;
-                            text-align: center;
-                        }
-                        .maintenance-message {
-                            font-size: 18px;
-                            color: #2d3748;
-                            margin-bottom: 20px;
-                            line-height: 1.6;
-                        }
-                        .maintenance-footer {
-                            margin-top: 30px;
-                            padding-top: 20px;
-                            border-top: 1px solid #edf2f7;
-                            text-align: center;
-                            font-size: 14px;
-                            color: #718096;
-                        }
-                    </style>
-                </t>
-                <div class="maintenance-container">
-                    <div class="maintenance-header">
-                        <img t-att-src="'/web/binary/company_logo'" alt="Logo"/>
-                        <h1 class="h3">Andes Copiers</h1>
+    <!-- Diseño autónomo: no depende de Bootstrap ni de fuentes externas. -->
+    <template id="maintenance_layout" name="Maintenance Layout">
+        <html lang="es">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <meta name="robots" content="noindex, nofollow"/>
+                <meta name="referrer" content="no-referrer"/>
+                <title>Servicio técnico | Andes Copiers</title>
+                <style>
+                    * { box-sizing: border-box; }
+                    body { margin:0; color:#172b25; background:#f3f7f5; font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; line-height:1.55; }
+                    .mc-shell { min-height:100vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 18px; }
+                    .mc-wrap { width:100%; max-width:540px; }
+                    .mc-brand { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:24px; }
+                    .mc-brand img { max-width:120px; max-height:48px; object-fit:contain; }
+                    .mc-brand strong { display:block; font-size:18px; }
+                    .mc-brand small { display:block; color:#53675e; font-size:12px; }
+                    .mc-card { background:white; border:1px solid #dfe8e3; border-radius:24px; padding:32px; box-shadow:0 16px 48px rgba(22,56,42,.08); text-align:center; }
+                    .mc-icon { width:64px; height:64px; display:grid; place-items:center; border-radius:20px; margin:0 auto 20px; background:#e5f4eb; color:#167247; }
+                    .mc-icon svg { width:32px; height:32px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }
+                    .mc-icon.info { background:#e9f1fc; color:#2459a3; }
+                    .mc-icon.error { background:#fcebea; color:#b33c38; }
+                    .mc-kicker { font-size:11px; font-weight:750; letter-spacing:1.4px; text-transform:uppercase; color:#53675e; margin:0 0 8px; }
+                    h1 { font-size:clamp(23px,5vw,30px); line-height:1.2; letter-spacing:-.7px; margin:0 0 14px; }
+                    .mc-message { color:#506159; font-size:15px; margin:0 0 22px; overflow-wrap:anywhere; }
+                    .mc-detail { text-align:left; background:#f4f8f6; border:1px solid #e0ebe4; border-radius:14px; padding:16px 18px; margin:20px 0; }
+                    .mc-detail small { display:block; color:#53675e; font-size:12px; }
+                    .mc-detail strong { display:block; font-size:20px; margin-top:4px; }
+                    .mc-detail p { font-size:14px; margin:0; color:#40554a; }
+                    .mc-actions { display:grid; gap:10px; margin-top:24px; }
+                    .mc-btn { display:block; width:100%; padding:13px 16px; border:1px solid transparent; border-radius:12px; background:#176b48; color:white; font:inherit; font-weight:650; text-align:center; text-decoration:none; cursor:pointer; }
+                    .mc-btn:hover { background:#105438; color:white; }
+                    .mc-btn.secondary { background:white; border-color:#d9e4dd; color:#284b3b; }
+                    .mc-btn.secondary:hover { background:#f0f5f2; }
+                    .mc-btn:focus-visible, .mc-footer a:focus-visible { outline:3px solid #2376bb; outline-offset:3px; }
+                    .mc-footer { color:#53675e; text-align:center; font-size:12px; margin-top:24px; }
+                    .mc-footer a { color:#176b48; text-decoration:underline; overflow-wrap:anywhere; }
+                    .mc-footer p { margin:6px 0; }
+                    @media(max-width:480px) { .mc-shell { justify-content:flex-start; padding:28px 14px; } .mc-card { padding:26px 20px; border-radius:20px; } }
+                </style>
+            </head>
+            <body>
+                <main class="mc-shell">
+                    <div class="mc-wrap">
+                        <header class="mc-brand">
+                            <img src="/web/binary/company_logo" alt="Logo de la empresa"/>
+                            <div><strong>Andes Copiers</strong><small>Centro de servicio técnico</small></div>
+                        </header>
+                        <section class="mc-card" aria-labelledby="mc-title">
+                            <t t-out="0"/>
+                        </section>
+                        <footer class="mc-footer">
+                            <p>¿Necesita ayuda? <a href="mailto:soporte@andescopiers.com.pe">Contactar soporte</a></p>
+                            <p><a href="tel:+51924894829">+51 924 894 829</a></p>
+                            <p>© Andes Copiers. Todos los derechos reservados.</p>
+                        </footer>
                     </div>
-                    <div class="maintenance-content">
-                        <t t-out="0"/>
-                    </div>
-                    <div class="maintenance-footer">
-                        <p>© 2024 Andes Copiers. Todos los derechos reservados.</p>
-                    </div>
-                </div>
-            </t>
-        </template>
+                </main>
+            </body>
+        </html>
+    </template>
 
-        <!-- Template para confirmación exitosa -->
-        <template id="maintenance_confirmation_template" name="Maintenance Confirmation">
-            <t t-call="sat.maintenance_layout">
-                <div class="maintenance-message">
-                    <div class="text-center mb-4">
-                        <i class="fa fa-check-circle" style="font-size: 48px; color: #38a169;"></i>
-                        <h2 class="h4 mt-3">¡Confirmación Exitosa!</h2>
-                    </div>
-                    
-                    <p class="mb-4" t-out="message"/>
+    <!-- GET: revisión de la acción, sin modificar registros. -->
+    <template id="maintenance_action_template" name="Maintenance Action">
+        <t t-call="sat.maintenance_layout">
+            <div class="mc-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4 M17 3v4 M3 10h18 M8 15l3 3 5-5"/></svg>
+            </div>
+            <p class="mc-kicker">Mantenimiento preventivo</p>
+            <h1 id="mc-title"><t t-out="action_label"/></h1>
+            <p class="mc-message" t-if="action_kind == 'confirm'">Revise la fecha propuesta y confirme si está de acuerdo. Nuestro equipo coordinará la asignación técnica.</p>
+            <p class="mc-message" t-else="">Si la fecha propuesta no es conveniente, envíe su solicitud para coordinar una nueva visita.</p>
+            <div class="mc-detail">
+                <small>Cliente</small><strong t-out="customer_name"/>
+                <small style="margin-top:12px">Fecha propuesta</small>
+                <strong t-out="visit_date.strftime('%d/%m/%Y') if visit_date else 'Por coordinar'"/>
+            </div>
+            <form method="post" t-att-action="action_url" class="mc-actions">
+                <input type="hidden" name="csrf_token" t-att-value="csrf_token"/>
+                <input type="hidden" name="ciclo" t-att-value="ciclo"/>
+                <input type="hidden" name="cliente" t-att-value="cliente"/>
+                <input type="hidden" name="firma" t-att-value="firma"/>
+                <button type="submit" class="mc-btn" t-out="action_label"/>
+                <a href="/" class="mc-btn secondary">Cancelar y volver al inicio</a>
+            </form>
+        </t>
+    </template>
 
-                    <div class="alert alert-info">
-                        <p class="mb-2">Visita programada para:</p>
-                        <p class="font-weight-bold">
-                            <!-- Formatear la fecha directamente -->
-                            <t t-if="visit_date">
-                                <t t-esc="visit_date.strftime('%d de %B de %Y') if isinstance(visit_date, datetime.date) else visit_date"/>
-                            </t>
-                        </p>
-                    </div>
+    <template id="maintenance_confirmation_template" name="Maintenance Confirmation">
+        <t t-call="sat.maintenance_layout">
+            <div class="mc-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg></div>
+            <p class="mc-kicker">Confirmación recibida</p>
+            <h1 id="mc-title">¡Gracias por confirmar!</h1>
+            <p class="mc-message" t-out="message"/>
+            <div class="mc-detail" t-if="visit_date">
+                <small>Fecha aceptada por el cliente</small>
+                <strong t-out="visit_date.strftime('%d/%m/%Y')"/>
+            </div>
+            <div class="mc-detail"><p><b>¿Qué sigue?</b> Nuestro equipo técnico coordinará la asignación de la visita. La confirmación de la fecha no implica que ya se haya asignado un técnico.</p></div>
+            <div class="mc-actions"><a href="/" class="mc-btn">Volver al inicio</a></div>
+        </t>
+    </template>
 
-                    <p class="mt-4">
-                        Se ha enviado un correo electrónico con los detalles de la visita.
-                    </p>
+    <template id="maintenance_reschedule_template" name="Maintenance Reschedule Request">
+        <t t-call="sat.maintenance_layout">
+            <div class="mc-icon info" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <p class="mc-kicker">Solicitud recibida</p>
+            <h1 id="mc-title">Reprogramación en trámite</h1>
+            <p class="mc-message" t-out="message"/>
+            <div class="mc-detail"><p><b>Próximo paso</b> Coordinaremos con usted una nueva fecha de mantenimiento. No necesita enviar otra solicitud.</p></div>
+            <div class="mc-actions"><a href="/" class="mc-btn">Volver al inicio</a></div>
+        </t>
+    </template>
 
-                    <div class="mt-4">
-                        <a href="/" class="btn btn-success">
-                            Volver al inicio
-                        </a>
-                    </div>
-                </div>
-            </t>
-        </template>
-
-        <!-- Template para solicitud de reprogramación -->
-        <template id="maintenance_reschedule_template" name="Maintenance Reschedule Request">
-            <t t-call="sat.maintenance_layout">
-                <div class="maintenance-message">
-                    <div class="text-center mb-4">
-                        <i class="fa fa-clock" style="font-size: 48px; color: #4299e1;"></i>
-                        <h2 class="h4 mt-3">Solicitud de Reprogramación Recibida</h2>
-                    </div>
-
-                    <p class="mb-4" t-out="message"/>
-
-                    <div class="alert alert-info">
-                        <p>
-                            Uno de nuestros representantes se pondrá en contacto con usted 
-                            para coordinar una nueva fecha.
-                        </p>
-                    </div>
-
-                    <div class="mt-4">
-                        <a href="/" class="btn btn-success">
-                            Volver al inicio
-                        </a>
-                    </div>
-                </div>
-            </t>
-        </template>
-
-        <!-- Template para error -->
-        <template id="maintenance_error_template" name="Maintenance Error">
-            <t t-call="sat.maintenance_layout">
-                <div class="maintenance-message">
-                    <div class="text-center mb-4">
-                        <i class="fa fa-exclamation-triangle" style="font-size: 48px; color: #e53e3e;"></i>
-                        <h2 class="h4 mt-3">Ha ocurrido un error</h2>
-                    </div>
-
-                    <p class="mb-4" t-out="error_message"/>
-
-                    <div class="alert alert-warning">
-                        <p>
-                            Por favor, contacte con soporte técnico si el problema persiste.
-                        </p>
-                    </div>
-
-                    <div class="mt-4">
-                        <a href="mailto:soporte@andescopiers.com.pe" class="btn btn-success">
-                            Contactar Soporte
-                        </a>
-                    </div>
-                </div>
-            </t>
-        </template>
-
+    <template id="maintenance_error_template" name="Maintenance Error">
+        <t t-call="sat.maintenance_layout">
+            <div class="mc-icon error" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v6 M12 17h.01"/></svg></div>
+            <p class="mc-kicker">Aviso de mantenimiento</p>
+            <h1 id="mc-title">No pudimos procesar su solicitud</h1>
+            <p class="mc-message" t-out="error_message"/>
+            <div class="mc-detail"><p>Si el enlace ya no es válido o necesita ayuda con su mantenimiento, comuníquese con nuestro equipo de soporte.</p></div>
+            <div class="mc-actions">
+                <a href="mailto:soporte@andescopiers.com.pe" class="mc-btn">Contactar soporte</a>
+                <a href="/" class="mc-btn secondary">Volver al inicio</a>
+            </div>
+        </t>
+    </template>
 </odoo>

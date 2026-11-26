@@ -98,6 +98,7 @@ class MantenimientoPlanificador(models.Model):
     observacion = fields.Text(
         string='Observaciones'
     )
+    automatico_mantenimiento = fields.Boolean(string='Plan automático de mantenimiento', default=False, copy=False, index=True)
     # ============================================================
     # DEFAULTS / ONCHANGE
     # ============================================================
@@ -108,7 +109,8 @@ class MantenimientoPlanificador(models.Model):
         inicio = today.replace(day=1)
         ultimo_dia = calendar.monthrange(inicio.year, inicio.month)[1]
         fin = inicio.replace(day=ultimo_dia)
-        vals.setdefault('fecha_inicio', inicio)
+        if 'fecha_inicio' in fields_list and 'default_fecha_inicio' not in self.env.context:
+            vals['fecha_inicio'] = inicio
         vals.setdefault('fecha_fin', fin)
         vals.setdefault('name', 'Planificación %s/%s' % (
             str(inicio.month).zfill(2),
@@ -138,7 +140,7 @@ class MantenimientoPlanificador(models.Model):
             rec.total_maquinas = len(rec.line_ids)
             rec.total_pendientes = len(rec.line_ids.filtered(lambda l: l.estado == 'pendiente'))
             rec.total_confirmadas = len(rec.line_ids.filtered(lambda l: l.estado == 'confirmado'))
-            rec.total_programadas = len(rec.line_ids.filtered(lambda l: l.estado == 'programado'))
+            rec.total_programadas = len(rec.line_ids.filtered(lambda l: l.estado in ('programado', 'ticket_creado')))
             rec.total_sin_cupo = len(rec.line_ids.filtered(lambda l: l.estado == 'sin_cupo'))
             rec.total_reasignar = len(rec.line_ids.filtered(lambda l: l.estado == 'reasignar'))
     @api.depends(
@@ -206,7 +208,7 @@ class MantenimientoPlanificador(models.Model):
         """
         if not agenda_value:
             return False
-        user_tz = self.env.user.tz or 'America/Lima'
+        user_tz = 'America/Lima'
         local_tz = timezone(user_tz)
         agenda_utc = fields.Datetime.to_datetime(agenda_value)
         return UTC.localize(agenda_utc).astimezone(local_tz).replace(tzinfo=None)
@@ -281,7 +283,8 @@ class MantenimientoPlanificador(models.Model):
     def _get_perfiles_tecnicos(self):
         self.ensure_one()
         Perfil = self.env['mantenimiento.tecnico.perfil']
-        domain = [('active', '=', True)]
+        domain = [('active', '=', True), ('tecnico_id.active', '=', True),
+                  ('tipo_operativo', '!=', 'taller')]
         if self.tecnico_ids:
             domain.append(('tecnico_id', 'in', self.tecnico_ids.ids))
         return Perfil.search(domain)
@@ -302,69 +305,67 @@ class MantenimientoPlanificador(models.Model):
         _agenda_to_local_dt, por lo que ambos deben estar en la misma escala
         (hora local naive).
         """
-        return datetime.combine(fecha, self._float_to_time(hora_float))
+        return datetime.combine(fecha, time.min) + timedelta(minutes=round(hora_float * 60))
+    def _tickets_tecnico_fecha(self, tecnico_id, fecha):
+        """Tickets existentes en el día operativo de Lima."""
+        tz = timezone('America/Lima')
+        inicio = tz.localize(datetime.combine(fecha, time.min)).astimezone(UTC).replace(tzinfo=None)
+        fin = inicio + timedelta(days=1)
+        return self.env['ticket.alquiler'].search([
+            ('responsable', '=', tecnico_id),
+            ('agenda', '>=', inicio - timedelta(days=1)),
+            ('agenda', '<', fin),
+            ('estado', 'not in', ['finalizado']),
+        ])
+
     def _ticket_ocupa_tecnico(self, tecnico_id, inicio_dt, fin_dt, excluir_ticket_id=False):
-        """
-        Verifica si el técnico tiene tickets que se cruzan con el rango dado.
-        inicio_dt y fin_dt deben venir en hora local naive. Los tickets en BD
-        tienen agenda en UTC, así que se convierten a hora local antes de
-        comparar.
-        """
-        domain = [
-            ('responsable', '=', tecnico_id),
-            ('agenda', '!=', False),
-            ('estado', 'not in', ['finalizado']),
-        ]
-        if excluir_ticket_id:
-            domain.append(('id', '!=', excluir_ticket_id))
-        tickets = self.env['ticket.alquiler'].search(domain)
+        tickets = self._tickets_tecnico_fecha(tecnico_id, inicio_dt.date())
         for ticket in tickets:
-            ticket_inicio = self._agenda_to_local_dt(ticket.agenda)
-            if not ticket_inicio:
+            if ticket.id == excluir_ticket_id:
                 continue
-            ticket_fin = ticket_inicio + timedelta(hours=2)
-            if ticket_inicio < fin_dt and ticket_fin > inicio_dt:
+            inicio = self._agenda_to_local_dt(ticket.agenda)
+            duracion = ticket._get_duracion_ticket_calendario()
+            if inicio and inicio < fin_dt and inicio + timedelta(hours=duracion) > inicio_dt:
                 return True
         return False
+
     def _contar_tickets_tecnico_fecha(self, tecnico_id, fecha):
-        """
-        Cuenta tickets del técnico en una fecha local específica.
-        Como agenda se almacena en UTC, hay que considerar la conversión:
-        un ticket a las 23:00 hora Lima (= 04:00 UTC del día siguiente) debe
-        contarse en el día Lima correcto. Se construye el rango UTC equivalente
-        al día local.
-        """
-        user_tz = self.env.user.tz or 'America/Lima'
-        local_tz = timezone(user_tz)
-        inicio_local = local_tz.localize(datetime.combine(fecha, time.min))
-        fin_local = local_tz.localize(datetime.combine(fecha + timedelta(days=1), time.min))
-        inicio_utc = inicio_local.astimezone(UTC).replace(tzinfo=None)
-        fin_utc = fin_local.astimezone(UTC).replace(tzinfo=None)
-        return self.env['ticket.alquiler'].search_count([
-            ('responsable', '=', tecnico_id),
-            ('agenda', '>=', inicio_utc),
-            ('agenda', '<', fin_utc),
-            ('estado', 'not in', ['finalizado']),
-        ])
+        return len(self._tickets_tecnico_fecha(tecnico_id, fecha).filtered(
+            lambda t: self._agenda_to_local_dt(t.agenda).date() == fecha))
+
     def _get_horas_ocupadas_lineas(self, tecnico_id, fecha):
-        lineas = self.env['mantenimiento.planificador.linea'].search([
-            ('tecnico_id', '=', tecnico_id),
+        domain = [
             ('fecha_programada', '=', fecha),
-            ('estado', 'in', ['programado', 'confirmado']),
-            ('hora_inicio', '!=', False),
-            ('hora_fin', '!=', False),
-        ])
-        return lineas
+            ('estado', 'in', ['programado', 'confirmado', 'ticket_creado', 'reasignar']),
+            ('planificador_id.estado', '!=', 'cancelado'),
+            '|', ('tecnico_id', '=', tecnico_id), ('tecnico_apoyo_ids', 'in', [tecnico_id]),
+        ]
+        excluir = self.env.context.get('mantenimiento_excluir_linea_id')
+        if excluir:
+            domain.append(('id', '!=', excluir))
+        return self.env['mantenimiento.planificador.linea'].search(domain).filtered(
+            lambda l: l.hora_fin > l.hora_inicio and (
+                not l.ticket_id or l.ticket_id.estado != 'finalizado'))
+
     def _linea_ocupa_tecnico(self, tecnico_id, fecha, hora_inicio, hora_fin):
-        lineas = self._get_horas_ocupadas_lineas(tecnico_id, fecha)
-        for linea in lineas:
-            if linea.hora_inicio < hora_fin and linea.hora_fin > hora_inicio:
-                return True
-        return False
+        return any(l.hora_inicio < hora_fin and l.hora_fin > hora_inicio
+                   for l in self._get_horas_ocupadas_lineas(tecnico_id, fecha))
+
+    def _disponibilidad_operativa(self, perfil, fecha):
+        """Aplica las ausencias reales incluso si hay varias el mismo día."""
+        disp = dict(perfil.get_disponibilidad_fecha(fecha))
+        intervalos = list(disp.get('intervalos', []))
+        for inicio, fin in self.env['mantenimiento.tecnico.ausencia'].get_intervalos_ausencia(
+                perfil.tecnico_id.id, fecha):
+            intervalos = perfil._restar_intervalo(intervalos, inicio, fin)
+        disp['intervalos'] = intervalos
+        disp['disponible'] = bool(disp.get('disponible') and intervalos)
+        return disp
+
     def _perfil_compatible_zona(self, perfil, zona, permitir_flexible=True):
         if not zona:
             return True
-        if zona in perfil.zona_preferida_ids:
+        if zona in perfil.zona_preferida_ids or perfil.tecnico_id in zona.tecnico_ids:
             return True
         if permitir_flexible and zona.flexible:
             return True
@@ -385,30 +386,34 @@ class MantenimientoPlanificador(models.Model):
         hora_fin = hora_inicio + duracion_horas
         inicio_dt = self._make_datetime(fecha, hora_inicio)
         fin_dt = self._make_datetime(fecha, hora_fin)
+        if duracion_horas <= 0 or not 0 <= hora_inicio < hora_fin <= 24:
+            return []
+        if inicio_dt < self.env['alquiler']._mantenimiento_ahora_local():
+            return []
         for perfil in perfiles:
             tecnico = perfil.tecnico_id
-            disp = perfil.get_disponibilidad_fecha(fecha)
+            disp = self._disponibilidad_operativa(perfil, fecha)
             # Si el técnico está bloqueado/no disponible, nunca se asigna.
             if not disp.get('disponible'):
                 continue
             permite_asignaciones_multiples = bool(
                 disp.get('permite_asignaciones_multiples')
             )
-            # Si NO está activado el modo múltiple, se respeta el horario normal.
-            # Si está activado, se permite asignar incluso fuera del rango horario,
-            # siempre que la disponibilidad de ese día esté aprobada y disponible=True.
-            if not permite_asignaciones_multiples:
-                if hora_inicio < disp.get('hora_inicio') or hora_fin > disp.get('hora_fin'):
-                    continue
+            # La excepción múltiple no permite saltar ausencias ni refrigerios.
+            if not any(a <= hora_inicio and hora_fin <= b
+                       for a, b in disp['intervalos']):
+                continue
             # Validación de zona.
             # El modo múltiple no debe saltarse la zona, salvo que ignorar_zona=True.
             if not ignorar_zona:
                 if not self._perfil_compatible_zona(perfil, zona, permitir_flexible=True):
                     continue
-            ocupados_dia = self._contar_tickets_tecnico_fecha(tecnico.id, fecha)
-            ocupados_lineas = len(self._get_horas_ocupadas_lineas(tecnico.id, fecha))
+            lineas = self._get_horas_ocupadas_lineas(tecnico.id, fecha)
+            tickets = self._tickets_tecnico_fecha(tecnico.id, fecha).filtered(
+                lambda t: t.id != excluir_ticket_id and
+                self._agenda_to_local_dt(t.agenda).date() == fecha)
             capacidad = disp.get('capacidad') or 0
-            total_ocupados = ocupados_dia + ocupados_lineas
+            total_ocupados = len(tickets - lineas.mapped('ticket_id')) + len(lineas)
             # En modo normal se valida capacidad y cruces.
             # En modo múltiple se permite varias asignaciones el mismo día/hora.
             if not permite_asignaciones_multiples:
@@ -428,8 +433,8 @@ class MantenimientoPlanificador(models.Model):
                     hora_fin
                 ):
                     continue
-            score = 0
-            if zona and zona in perfil.zona_preferida_ids:
+            score = 100 if perfil.tipo_operativo == 'servicios' else 0
+            if zona and (zona in perfil.zona_preferida_ids or tecnico in zona.tecnico_ids):
                 score += 50
             if permite_asignaciones_multiples:
                 # Se prioriza al técnico que tiene la excepción manual activa.
@@ -446,6 +451,10 @@ class MantenimientoPlanificador(models.Model):
                 'permite_asignaciones_multiples': permite_asignaciones_multiples,
             })
         candidatos = sorted(candidatos, key=lambda x: x['score'], reverse=True)
+        unicos = {}
+        for candidato in candidatos:
+            unicos.setdefault(candidato['tecnico'].id, candidato)
+        candidatos = list(unicos.values())
         if len(candidatos) < cantidad:
             return []
         return candidatos[:cantidad]
@@ -457,9 +466,10 @@ class MantenimientoPlanificador(models.Model):
         duracion_horas=2.0,
         hora_preferida=False,
         ignorar_zona=False,
+        hora_fija=False,
     ):
         self.ensure_one()
-        if hora_preferida:
+        if hora_preferida or hora_fija:
             tecnicos = self._buscar_tecnicos_disponibles(
                 fecha=fecha,
                 hora_inicio=hora_preferida,
@@ -475,13 +485,17 @@ class MantenimientoPlanificador(models.Model):
                     'hora_fin': hora_preferida + duracion_horas,
                     'tecnicos': tecnicos,
                 }
-        bloques = [
-            8.0,
-            10.0,
-            12.0,
-            14.0,
-            16.0,
-        ]
+        if hora_fija:
+            return False
+        bloques = set()
+        for perfil in self._get_perfiles_tecnicos():
+            disp = self._disponibilidad_operativa(perfil, fecha)
+            for inicio, fin in disp['intervalos']:
+                minuto = round(inicio * 60)
+                while minuto / 60.0 + duracion_horas <= fin + 1e-9:
+                    bloques.add(minuto / 60.0)
+                    minuto += 30
+        bloques = sorted(bloques)
         for hora in bloques:
             tecnicos = self._buscar_tecnicos_disponibles(
                 fecha=fecha,
@@ -508,13 +522,17 @@ class MantenimientoPlanificador(models.Model):
         hora_preferida=False,
         ignorar_zona=False,
         dias_busqueda=20,
+        hora_fija=False,
     ):
         self.ensure_one()
         if not fecha_base:
             fecha_base = fields.Date.context_today(self)
         for offset in range(0, dias_busqueda + 1):
             fecha = fecha_base + timedelta(days=offset)
-            if fecha < self.fecha_inicio or fecha > self.fecha_fin:
+            hoy = self.env['alquiler']._mantenimiento_ahora_local().date()
+            if fecha < hoy:
+                continue
+            if dias_busqueda != 0 and not self.fecha_inicio <= fecha <= self.fecha_fin:
                 continue
             slot = self._buscar_horario_disponible(
                 fecha=fecha,
@@ -523,6 +541,7 @@ class MantenimientoPlanificador(models.Model):
                 duracion_horas=duracion_horas,
                 hora_preferida=hora_preferida if offset == 0 else False,
                 ignorar_zona=ignorar_zona,
+                hora_fija=hora_fija,
             )
             if slot:
                 return slot
@@ -530,68 +549,256 @@ class MantenimientoPlanificador(models.Model):
     # ============================================================
     # GENERACIÓN DE LÍNEAS
     # ============================================================
-    def action_generar_lineas(self):
+    @api.model
+    def _bloquear_planificacion_mantenimiento(self, esperar=False):
+        # Todos los cron y las acciones manuales de este planificador comparten
+        # el mismo bloqueo transaccional. No se libera antes del commit.
+        if esperar:
+            self.env.cr.execute('SELECT pg_advisory_xact_lock(%s, %s)', (41971, 2))
+            return True
+        self.env.cr.execute('SELECT pg_try_advisory_xact_lock(%s, %s)', (41971, 2))
+        return bool(self.env.cr.fetchone()[0])
+
+    def _incorporar_equipos_mantenimiento(self, equipos):
+        self.ensure_one()
+        Linea = self.env['mantenimiento.planificador.linea']
         Zona = self.env['mantenimiento.zona']
         mapa = Zona._mapa_distritos()
-        for rec in self:
-            if rec.estado not in ('borrador', 'generado'):
-                raise UserError(_("Solo puede generar líneas en estado borrador o generado."))
-            # La regeneración original eliminaba todas las líneas, incluso las ya
-            # confirmadas. Evitamos pérdidas accidentales de trabajo o tickets.
-            if rec.line_ids.filtered(lambda l: (
-                l.ticket_id or l.fecha_programada or l.tecnico_id
-                or l.estado not in ('pendiente', 'sin_cupo')
-            )):
-                raise UserError(_(
-                    "Hay líneas confirmadas, asignadas o con ticket. "
-                    "No es seguro regenerar esta planificación."
-                ))
-            domain = [
-                ('control_mantenimiento', '=', True),
-                ('estado_alquiler_id', '=', 'alquilada'),
-                ('fecha_recurrente', '>=', rec.fecha_inicio),
-                ('fecha_recurrente', '<=', rec.fecha_fin),
-            ]
-            equipos = self.env['alquiler'].search(domain, order='distrito, cliente_id, serie')
-            nuevas = []
-            sin_zona = 0
-            for equipo in equipos:
-                zona = rec._get_zona_por_distrito(
-                    equipo.distrito, rec._direccion_operativa_equipo(equipo), mapa=mapa
-                )
-                if rec.zona_ids and (not zona or zona not in rec.zona_ids):
+        nuevas = 0
+        for equipo in equipos.sorted('id'):
+            self.env.cr.execute('SELECT id FROM alquiler WHERE id=%s FOR UPDATE', (equipo.id,))
+            equipo.invalidate_recordset()
+            if (not equipo.control_mantenimiento or equipo.estado_alquiler_id != 'alquilada'
+                    or not equipo.cliente_id or not equipo.fecha_recurrente):
+                continue
+            ciclo = equipo.fecha_recurrente
+            hoy = self.env['alquiler']._mantenimiento_ahora_local().date()
+            fecha_periodo = max(hoy, ciclo) if self.automatico_mantenimiento else ciclo
+            if not self.fecha_inicio <= fecha_periodo <= self.fecha_fin:
+                continue
+            existentes = equipo._lineas_ciclo_mantenimiento()
+            # También protege una línea histórica cuyo cliente haya cambiado:
+            # no se crea otra hasta que el operador resuelva el conflicto.
+            if existentes or Linea.search_count([
+                    ('equipo_id', '=', equipo.id), ('fecha_ideal', '=', ciclo),
+                    ('estado', '!=', 'cancelado'), ('planificador_id.estado', '!=', 'cancelado')]):
+                continue
+            zona, _clave = Zona._resolver_ubicacion_equipo(equipo, mapa=mapa)
+            if self.zona_ids and (not zona or zona not in self.zona_ids):
+                continue
+            confirmada = equipo.estado_programacion == 'confirmado'
+            nota = False
+            estado = 'confirmado' if confirmada else 'pendiente'
+            if equipo.estado_programacion == 'reprogramado':
+                estado = 'reasignar'
+                nota = _('Pendiente de coordinar una nueva fecha con el cliente.')
+            elif ciclo < hoy:
+                estado = 'reasignar'
+                nota = _('Ciclo vencido: coordinar una nueva fecha sin modificar el ciclo contractual.')
+            elif not self.env['whatsapp.calendar.event'].sudo().get_working_intervals(ciclo).get('intervalos'):
+                estado = 'reasignar'
+                nota = _('Fecha contractual no laborable: coordinar fecha de atención con el cliente.')
+            Linea.create({
+                'planificador_id': self.id, 'equipo_id': equipo.id,
+                'cliente_id': equipo.cliente_id.id, 'distrito': equipo.distrito,
+                'zona_id': zona.id if zona else False, 'fecha_ideal': ciclo,
+                'fecha_confirmada': ciclo if confirmada else False,
+                'estado': estado, 'nota': nota, 'cantidad_tecnicos': 1,
+                'duracion_horas': 2.0,
+            })
+            nuevas += 1
+        if nuevas and self.estado == 'borrador':
+            self.estado = 'generado'
+        return nuevas
+
+    @api.model
+    def cron_generar_planificacion_mantenimiento(self):
+        if not self._bloquear_planificacion_mantenimiento():
+            return False
+        hoy = self.env['alquiler']._mantenimiento_ahora_local().date()
+        limite = hoy + timedelta(days=30)
+        equipos = self.env['alquiler'].search([
+            ('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada'),
+            ('cliente_id', '!=', False), ('fecha_recurrente', '!=', False),
+            ('fecha_recurrente', '<=', limite)], order='id')
+        Linea = self.env['mantenimiento.planificador.linea']
+        # No crear planificaciones vacías cuando todos los ciclos ya existen.
+        existentes = Linea.search([('equipo_id', 'in', equipos.ids),
+            ('estado', '!=', 'cancelado'), ('planificador_id.estado', '!=', 'cancelado')])
+        claves = {(l.equipo_id.id, l.fecha_ideal) for l in existentes}
+        grupos = {}
+        for equipo in equipos:
+            if (equipo.id, equipo.fecha_recurrente) in claves:
+                continue
+            # Las líneas vencidas sin plan quedan en el mes operativo actual.
+            mes = max(hoy, equipo.fecha_recurrente).replace(day=1)
+            grupos.setdefault(mes, self.env['alquiler'])
+            grupos[mes] |= equipo
+        for inicio, grupo in sorted(grupos.items()):
+            fin = inicio + relativedelta(months=1) - timedelta(days=1)
+            plan = self.search([('automatico_mantenimiento', '=', True),
+                                ('fecha_inicio', '=', inicio), ('fecha_fin', '=', fin),
+                                ('estado', 'in', ['borrador', 'generado', 'en_proceso'])], limit=1)
+            if not plan:
+                plan = self.create({'name': _('Mantenimiento automático %s') % inicio.strftime('%m/%Y'),
+                                    'fecha_inicio': inicio, 'fecha_fin': fin,
+                                    'automatico_mantenimiento': True})
+            nuevas = plan._incorporar_equipos_mantenimiento(grupo)
+            _logger.info('[MANT] Plan %s: %s líneas nuevas', plan.id, nuevas)
+        return True
+
+    @api.model
+    def cron_asignar_mantenimiento(self):
+        Alquiler = self.env['alquiler']
+        if not Alquiler._mantenimiento_horario_abierto() or not self._bloquear_planificacion_mantenimiento():
+            return False
+        hoy = Alquiler._mantenimiento_ahora_local().date()
+        Linea = self.env['mantenimiento.planificador.linea']
+        vencidas = Linea.search([('planificador_id.estado', 'in', ['generado', 'en_proceso']),
+            ('estado', 'in', ['confirmado', 'sin_cupo', 'programado']), ('ticket_id', '=', False),
+            ('fecha_confirmada', '!=', False), ('fecha_confirmada', '<', hoy)])
+        for linea in vencidas:
+            self.env.cr.execute('SELECT id FROM alquiler WHERE id=%s FOR UPDATE', (linea.equipo_id.id,))
+            linea.invalidate_recordset()
+            if not linea.ticket_id and linea.fecha_confirmada and linea.fecha_confirmada < hoy:
+                linea._liberar_reserva_mantenimiento(_('Fecha de atención vencida: coordinar con el cliente.'), borrar_confirmacion=True)
+        lineas = Linea.search([
+            ('planificador_id.estado', 'in', ['generado', 'en_proceso']),
+            ('estado', 'in', ['confirmado', 'sin_cupo', 'reasignar']),
+            ('ticket_id', '=', False), ('fecha_confirmada', '>=', hoy),
+            ('equipo_id.estado_programacion', '=', 'confirmado'),
+        ], order='prioridad desc, fecha_confirmada, id')
+        for linea in lineas:
+            if not Alquiler._mantenimiento_horario_abierto():
+                break
+            try:
+                with self.env.cr.savepoint():
+                    if linea.action_buscar_y_asignar_slot(silent=True):
+                        linea.planificador_id.estado = 'en_proceso'
+            except Exception:
+                _logger.exception('[MANT] Error asignando línea %s', linea.id)
+        return True
+
+    @api.model
+    def cron_crear_tickets_mantenimiento(self):
+        Alquiler = self.env['alquiler']
+        if not Alquiler._mantenimiento_horario_abierto() or not self._bloquear_planificacion_mantenimiento():
+            return False
+        hoy = Alquiler._mantenimiento_ahora_local().date()
+        lineas = self.env['mantenimiento.planificador.linea'].search([
+            ('planificador_id.estado', 'in', ['generado', 'en_proceso']),
+            ('estado', '=', 'programado'), ('ticket_id', '=', False),
+            ('fecha_confirmada', '>=', hoy), ('fecha_programada', '>=', hoy),
+            ('equipo_id.estado_programacion', '=', 'confirmado'),
+        ], order='fecha_programada, hora_inicio, id')
+        for linea in lineas:
+            if not Alquiler._mantenimiento_horario_abierto():
+                break
+            try:
+                with self.env.cr.savepoint():
+                    linea.action_crear_ticket()
+            except (UserError, ValidationError) as exc:
+                self.env.cr.execute('SELECT id FROM alquiler WHERE id=%s FOR UPDATE', (linea.equipo_id.id,))
+                linea.invalidate_recordset()
+                if not linea.ticket_id:
+                    linea._liberar_reserva_mantenimiento(str(exc))
+            except Exception:
+                _logger.exception('[MANT] Error creando ticket línea %s', linea.id)
+        return True
+
+    @api.model
+    def cron_notificar_asignaciones_mantenimiento(self):
+        """Reutiliza canales existentes, sin repetir los ya procesados por Odoo.
+
+        Las marcas reflejan retorno satisfactorio del método, no acuse del
+        proveedor. Los tickets de apoyo siguen registrados en la planificación.
+        """
+        Alquiler = self.env['alquiler']
+        if not Alquiler._mantenimiento_horario_abierto() or not self._bloquear_planificacion_mantenimiento():
+            return False
+        Linea = self.env['mantenimiento.planificador.linea']
+        Ticket = self.env['ticket.alquiler']
+        hoy = Alquiler._mantenimiento_ahora_local().date()
+        for campo, nombre_metodo in (
+                ('aviso_whatsapp_at', '_enviar_whatsapp_consolidado'),
+                ('aviso_correo_at', '_enviar_correos_consolidados')):
+            metodo = getattr(Ticket, nombre_metodo, None)
+            if not callable(metodo):
+                _logger.error('[MANT] Canal no disponible: %s; se conserva pendiente', nombre_metodo)
+                continue
+            lineas = Linea.search([
+                ('estado', '=', 'ticket_creado'), ('ticket_id.estado', '=', 'proceso'),
+                ('notificacion_automatica_pendiente', '=', True),
+                ('planificador_id.estado', 'in', ['generado', 'en_proceso']),
+                ('fecha_programada', '>=', hoy), ('equipo_id.estado_programacion', '=', 'confirmado'),
+                (campo, '=', False)], order='fecha_programada, id')
+            grupos = {}
+            for linea in lineas:
+                if (linea.equipo_id.fecha_recurrente != linea.fecha_ideal or
+                        linea.ticket_id.partner_id != linea.cliente_id or
+                        linea.ticket_id.responsable != linea.tecnico_id or
+                        not linea.equipo_id.control_mantenimiento or
+                        linea.equipo_id.estado_alquiler_id != 'alquilada'):
                     continue
-                if not zona:
-                    sin_zona += 1
-                nuevas.append({
-                    'planificador_id': rec.id,
-                    'equipo_id': equipo.id,
-                    'cliente_id': equipo.cliente_id.id if equipo.cliente_id else False,
-                    'distrito': equipo.distrito,
-                    'zona_id': zona.id if zona else False,
-                    'fecha_ideal': equipo.fecha_recurrente,
-                    'estado': 'pendiente',
-                    'cantidad_tecnicos': 1,
-                    'duracion_horas': 2.0,
-                })
-            rec.line_ids.unlink()
-            if nuevas:
-                self.env['mantenimiento.planificador.linea'].create(nuevas)
-            rec.estado = 'generado'
-            rec.message_post(
-                body=_("Se generaron %s líneas de planificación. Sin zona identificada: %s.")
-                     % (len(nuevas), sin_zona),
-                message_type='notification'
-            )
+                clave = (linea.cliente_id.id, linea.tecnico_id.id, linea.fecha_programada)
+                grupos.setdefault(clave, Linea)
+                grupos[clave] |= linea
+            for grupo in grupos.values():
+                if not Alquiler._mantenimiento_horario_abierto():
+                    return False
+                try:
+                    with self.env.cr.savepoint():
+                        equipos = grupo.mapped('equipo_id')
+                        self.env.cr.execute('SELECT id FROM alquiler WHERE id IN %s ORDER BY id FOR UPDATE',
+                                            (tuple(equipos.ids),))
+                        equipos.invalidate_recordset(); grupo.invalidate_recordset()
+                        grupo = grupo.filtered(lambda l: not l[campo] and l.notificacion_automatica_pendiente and
+                            l.estado == 'ticket_creado' and l.ticket_id.estado == 'proceso' and
+                            l.equipo_id.estado_programacion == 'confirmado' and
+                            l.equipo_id.fecha_recurrente == l.fecha_ideal and
+                            l.equipo_id.cliente_id == l.cliente_id and
+                            l.equipo_id.control_mantenimiento and l.equipo_id.estado_alquiler_id == 'alquilada' and
+                            l.ticket_id.partner_id == l.cliente_id and l.ticket_id.responsable == l.tecnico_id)
+                        if not grupo or not Alquiler._mantenimiento_horario_abierto():
+                            continue
+                        resultado = metodo(grupo.mapped('ticket_id'), grupo[0].cliente_id, grupo[0].tecnico_id)
+                        if resultado is False:
+                            raise UserError(_('El canal devolvió un resultado fallido.'))
+                        grupo.write({campo: fields.Datetime.now()})
+                        completas = grupo.filtered(lambda l: l.aviso_whatsapp_at and l.aviso_correo_at)
+                        if completas:
+                            completas.write({'notificacion_automatica_pendiente': False})
+                except Exception:
+                    _logger.exception('[MANT] Error notificando canal %s, líneas %s', nombre_metodo, grupo.ids)
+        return True
+
+    def action_generar_lineas(self):
+        self._bloquear_planificacion_mantenimiento(esperar=True)
+        for rec in self:
+            if rec.estado not in ('borrador', 'generado', 'en_proceso'):
+                raise UserError(_('La planificación está cerrada o cancelada.'))
+            equipos = self.env['alquiler'].search([
+                ('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada'),
+                ('fecha_recurrente', '>=', rec.fecha_inicio), ('fecha_recurrente', '<=', rec.fecha_fin),
+            ], order='id')
+            nuevas = rec._incorporar_equipos_mantenimiento(equipos)
+            if rec.estado == 'borrador':
+                rec.estado = 'generado'
+            rec.message_post(body=_('Se incorporaron %s líneas nuevas; se conservaron las existentes.') % nuevas,
+                             message_type='notification')
+
 
     def action_auto_asignar(self):
+        self._bloquear_planificacion_mantenimiento(esperar=True)
         for rec in self:
             if not rec.line_ids:
                 raise UserError(_("Primero debe generar las líneas de planificación."))
-            lineas = rec.line_ids.filtered(lambda l: l.estado in ('pendiente', 'confirmado', 'reasignar'))
+            lineas = rec.line_ids.filtered(lambda l: l.estado in ('confirmado', 'reasignar', 'sin_cupo') and l.fecha_confirmada and not l.ticket_id and l.equipo_id.estado_programacion == 'confirmado')
             asignadas = 0
             sin_cupo = 0
             for linea in lineas.sorted(lambda l: (
+                not bool(l.fecha_confirmada),
+                -int(l.prioridad or '1'),
                 l.fecha_confirmada or l.fecha_ideal or rec.fecha_inicio,
                 l.zona_id.name or '',
                 l.distrito or '',
@@ -749,6 +956,9 @@ class MantenimientoPlanificadorLinea(models.Model):
         readonly=True,
         copy=False
     )
+    notificacion_automatica_pendiente = fields.Boolean(string='Notificación automática pendiente', default=False, readonly=True, copy=False, index=True)
+    aviso_whatsapp_at = fields.Datetime(string='Aviso WhatsApp procesado', readonly=True, copy=False)
+    aviso_correo_at = fields.Datetime(string='Aviso correo procesado', readonly=True, copy=False)
     nota = fields.Text(
         string='Notas'
     )
@@ -791,23 +1001,92 @@ class MantenimientoPlanificadorLinea(models.Model):
                 raise ValidationError(_("La cantidad de técnicos debe ser mínimo 1."))
             if rec.duracion_horas <= 0:
                 raise ValidationError(_("La duración debe ser mayor a 0."))
+    def _validar_equipo_elegible(self):
+        self.ensure_one()
+        equipo = self.equipo_id
+        if not equipo.control_mantenimiento or equipo.estado_alquiler_id != 'alquilada':
+            raise UserError(_("El equipo debe estar alquilado y tener mantenimiento activo."))
+        if not self.cliente_id or equipo.cliente_id != self.cliente_id:
+            raise UserError(_("El cliente del equipo cambió o no está asignado."))
+        if not self.fecha_ideal or self.fecha_ideal != equipo.fecha_recurrente:
+            raise UserError(_('La línea no corresponde al ciclo vigente del equipo.'))
+        if self.planificador_id.estado in ('cancelado', 'finalizado') or self.estado == 'cancelado':
+            raise UserError(_("La planificación está cerrada o cancelada."))
+        return True
+
+    @api.constrains('equipo_id', 'fecha_ideal', 'estado', 'planificador_id')
+    def _check_ciclo_duplicado(self):
+        for rec in self:
+            if not rec.fecha_ideal or rec.estado == 'cancelado' or rec.planificador_id.estado == 'cancelado':
+                continue
+            if self.search_count([
+                ('id', '!=', rec.id), ('equipo_id', '=', rec.equipo_id.id),
+                ('fecha_ideal', '=', rec.fecha_ideal), ('estado', '!=', 'cancelado'),
+                ('planificador_id.estado', '!=', 'cancelado'),
+            ]):
+                raise ValidationError(_("Ya existe una línea activa para esta máquina y fecha de mantenimiento."))
+
     def action_confirmar_cliente(self):
+        self.env['mantenimiento.planificador']._bloquear_planificacion_mantenimiento(esperar=True)
         for rec in self:
-            rec.estado = 'confirmado'
-            rec.message_post(
-                body=_("Cliente confirmado. Pendiente de asignar técnico."),
-                message_type='notification'
-            )
+            self.env.cr.execute('SELECT id FROM alquiler WHERE id=%s FOR UPDATE', (rec.equipo_id.id,))
+            rec.invalidate_recordset(); rec.equipo_id.invalidate_recordset()
+            rec._validar_equipo_elegible()
+            if rec.ticket_id:
+                raise UserError(_('La línea ya tiene un ticket.'))
+            fecha = rec.fecha_confirmada or rec.fecha_ideal
+            if fecha < self.env['alquiler']._mantenimiento_ahora_local().date():
+                raise UserError(_('Indique una nueva fecha de atención confirmada con el cliente.'))
+            if not self.env['whatsapp.calendar.event'].get_working_intervals(fecha).get('intervalos'):
+                raise UserError(_('La fecha confirmada no tiene horario laboral.'))
+            rec.write({'fecha_confirmada': fecha, 'estado': 'confirmado', 'nota': False,
+                       'fecha_programada': False, 'hora_inicio': 0, 'hora_fin': 0,
+                       'tecnico_id': False, 'tecnico_apoyo_ids': [(5, 0, 0)]})
+            rec.equipo_id.write({'estado_programacion': 'confirmado', 'fecha_confirmacion': fields.Datetime.now()})
+            rec.message_post(body=_('Cliente confirmó la fecha operativa %s.') % fecha,
+                             message_type='notification')
+
+    def _liberar_reserva_mantenimiento(self, nota, borrar_confirmacion=False):
+        self.ensure_one()
+        if self.ticket_id:
+            raise UserError(_('No se puede liberar una reserva vinculada a un ticket.'))
+        vals = {'estado': 'reasignar', 'nota': nota, 'fecha_programada': False,
+                'hora_inicio': 0.0, 'hora_fin': 0.0, 'tecnico_id': False,
+                'tecnico_apoyo_ids': [(5, 0, 0)]}
+        if borrar_confirmacion:
+            vals.update(fecha_confirmada=False, hora_confirmada=0.0)
+        self.write(vals)
+
     def action_marcar_reasignar(self):
+        self.env['mantenimiento.planificador']._bloquear_planificacion_mantenimiento(esperar=True)
         for rec in self:
-            rec.estado = 'reasignar'
+            rec._validar_equipo_elegible()
+            rec._liberar_reserva_mantenimiento(_('Marcado para reasignación.'))
             rec.message_post(
                 body=_("Marcado para reasignación."),
                 message_type='notification'
             )
     def action_buscar_y_asignar_slot(self, silent=False):
         self.ensure_one()
-        plan = self.planificador_id
+        self.env['mantenimiento.planificador']._bloquear_planificacion_mantenimiento(esperar=True)
+        self.env.cr.execute('SELECT id FROM alquiler WHERE id=%s FOR UPDATE', (self.equipo_id.id,))
+        self.invalidate_recordset(); self.equipo_id.invalidate_recordset()
+        plan = self.planificador_id.with_context(mantenimiento_excluir_linea_id=self.id)
+        if not self.fecha_confirmada or self.equipo_id.estado_programacion != 'confirmado':
+            if silent:
+                return False
+            raise UserError(_('Primero registre la fecha confirmada por el cliente.'))
+        if self.ticket_id:
+            if silent:
+                return False
+            raise UserError(_("La línea ya tiene ticket. Reasigne el servicio existente."))
+        try:
+            self._validar_equipo_elegible()
+        except UserError as exc:
+            if not silent:
+                raise
+            self.write({'estado': 'sin_cupo', 'nota': str(exc)})
+            return False
         if not self.zona_id and not self.ignorar_zona:
             self.write({
                 'estado': 'sin_cupo',
@@ -817,7 +1096,8 @@ class MantenimientoPlanificadorLinea(models.Model):
                 raise UserError(_("No se identificó la zona del equipo. Corrija el distrito o utilice Ignorar zona de forma explícita."))
             return False
 
-        fecha_base = self.fecha_confirmada or self.fecha_ideal or plan.fecha_inicio
+        fecha_base = self.fecha_confirmada or max(
+            self.fecha_ideal or plan.fecha_inicio, fields.Date.context_today(self))
         slot = plan._buscar_slot_desde_fecha(
             fecha_base=fecha_base,
             zona=self.zona_id,
@@ -825,13 +1105,12 @@ class MantenimientoPlanificadorLinea(models.Model):
             duracion_horas=self.duracion_horas,
             hora_preferida=self.hora_confirmada if self.fecha_confirmada else False,
             ignorar_zona=self.ignorar_zona,
-            dias_busqueda=30,
+            dias_busqueda=0 if self.fecha_confirmada else 30,
+            hora_fija=bool(self.fecha_confirmada and self.hora_confirmada),
         )
         if not slot:
-            self.write({
-                'estado': 'sin_cupo',
-                'nota': _("No se encontró disponibilidad para la fecha/hora solicitada."),
-            })
+            self._liberar_reserva_mantenimiento(_('No se encontró disponibilidad para la fecha/hora solicitada.'))
+            self.estado = 'sin_cupo'
             if not silent:
                 raise UserError(_("No se encontró cupo disponible para esta línea."))
             return False
@@ -871,32 +1150,65 @@ class MantenimientoPlanificadorLinea(models.Model):
         self.ensure_one()
         if not self.fecha_programada:
             return False
-        hora = self.hora_inicio or 8.0
-        hours = int(hora)
-        minutes = int(round((hora - hours) * 60))
-        dt_local_naive = datetime.combine(
-            self.fecha_programada,
-            time(hour=hours, minute=minutes)
-        )
-        user_tz = self.env.user.tz or 'America/Lima'
+        dt_local_naive = self.planificador_id._make_datetime(
+            self.fecha_programada, self.hora_inicio)
+        user_tz = 'America/Lima'
         local_tz = timezone(user_tz)
         dt_local = local_tz.localize(dt_local_naive)
         dt_utc = dt_local.astimezone(UTC).replace(tzinfo=None)
         return dt_utc
     def action_crear_ticket(self):
+        self.env['mantenimiento.planificador']._bloquear_planificacion_mantenimiento(esperar=True)
         for rec in self:
+            self.env.cr.execute('SELECT id FROM alquiler WHERE id=%s FOR UPDATE', (rec.equipo_id.id,))
+            rec.invalidate_recordset(); rec.equipo_id.invalidate_recordset()
             if rec.ticket_id:
                 continue
             if rec.estado != 'programado':
                 raise UserError(_("Solo se puede crear ticket para líneas programadas."))
             if not rec.tecnico_id:
                 raise UserError(_("Debe tener técnico asignado."))
+            rec._validar_equipo_elegible()
+            if not self.env['alquiler']._mantenimiento_horario_abierto():
+                raise UserError(_('La creación de tickets con notificaciones se realiza dentro del horario laboral.'))
+            if not rec.fecha_confirmada or rec.equipo_id.estado_programacion != 'confirmado':
+                raise UserError(_('El cliente todavía no ha confirmado el mantenimiento.'))
+            if not rec.fecha_programada or rec.hora_fin <= rec.hora_inicio:
+                raise UserError(_("Debe indicar una fecha y horario válidos."))
+            if rec.fecha_confirmada and rec.fecha_programada != rec.fecha_confirmada:
+                raise UserError(_("La fecha programada no coincide con la confirmada."))
+            if rec.fecha_confirmada and rec.hora_confirmada and abs(rec.hora_inicio - rec.hora_confirmada) > 1e-6:
+                raise UserError(_("La hora programada no coincide con la confirmada."))
+            plan = rec.planificador_id.with_context(mantenimiento_excluir_linea_id=rec.id)
+            tecnicos = rec.tecnico_id | rec.tecnico_apoyo_ids
+            if len(tecnicos) != rec.cantidad_tecnicos:
+                raise UserError(_("La cantidad de técnicos asignados no coincide con la requerida."))
+            # Validar cada técnico asignado, no solo el de mayor puntuación.
+            for tecnico in tecnicos:
+                perfil = plan._get_perfiles_tecnicos().filtered(lambda p: p.tecnico_id == tecnico)
+                if not perfil or len(perfil) != 1:
+                    raise UserError(_("Técnico sin perfil operativo válido: %s") % tecnico.name)
+                disp = plan._disponibilidad_operativa(perfil, rec.fecha_programada)
+                if not disp['disponible'] or not any(a <= rec.hora_inicio and rec.hora_fin <= b for a,b in disp['intervalos']):
+                    raise UserError(_("El técnico ya no está disponible: %s") % tecnico.name)
+                if not rec.ignorar_zona and (not rec.zona_id or not plan._perfil_compatible_zona(perfil, rec.zona_id)):
+                    raise UserError(_("El técnico no corresponde a la zona: %s") % tecnico.name)
+                if not disp.get('permite_asignaciones_multiples'):
+                    lineas = plan._get_horas_ocupadas_lineas(tecnico.id, rec.fecha_programada)
+                    tickets = plan._tickets_tecnico_fecha(tecnico.id, rec.fecha_programada)
+                    total = len(tickets.filtered(lambda t: plan._agenda_to_local_dt(t.agenda).date() == rec.fecha_programada) - lineas.mapped('ticket_id')) + len(lineas)
+                    if total >= disp['capacidad'] or plan._linea_ocupa_tecnico(tecnico.id, rec.fecha_programada, rec.hora_inicio, rec.hora_fin) or plan._ticket_ocupa_tecnico(tecnico.id, plan._make_datetime(rec.fecha_programada, rec.hora_inicio), plan._make_datetime(rec.fecha_programada, rec.hora_fin)):
+                        raise UserError(_("El técnico tiene un cruce o no tiene cupo: %s") % tecnico.name)
             agenda_dt = rec._get_agenda_datetime()
+            if agenda_dt < fields.Datetime.to_datetime(fields.Datetime.now()):
+                raise UserError(_('El horario programado ya pasó. Debe reasignarse.'))
+            if abs(rec.hora_fin - rec.hora_inicio - rec.duracion_horas) > 1e-6:
+                raise UserError(_('El horario no coincide con la duración configurada.'))
             ticket_vals = {
                 'partner_id': rec.cliente_id.id if rec.cliente_id else False,
                 'product_alquiler': rec.equipo_id.id,
                 'tipo_servicio_id': 'mantenimiento_preventivo',
-                'estado': 'nuevo',
+                'estado': 'proceso',
                 'description': _(
                     "Mantenimiento preventivo programado desde planificador %s."
                 ) % rec.planificador_id.name,
@@ -907,19 +1219,35 @@ class MantenimientoPlanificadorLinea(models.Model):
                 'responsable': rec.tecnico_id.id,
                 'agenda': agenda_dt,
             }
-            ticket = self.env['ticket.alquiler'].create(ticket_vals)
+            # Evitar duplicar un ticket abierto sin una relación inequívoca al ciclo.
+            # El flujo de correo se integrará en el siguiente archivo.
+            self.env.cr.execute('SELECT id FROM alquiler WHERE id = %s FOR UPDATE', (rec.equipo_id.id,))
+            existentes = self.env['ticket.alquiler'].search([
+                ('product_alquiler', '=', rec.equipo_id.id),
+                ('tipo_servicio_id', '=', 'mantenimiento_preventivo'),
+                ('estado', 'not in', ['finalizado']),
+            ])
+            if existentes:
+                raise UserError(_("Ya existe un ticket de mantenimiento abierto para esta máquina. Revise el ticket antes de crear otro."))
+            Ticket = self.env['ticket.alquiler']
+            if 'duracion_programada_horas' in Ticket._fields:
+                ticket_vals['duracion_programada_horas'] = rec.duracion_horas
+            ticket = Ticket.with_context(mantenimiento_duracion_horas=rec.duracion_horas).create(ticket_vals)
+            rec.write({'ticket_id': ticket.id, 'estado': 'ticket_creado',
+                       'notificacion_automatica_pendiente': True})
             if hasattr(ticket, 'crear_evento_calendario'):
                 ticket.crear_evento_calendario()
-            rec.write({
-                'ticket_id': ticket.id,
-                'estado': 'ticket_creado',
-            })
-            rec.equipo_id.write({
-                'estado_programacion': 'confirmado',
-                'fecha_confirmacion': fields.Datetime.now(),
-                'fecha_programada_mantenimiento': rec.fecha_programada,
-                'tecnico_mantenimiento_id': rec.tecnico_id.id,
-            })
+            # No inventar campos de otros módulos; conservar los opcionales si existen.
+            valores_equipo = {}
+            if 'fecha_programada_mantenimiento' in rec.equipo_id._fields:
+                valores_equipo['fecha_programada_mantenimiento'] = rec.fecha_programada
+            if 'tecnico_mantenimiento_id' in rec.equipo_id._fields:
+                valores_equipo['tecnico_mantenimiento_id'] = rec.tecnico_id.id
+            if rec.fecha_confirmada:
+                valores_equipo.update(estado_programacion='confirmado',
+                                      fecha_confirmacion=fields.Datetime.now())
+            if valores_equipo:
+                rec.equipo_id.write(valores_equipo)
             rec.message_post(
                 body=_("🎫 Ticket creado: %s") % ticket.name,
                 message_type='notification'

@@ -62,12 +62,6 @@ class MantenimientoTecnicoPerfil(models.Model):
         ('mixto', 'Técnico mixto / servicios eventuales'),
     ], string='Tipo operativo aplicado', default='mixto', tracking=True)
 
-    meta_base_taller = fields.Float(
-        string='Meta base taller',
-        default=50.0,
-        tracking=True
-    )
-
     meta_base_servicios = fields.Float(
         string='Meta base servicios',
         default=40.0,
@@ -146,6 +140,9 @@ class MantenimientoTecnicoPerfil(models.Model):
         'capacidad_diaria',
         'capacidad_sabado',
         'duracion_servicio_horas',
+        'trabaja_lunes', 'trabaja_martes', 'trabaja_miercoles',
+        'trabaja_jueves', 'trabaja_viernes', 'trabaja_sabado',
+        'trabaja_domingo',
         'hora_inicio_lunes', 'hora_fin_lunes',
         'hora_inicio_martes', 'hora_fin_martes',
         'hora_inicio_miercoles', 'hora_fin_miercoles',
@@ -212,32 +209,43 @@ class MantenimientoTecnicoPerfil(models.Model):
 
         return self.trabaja_domingo, self.hora_inicio_domingo, self.hora_fin_domingo
 
-    def get_disponibilidad_fecha(self, fecha):
-        """
-        Retorna la disponibilidad final del técnico para una fecha.
+    @api.model
+    def _intersectar_intervalos(self, intervalos, inicio, fin):
+        """Limita los intervalos al horario individual autorizado."""
+        return [(max(a, inicio), min(b, fin)) for a, b in intervalos
+                if max(a, inicio) < min(b, fin)]
 
-        Resultado:
-        {
-            'disponible': True/False,
-            'hora_inicio': 8.0,
-            'hora_fin': 18.0,
-            'capacidad': 4,
-            'permite_asignaciones_multiples': True/False,
-            'origen': 'base' / 'excepcion' / 'bloqueado'
-        }
+    @api.model
+    def _restar_intervalo(self, intervalos, inicio, fin):
+        """Excluye un bloqueo sin perder las horas libres restantes."""
+        resultado = []
+        for a, b in intervalos:
+            if fin <= a or inicio >= b:
+                resultado.append((a, b))
+                continue
+            if a < inicio:
+                resultado.append((a, min(b, inicio)))
+            if fin < b:
+                resultado.append((max(a, fin), b))
+        return resultado
+
+    def get_disponibilidad_fecha(self, fecha):
+        """Disponibilidad operativa local; conserva las claves originales.
+
+        Los intervalos son la fuente de verdad para validar cada servicio.
+        El horario general y los cierres no se pueden ampliar mediante una
+        excepción individual. Los bloqueos parciales restan solo sus horas.
         """
         self.ensure_one()
-
-        if isinstance(fecha, datetime):
-            fecha = fecha.date()
-
-        trabaja, hora_inicio, hora_fin = self._get_horario_base_fecha(fecha)
-
+        if not fecha:
+            raise ValidationError(_("Debe indicar una fecha de disponibilidad."))
+        fecha = fields.Date.to_date(fecha)
+        calendario = self.env['whatsapp.calendar.event'].get_working_intervals(fecha)
+        trabaja, inicio, fin = self._get_horario_base_fecha(fecha)
         capacidad = self.capacidad_sabado if fecha.weekday() == 5 else self.capacidad_diaria
-
-        disponible = bool(trabaja and capacidad > 0)
-        permite_asignaciones_multiples = False
+        multiples = False
         origen = 'base'
+        bloqueo = False
 
         excepcion = self.env['mantenimiento.tecnico.disponibilidad'].search([
             ('perfil_id', '=', self.id),
@@ -246,23 +254,52 @@ class MantenimientoTecnicoPerfil(models.Model):
         ], order='sequence desc, id desc', limit=1)
 
         if excepcion:
-            origen = 'excepcion'
-            disponible = excepcion.disponible
-            hora_inicio = excepcion.hora_inicio
-            hora_fin = excepcion.hora_fin
-            capacidad = excepcion.capacidad
-            permite_asignaciones_multiples = bool(excepcion.permite_asignaciones_multiples)
+            if excepcion.disponible:
+                trabaja = True
+                inicio, fin = excepcion.hora_inicio, excepcion.hora_fin
+                capacidad = excepcion.capacidad
+                multiples = bool(excepcion.permite_asignaciones_multiples)
+                origen = 'excepcion'
+            else:
+                bloqueo = excepcion
+                origen = 'bloqueado' if excepcion.dia_completo else 'bloqueo_parcial'
 
-            if not excepcion.disponible:
-                origen = 'bloqueado'
+        intervalos = []
+        if (self.active and self.tecnico_id.active and trabaja
+                and calendario['disponible'] and capacidad > 0
+                and 0 <= inicio < fin <= 24):
+            intervalos = self._intersectar_intervalos(
+                calendario['intervalos'], inicio, fin)
 
+        if bloqueo:
+            if bloqueo.dia_completo:
+                intervalos = []
+            elif 0 <= bloqueo.hora_inicio < bloqueo.hora_fin <= 24:
+                intervalos = self._restar_intervalo(
+                    intervalos, bloqueo.hora_inicio, bloqueo.hora_fin)
+            else:
+                intervalos = []
+
+        if not calendario['disponible']:
+            origen = calendario['origen']
+        elif not self.active or not self.tecnico_id.active:
+            origen = 'inactivo'
+
+        horas = sum(b - a for a, b in intervalos)
+        cupos_horarios = sum(int((b - a + 1e-9) / self.duracion_servicio_horas)
+                             for a, b in intervalos) if self.duracion_servicio_horas > 0 else 0
+        capacidad = min(capacidad, cupos_horarios) if intervalos else 0
+        disponible = bool(intervalos and capacidad > 0)
         return {
             'disponible': disponible,
-            'hora_inicio': hora_inicio,
-            'hora_fin': hora_fin,
+            'hora_inicio': intervalos[0][0] if intervalos else 0.0,
+            'hora_fin': intervalos[-1][1] if intervalos else 0.0,
             'capacidad': capacidad,
-            'permite_asignaciones_multiples': permite_asignaciones_multiples,
+            'permite_asignaciones_multiples': bool(disponible and multiples),
             'origen': origen,
+            'intervalos': intervalos,
+            'horas_laborales': horas,
+            'feriado': calendario.get('feriado', False),
         }
 
     def action_ver_disponibilidades(self):
@@ -432,7 +469,7 @@ class MantenimientoTecnicoDisponibilidad(models.Model):
                     _("Ya existe una disponibilidad aprobada para este técnico en esa fecha.")
                 )
 
-    @api.constrains('hora_inicio', 'hora_fin', 'capacidad', 'disponible', 'permite_asignaciones_multiples')
+    @api.constrains('hora_inicio', 'hora_fin', 'capacidad', 'disponible', 'permite_asignaciones_multiples', 'dia_completo')
     def _check_horas_y_capacidad(self):
         for rec in self:
             if rec.hora_inicio < 0 or rec.hora_inicio > 24:
@@ -441,7 +478,7 @@ class MantenimientoTecnicoDisponibilidad(models.Model):
             if rec.hora_fin < 0 or rec.hora_fin > 24:
                 raise ValidationError(_("La hora de fin debe estar entre 0 y 24."))
 
-            if rec.disponible and rec.hora_fin <= rec.hora_inicio:
+            if (rec.disponible or not rec.dia_completo) and rec.hora_fin <= rec.hora_inicio:
                 raise ValidationError(_("La hora fin debe ser mayor a la hora inicio."))
 
             if rec.capacidad < 0:

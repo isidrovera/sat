@@ -1,7 +1,6 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <odoo>
     <data>
-
         <!-- ========================================================= -->
         <!-- PLANIFICADOR - LISTA                                      -->
         <!-- ========================================================= -->
@@ -9,12 +8,7 @@
             <field name="name">mantenimiento.planificador.list</field>
             <field name="model">mantenimiento.planificador</field>
             <field name="arch" type="xml">
-                <list string="Planificadores de mantenimiento"
-                      decoration-info="estado == 'borrador'"
-                      decoration-primary="estado == 'generado'"
-                      decoration-warning="estado == 'en_proceso'"
-                      decoration-success="estado == 'finalizado'"
-                      decoration-muted="estado == 'cancelado'">
+                <list string="Planificadores de mantenimiento" decoration-info="estado == 'borrador'" decoration-primary="estado == 'generado'" decoration-warning="estado == 'en_proceso'" decoration-success="estado == 'finalizado'" decoration-muted="estado == 'cancelado'">
                     <field name="name"/>
                     <field name="fecha_inicio"/>
                     <field name="fecha_fin"/>
@@ -28,7 +22,6 @@
                 </list>
             </field>
         </record>
-
         <!-- ========================================================= -->
         <!-- PLANIFICADOR - FORM                                       -->
         <!-- ========================================================= -->
@@ -38,107 +31,47 @@
             <field name="arch" type="xml">
                 <form string="Planificador inteligente">
                     <header>
-                        <button name="action_generar_lineas"
-                                string="Generar líneas"
-                                type="object"
-                                class="btn-primary"
-                                invisible="estado not in ('borrador', 'generado')"/>
-
-                        <button name="action_auto_asignar"
-                                string="Auto-asignar"
-                                type="object"
-                                class="btn-success"
-                                invisible="estado not in ('generado', 'en_proceso')"/>
-
-                        <button name="action_ver_lineas_sin_cupo"
-                                string="Ver sin cupo"
-                                type="object"
-                                class="btn-secondary"
-                                invisible="total_sin_cupo == 0"/>
-
-                        <button name="action_ver_lineas_reasignar"
-                                string="Ver por reasignar"
-                                type="object"
-                                class="btn-secondary"
-                                invisible="total_reasignar == 0"/>
-
-                        <field name="estado"
-                               widget="statusbar"
-                               statusbar_visible="borrador,generado,en_proceso,finalizado"/>
+                        <button name="action_generar_lineas" string="Incorporar líneas" type="object" class="btn-primary" invisible="estado not in ('borrador', 'generado', 'en_proceso')"/>
+                        <button name="action_auto_asignar" string="Auto-asignar" type="object" class="btn-success" invisible="estado not in ('generado', 'en_proceso')"/>
+                        <button name="action_ver_lineas_sin_cupo" string="Ver sin cupo" type="object" class="btn-secondary" invisible="total_sin_cupo == 0"/>
+                        <button name="action_ver_lineas_reasignar" string="Ver por reasignar" type="object" class="btn-secondary" invisible="total_reasignar == 0"/>
+                        <field name="estado" widget="statusbar" statusbar_visible="borrador,generado,en_proceso,finalizado"/>
                     </header>
-
                     <sheet>
-
                         <div class="oe_button_box" name="button_box">
-                            <button name="action_ver_lineas_sin_cupo"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-exclamation-triangle"
-                                    invisible="total_sin_cupo == 0">
-                                <field name="total_sin_cupo"
-                                       widget="statinfo"
-                                       string="Sin cupo"/>
+                            <button name="action_ver_lineas_sin_cupo" type="object" class="oe_stat_button" icon="fa-exclamation-triangle" invisible="total_sin_cupo == 0">
+                                <field name="total_sin_cupo" widget="statinfo" string="Sin cupo"/>
                             </button>
-
-                            <button name="action_ver_lineas_reasignar"
-                                    type="object"
-                                    class="oe_stat_button"
-                                    icon="fa-refresh"
-                                    invisible="total_reasignar == 0">
-                                <field name="total_reasignar"
-                                       widget="statinfo"
-                                       string="Reasignar"/>
+                            <button name="action_ver_lineas_reasignar" type="object" class="oe_stat_button" icon="fa-refresh" invisible="total_reasignar == 0">
+                                <field name="total_reasignar" widget="statinfo" string="Reasignar"/>
                             </button>
                         </div>
-
-                        <widget name="web_ribbon"
-                                title="Borrador"
-                                bg_color="text-bg-secondary"
-                                invisible="estado != 'borrador'"/>
-
-                        <widget name="web_ribbon"
-                                title="En proceso"
-                                bg_color="text-bg-warning"
-                                invisible="estado != 'en_proceso'"/>
-
-                        <widget name="web_ribbon"
-                                title="Finalizado"
-                                bg_color="text-bg-success"
-                                invisible="estado != 'finalizado'"/>
-
+                        <widget name="web_ribbon" title="Borrador" bg_color="text-bg-secondary" invisible="estado != 'borrador'"/>
+                        <widget name="web_ribbon" title="En proceso" bg_color="text-bg-warning" invisible="estado != 'en_proceso'"/>
+                        <widget name="web_ribbon" title="Finalizado" bg_color="text-bg-success" invisible="estado != 'finalizado'"/>
                         <div class="oe_title">
                             <label for="name"/>
                             <h1>
                                 <field name="name"/>
                             </h1>
                         </div>
-
                         <group>
                             <group string="Periodo">
                                 <field name="fecha_inicio"/>
                                 <field name="fecha_fin"/>
                             </group>
-
                             <group string="Alcance">
                                 <field name="tecnico_ids" widget="many2many_tags"/>
                                 <field name="zona_ids" widget="many2many_tags"/>
                             </group>
                         </group>
-
                         <group string="Resumen inteligente">
                             <field name="resumen_html" nolabel="1" readonly="1"/>
                         </group>
-
                         <notebook>
-
                             <page string="Planificación">
-                                <field name="line_ids">
-                                    <list editable="bottom"
-                                          decoration-info="estado == 'confirmado'"
-                                          decoration-success="estado in ('programado', 'ticket_creado')"
-                                          decoration-danger="estado == 'sin_cupo'"
-                                          decoration-warning="estado == 'reasignar'"
-                                          decoration-muted="estado == 'cancelado'">
+                                <field name="line_ids" readonly="estado in ('finalizado', 'cancelado')">
+                                    <list create="false" delete="false" decoration-info="estado == 'confirmado'" decoration-success="estado == 'programado'" decoration-primary="estado == 'ticket_creado'" decoration-danger="estado == 'sin_cupo'" decoration-warning="estado == 'reasignar'" decoration-muted="estado == 'cancelado'">
                                         <field name="estado"/>
                                         <field name="equipo_id"/>
                                         <field name="cliente_id"/>
@@ -159,10 +92,8 @@
                                     </list>
                                 </field>
                             </page>
-
                             <page string="Pendientes">
-                                <field name="line_ids"
-                                       domain="[('estado', 'in', ['pendiente', 'confirmado'])]">
+                                <field name="line_ids" readonly="1" domain="[('estado', 'in', ['pendiente', 'confirmado'])]">
                                     <list>
                                         <field name="estado"/>
                                         <field name="equipo_id"/>
@@ -178,10 +109,8 @@
                                     </list>
                                 </field>
                             </page>
-
-                            <page string="Programadas">
-                                <field name="line_ids"
-                                       domain="[('estado', 'in', ['programado', 'ticket_creado'])]">
+                            <page string="Programadas / Tickets">
+                                <field name="line_ids" readonly="1" domain="[('estado', 'in', ['programado', 'ticket_creado']), ('ticket_id.estado', '!=', 'finalizado')]">
                                     <list>
                                         <field name="estado"/>
                                         <field name="fecha_programada"/>
@@ -196,12 +125,21 @@
                                     </list>
                                 </field>
                             </page>
-
+                            <page string="Tickets finalizados">
+                                <field name="line_ids" readonly="1" domain="[('ticket_id', '!=', False), ('ticket_id.estado', '=', 'finalizado')]">
+                                    <list create="false" delete="false">
+                                        <field name="equipo_id"/>
+                                        <field name="cliente_id"/>
+                                        <field name="fecha_ideal"/>
+                                        <field name="fecha_programada"/>
+                                        <field name="tecnico_id"/>
+                                        <field name="ticket_id"/>
+                                    </list>
+                                </field>
+                            </page>
                             <page string="Sin cupo / Reasignar">
-                                <field name="line_ids"
-                                       domain="[('estado', 'in', ['sin_cupo', 'reasignar'])]">
-                                    <list decoration-danger="estado == 'sin_cupo'"
-                                          decoration-warning="estado == 'reasignar'">
+                                <field name="line_ids" readonly="1" domain="[('estado', 'in', ['sin_cupo', 'reasignar'])]">
+                                    <list decoration-danger="estado == 'sin_cupo'" decoration-warning="estado == 'reasignar'">
                                         <field name="estado"/>
                                         <field name="equipo_id"/>
                                         <field name="cliente_id"/>
@@ -217,22 +155,15 @@
                                     </list>
                                 </field>
                             </page>
-
                             <page string="Observaciones">
-                                <field name="observacion"
-                                       nolabel="1"
-                                       placeholder="Notas internas de esta planificación mensual..."/>
+                                <field name="observacion" nolabel="1" placeholder="Notas internas de esta planificación mensual..."/>
                             </page>
-
                         </notebook>
-
                     </sheet>
-
                     <chatter/>
                 </form>
             </field>
         </record>
-
         <!-- ========================================================= -->
         <!-- PLANIFICADOR - KANBAN MODERNO                             -->
         <!-- ========================================================= -->
@@ -240,8 +171,7 @@
             <field name="name">mantenimiento.planificador.kanban</field>
             <field name="model">mantenimiento.planificador</field>
             <field name="arch" type="xml">
-                <kanban class="o_kanban_mobile"
-                        default_group_by="estado">
+                <kanban class="o_kanban_mobile" default_group_by="estado" records_draggable="false" group_create="false" group_edit="false" group_delete="false">
                     <field name="name"/>
                     <field name="fecha_inicio"/>
                     <field name="fecha_fin"/>
@@ -252,11 +182,9 @@
                     <field name="total_programadas"/>
                     <field name="total_sin_cupo"/>
                     <field name="total_reasignar"/>
-
                     <templates>
                         <t t-name="card">
                             <div class="oe_kanban_global_click o_kanban_record">
-
                                 <div class="d-flex justify-content-between align-items-start mb-3">
                                     <div>
                                         <strong class="fs-5">
@@ -268,10 +196,8 @@
                                             <field name="fecha_fin"/>
                                         </div>
                                     </div>
-
                                     <field name="estado" widget="badge"/>
                                 </div>
-
                                 <div class="row g-2">
                                     <div class="col-4">
                                         <div class="border rounded p-2 text-center">
@@ -281,7 +207,6 @@
                                             <div class="text-muted small">Máquinas</div>
                                         </div>
                                     </div>
-
                                     <div class="col-4">
                                         <div class="border rounded p-2 text-center">
                                             <div class="fw-bold fs-5">
@@ -290,7 +215,6 @@
                                             <div class="text-muted small">Programadas</div>
                                         </div>
                                     </div>
-
                                     <div class="col-4">
                                         <div class="border rounded p-2 text-center">
                                             <div class="fw-bold fs-5">
@@ -300,7 +224,6 @@
                                         </div>
                                     </div>
                                 </div>
-
                                 <div class="row g-2 mt-2">
                                     <div class="col-6">
                                         <div class="border rounded p-2 text-center bg-light">
@@ -310,7 +233,6 @@
                                             <div class="text-muted small">Sin cupo</div>
                                         </div>
                                     </div>
-
                                     <div class="col-6">
                                         <div class="border rounded p-2 text-center bg-light">
                                             <div class="fw-bold">
@@ -320,14 +242,12 @@
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </t>
                     </templates>
                 </kanban>
             </field>
         </record>
-
         <!-- ========================================================= -->
         <!-- PLANIFICADOR - SEARCH                                     -->
         <!-- ========================================================= -->
@@ -342,35 +262,17 @@
                     <field name="estado"/>
                     <field name="tecnico_ids"/>
                     <field name="zona_ids"/>
-
-                    <filter name="filter_borrador"
-                            string="Borrador"
-                            domain="[('estado', '=', 'borrador')]"/>
-
-                    <filter name="filter_generado"
-                            string="Generado"
-                            domain="[('estado', '=', 'generado')]"/>
-
-                    <filter name="filter_en_proceso"
-                            string="En proceso"
-                            domain="[('estado', '=', 'en_proceso')]"/>
-
-                    <filter name="filter_activos"
-                            string="Activos"
-                            domain="[('estado', 'in', ['borrador', 'generado', 'en_proceso'])]"/>
-
+                    <filter name="filter_borrador" string="Borrador" domain="[('estado', '=', 'borrador')]"/>
+                    <filter name="filter_generado" string="Generado" domain="[('estado', '=', 'generado')]"/>
+                    <filter name="filter_en_proceso" string="En proceso" domain="[('estado', '=', 'en_proceso')]"/>
+                    <filter name="filter_activos" string="Activos" domain="[('estado', 'in', ['borrador', 'generado', 'en_proceso'])]"/>
                     <group>
-                        <filter name="group_estado"
-                                string="Estado"
-                                context="{'group_by': 'estado'}"/>
-                        <filter name="group_fecha_inicio"
-                                string="Fecha inicio"
-                                context="{'group_by': 'fecha_inicio'}"/>
+                        <filter name="group_estado" string="Estado" context="{'group_by': 'estado'}"/>
+                        <filter name="group_fecha_inicio" string="Fecha inicio" context="{'group_by': 'fecha_inicio'}"/>
                     </group>
                 </search>
             </field>
         </record>
-
         <!-- ========================================================= -->
         <!-- LINEA PLANIFICADOR - LISTA                                -->
         <!-- ========================================================= -->
@@ -378,12 +280,7 @@
             <field name="name">mantenimiento.planificador.linea.list</field>
             <field name="model">mantenimiento.planificador.linea</field>
             <field name="arch" type="xml">
-                <list string="Líneas de planificación"
-                      decoration-info="estado == 'confirmado'"
-                      decoration-success="estado in ('programado', 'ticket_creado')"
-                      decoration-danger="estado == 'sin_cupo'"
-                      decoration-warning="estado == 'reasignar'"
-                      decoration-muted="estado == 'cancelado'">
+                <list string="Líneas de planificación" delete="false" decoration-info="estado == 'confirmado'" decoration-success="estado == 'programado'" decoration-primary="estado == 'ticket_creado'" decoration-danger="estado == 'sin_cupo'" decoration-warning="estado == 'reasignar'" decoration-muted="estado == 'cancelado'">
                     <field name="estado"/>
                     <field name="planificador_id"/>
                     <field name="equipo_id"/>
@@ -405,7 +302,6 @@
                 </list>
             </field>
         </record>
-
         <!-- ========================================================= -->
         <!-- LINEA PLANIFICADOR - FORM                                 -->
         <!-- ========================================================= -->
@@ -413,117 +309,68 @@
             <field name="name">mantenimiento.planificador.linea.form</field>
             <field name="model">mantenimiento.planificador.linea</field>
             <field name="arch" type="xml">
-                <form string="Línea de planificación">
+                <form string="Línea de planificación" delete="false">
                     <header>
-                        <button name="action_confirmar_cliente"
-                                string="Cliente confirmó"
-                                type="object"
-                                class="btn-primary"
-                                invisible="estado not in ('pendiente', 'sin_cupo')"/>
-
-                        <button name="action_buscar_y_asignar_slot"
-                                string="Buscar y asignar slot"
-                                type="object"
-                                class="btn-success"
-                                invisible="estado not in ('pendiente', 'confirmado', 'sin_cupo', 'reasignar')"/>
-
-                        <button name="action_crear_ticket"
-                                string="Crear ticket"
-                                type="object"
-                                class="btn-primary"
-                                invisible="estado != 'programado'"/>
-
-                        <button name="action_ver_ticket"
-                                string="Ver ticket"
-                                type="object"
-                                class="btn-secondary"
-                                invisible="not ticket_id"/>
-
-                        <button name="action_marcar_reasignar"
-                                string="Marcar para reasignar"
-                                type="object"
-                                class="btn-secondary"
-                                invisible="estado in ('reasignar', 'cancelado')"/>
-
-                        <field name="estado"
-                               widget="statusbar"
-                               statusbar_visible="pendiente,confirmado,programado,ticket_creado"/>
+                        <button name="action_confirmar_cliente" string="Cliente confirmó" type="object" class="btn-primary" invisible="ticket_id or estado not in ('pendiente', 'sin_cupo', 'reasignar', 'confirmado')"/>
+                        <button name="action_buscar_y_asignar_slot" string="Buscar y asignar slot" type="object" class="btn-success" invisible="ticket_id or not fecha_confirmada or estado not in ('confirmado', 'sin_cupo', 'reasignar')"/>
+                        <button name="action_crear_ticket" string="Crear ticket" type="object" class="btn-primary" invisible="ticket_id or not fecha_confirmada or estado != 'programado'"/>
+                        <button name="action_ver_ticket" string="Ver ticket" type="object" class="btn-secondary" invisible="not ticket_id"/>
+                        <button name="action_marcar_reasignar" string="Marcar para reasignar" type="object" class="btn-secondary" invisible="ticket_id or estado in ('reasignar', 'cancelado')"/>
+                        <field name="estado" widget="statusbar" statusbar_visible="pendiente,confirmado,programado,ticket_creado"/>
                     </header>
-
                     <sheet>
-
-                        <widget name="web_ribbon"
-                                title="Sin cupo"
-                                bg_color="text-bg-danger"
-                                invisible="estado != 'sin_cupo'"/>
-
-                        <widget name="web_ribbon"
-                                title="Reasignar"
-                                bg_color="text-bg-warning"
-                                invisible="estado != 'reasignar'"/>
-
-                        <widget name="web_ribbon"
-                                title="Ticket creado"
-                                bg_color="text-bg-success"
-                                invisible="estado != 'ticket_creado'"/>
-
+                        <widget name="web_ribbon" title="Sin cupo" bg_color="text-bg-danger" invisible="estado != 'sin_cupo'"/>
+                        <widget name="web_ribbon" title="Reasignar" bg_color="text-bg-warning" invisible="estado != 'reasignar'"/>
+                        <widget name="web_ribbon" title="Ticket creado" bg_color="text-bg-primary" invisible="estado != 'ticket_creado'"/>
                         <div class="oe_title">
                             <label for="resumen"/>
                             <h1>
                                 <field name="resumen" readonly="1"/>
                             </h1>
                         </div>
-
                         <group>
                             <group string="Origen">
-                                <field name="planificador_id"/>
-                                <field name="equipo_id"/>
-                                <field name="cliente_id"/>
-                                <field name="distrito"/>
-                                <field name="zona_id"/>
+                                <field name="planificador_id" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="equipo_id" domain="[('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada')]" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="cliente_id" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="distrito" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="zona_id" readonly="ticket_id or estado == 'cancelado'"/>
                             </group>
-
                             <group string="Configuración">
-                                <field name="prioridad"/>
-                                <field name="cantidad_tecnicos"/>
-                                <field name="duracion_horas"/>
-                                <field name="ignorar_zona"/>
+                                <field name="prioridad" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="cantidad_tecnicos" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="duracion_horas" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="ignorar_zona" readonly="ticket_id or estado == 'cancelado'"/>
                             </group>
                         </group>
-
                         <group>
                             <group string="Fecha ideal / confirmación">
-                                <field name="fecha_ideal"/>
-                                <field name="fecha_confirmada"/>
-                                <field name="hora_confirmada" widget="float_time"/>
+                                <field name="fecha_ideal" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="fecha_confirmada" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="hora_confirmada" readonly="ticket_id or estado == 'cancelado'" widget="float_time"/>
                             </group>
-
                             <group string="Programación real">
-                                <field name="fecha_programada"/>
-                                <field name="hora_inicio" widget="float_time"/>
-                                <field name="hora_fin" widget="float_time"/>
-                                <field name="tecnico_id"/>
-                                <field name="tecnico_apoyo_ids" widget="many2many_tags"/>
+                                <field name="fecha_programada" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="hora_inicio" readonly="ticket_id or estado == 'cancelado'" widget="float_time"/>
+                                <field name="hora_fin" readonly="ticket_id or estado == 'cancelado'" widget="float_time"/>
+                                <field name="tecnico_id" readonly="ticket_id or estado == 'cancelado'"/>
+                                <field name="tecnico_apoyo_ids" readonly="ticket_id or estado == 'cancelado'" widget="many2many_tags"/>
                             </group>
                         </group>
-
                         <group string="Ticket">
                             <field name="ticket_id" readonly="1"/>
+                            <field name="notificacion_automatica_pendiente" readonly="1"/>
+                            <field name="aviso_whatsapp_at" readonly="1"/>
+                            <field name="aviso_correo_at" readonly="1"/>
                         </group>
-
                         <group string="Notas">
-                            <field name="nota"
-                                   nolabel="1"
-                                   placeholder="Motivo de sin cupo, comentario de reasignación o nota operativa..."/>
+                            <field name="nota" nolabel="1" placeholder="Motivo de sin cupo, comentario de reasignación o nota operativa..."/>
                         </group>
-
                     </sheet>
-
                     <chatter/>
                 </form>
             </field>
         </record>
-
         <!-- ========================================================= -->
         <!-- LINEA PLANIFICADOR - KANBAN                               -->
         <!-- ========================================================= -->
@@ -531,8 +378,7 @@
             <field name="name">mantenimiento.planificador.linea.kanban</field>
             <field name="model">mantenimiento.planificador.linea</field>
             <field name="arch" type="xml">
-                <kanban class="o_kanban_mobile"
-                        default_group_by="estado">
+                <kanban class="o_kanban_mobile" default_group_by="estado" records_draggable="false" group_create="false" group_edit="false" group_delete="false">
                     <field name="estado"/>
                     <field name="equipo_id"/>
                     <field name="cliente_id"/>
@@ -545,11 +391,9 @@
                     <field name="tecnico_id"/>
                     <field name="ticket_id"/>
                     <field name="cantidad_tecnicos"/>
-
                     <templates>
                         <t t-name="card">
                             <div class="oe_kanban_global_click o_kanban_record">
-
                                 <div class="d-flex justify-content-between align-items-start">
                                     <div>
                                         <strong>
@@ -559,10 +403,8 @@
                                             <field name="cliente_id"/>
                                         </div>
                                     </div>
-
                                     <field name="estado" widget="badge"/>
                                 </div>
-
                                 <div class="mt-3">
                                     <div>
                                         📍
@@ -571,12 +413,10 @@
                                             · <field name="zona_id"/>
                                         </t>
                                     </div>
-
                                     <div>
                                         📅 Ideal:
                                         <field name="fecha_ideal"/>
                                     </div>
-
                                     <div t-if="record.fecha_programada.raw_value">
                                         🗓️ Programado:
                                         <field name="fecha_programada"/>
@@ -585,25 +425,21 @@
                                         -
                                         <field name="hora_fin" widget="float_time"/>
                                     </div>
-
                                     <div t-if="record.tecnico_id.raw_value">
                                         👷 Técnico:
                                         <field name="tecnico_id"/>
                                     </div>
-
                                     <div>
                                         👥 Técnicos requeridos:
                                         <field name="cantidad_tecnicos"/>
                                     </div>
                                 </div>
-
                             </div>
                         </t>
                     </templates>
                 </kanban>
             </field>
         </record>
-
         <!-- ========================================================= -->
         <!-- LINEA PLANIFICADOR - CALENDAR                             -->
         <!-- ========================================================= -->
@@ -611,10 +447,7 @@
             <field name="name">mantenimiento.planificador.linea.calendar</field>
             <field name="model">mantenimiento.planificador.linea</field>
             <field name="arch" type="xml">
-                <calendar string="Calendario de planificación"
-                          date_start="fecha_programada"
-                          color="tecnico_id"
-                          mode="week">
+                <calendar string="Calendario por día de mantenimiento" date_start="fecha_programada" color="tecnico_id" mode="week" create="false" edit="false" quick_create="false">
                     <field name="equipo_id"/>
                     <field name="cliente_id"/>
                     <field name="zona_id"/>
@@ -624,7 +457,6 @@
                 </calendar>
             </field>
         </record>
-
         <!-- ========================================================= -->
         <!-- LINEA PLANIFICADOR - SEARCH                               -->
         <!-- ========================================================= -->
@@ -642,61 +474,30 @@
                     <field name="estado"/>
                     <field name="fecha_ideal"/>
                     <field name="fecha_programada"/>
-
-                    <filter name="filter_pendiente"
-                            string="Pendientes"
-                            domain="[('estado', '=', 'pendiente')]"/>
-
-                    <filter name="filter_confirmado"
-                            string="Confirmados"
-                            domain="[('estado', '=', 'confirmado')]"/>
-
-                    <filter name="filter_programado"
-                            string="Programados"
-                            domain="[('estado', '=', 'programado')]"/>
-
-                    <filter name="filter_ticket_creado"
-                            string="Ticket creado"
-                            domain="[('estado', '=', 'ticket_creado')]"/>
-
-                    <filter name="filter_sin_cupo"
-                            string="Sin cupo"
-                            domain="[('estado', '=', 'sin_cupo')]"/>
-
-                    <filter name="filter_reasignar"
-                            string="Reasignar"
-                            domain="[('estado', '=', 'reasignar')]"/>
-
-                    <filter name="filter_hoy"
-                            string="Hoy"
-                            domain="[('fecha_programada', '=', context_today())]"/>
-
-                    <filter name="filter_esta_semana"
-                            string="Esta semana"
-                            domain="[('fecha_programada', '&gt;=', context_today())]"/>
-
+                    <filter name="filter_pendiente" string="Pendientes" domain="[('estado', '=', 'pendiente')]"/>
+                    <filter name="filter_confirmado" string="Confirmados" domain="[('estado', '=', 'confirmado')]"/>
+                    <filter name="filter_programado" string="Programados" domain="[('estado', '=', 'programado')]"/>
+                    <filter name="filter_ticket_creado" string="Ticket creado" domain="[('estado', '=', 'ticket_creado')]"/>
+                    <filter name="filter_sin_cupo" string="Sin cupo" domain="[('estado', '=', 'sin_cupo')]"/>
+                    <filter name="filter_reasignar" string="Reasignar" domain="[('estado', '=', 'reasignar')]"/>
+                    <filter name="filter_ticket_finalizado" string="Tickets finalizados" domain="[('ticket_id', '!=', False), ('ticket_id.estado', '=', 'finalizado')]"/>
+                    <filter name="filter_ticket_abierto" string="Tickets abiertos" domain="[('ticket_id', '!=', False), ('ticket_id.estado', '!=', 'finalizado')]"/>
+                    <separator/>
+                    <filter name="filter_sin_zona" string="Sin zona" domain="[('zona_id', '=', False), ('estado', 'not in', ['cancelado', 'ticket_creado'])]"/>
+                    <separator/>
+                    <filter name="filter_vencido" string="Fecha ideal vencida" domain="[('fecha_ideal', '&lt;', context_today()), ('estado', '!=', 'cancelado'), '|', ('ticket_id', '=', False), ('ticket_id.estado', '!=', 'finalizado')]"/>
+                    <separator/>
+                    <filter name="filter_hoy" string="Hoy" domain="[('fecha_programada', '=', context_today())]"/>
+                    <filter name="filter_esta_semana" string="Esta semana" domain="[('fecha_programada', '&gt;=', context_today() - relativedelta(days=context_today().weekday())), ('fecha_programada', '&lt;', context_today() + relativedelta(days=7-context_today().weekday()))]"/>
                     <group>
-                        <filter name="group_estado"
-                                string="Estado"
-                                context="{'group_by': 'estado'}"/>
-                        <filter name="group_zona"
-                                string="Zona"
-                                context="{'group_by': 'zona_id'}"/>
-                        <filter name="group_distrito"
-                                string="Distrito"
-                                context="{'group_by': 'distrito'}"/>
-                        <filter name="group_tecnico"
-                                string="Técnico"
-                                context="{'group_by': 'tecnico_id'}"/>
-                        <filter name="group_fecha_programada"
-                                string="Fecha programada"
-                                context="{'group_by': 'fecha_programada'}"/>
+                        <filter name="group_estado" string="Estado" context="{'group_by': 'estado'}"/>
+                        <filter name="group_zona" string="Zona" context="{'group_by': 'zona_id'}"/>
+                        <filter name="group_distrito" string="Distrito" context="{'group_by': 'distrito'}"/>
+                        <filter name="group_tecnico" string="Técnico" context="{'group_by': 'tecnico_id'}"/>
+                        <filter name="group_fecha_programada" string="Fecha programada" context="{'group_by': 'fecha_programada'}"/>
                     </group>
                 </search>
             </field>
         </record>
-
-       
-
     </data>
 </odoo>

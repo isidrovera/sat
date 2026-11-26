@@ -310,7 +310,7 @@ class TicketAlquiler(models.Model):
 
     def _get_timezone_disponibilidad(self):
         """Zona horaria usada para validar agenda, permisos y bloqueos."""
-        return timezone(self.env.user.tz or 'America/Lima')
+        return timezone('America/Lima')
 
     def _datetime_utc_to_local_disponibilidad(self, fecha_dt):
         """
@@ -459,6 +459,17 @@ class TicketAlquiler(models.Model):
         fecha_fin = fin_local.date()
 
         while fecha_actual <= fecha_fin:
+            # Consultar también las ausencias reales (incluidas las abiertas).
+            Ausencia = self.env['mantenimiento.tecnico.ausencia'].sudo()
+            base = datetime.combine(fecha_actual, datetime.min.time())
+            for hora_a, hora_b in Ausencia.get_intervalos_ausencia(tecnico.id, fecha_actual):
+                if hora_b <= hora_a:
+                    hora_a, hora_b = 0.0, 24.0
+                if (inicio_local < base + timedelta(hours=hora_b)
+                        and fin_local > base + timedelta(hours=hora_a)):
+                    return {'disponible': False, 'bloqueo': False,
+                            'ausencia': self._get_ausencia_tecnico_fecha(tecnico, fecha_actual),
+                            'intervalo_ausencia': (hora_a, hora_b)}
             bloqueos = self._get_bloqueos_tecnico_fecha(
                 tecnico,
                 fecha_actual,
@@ -555,7 +566,8 @@ class TicketAlquiler(models.Model):
         elif bloqueo:
             motivo = getattr(bloqueo, 'motivo', False)
 
-        if bloqueo and getattr(bloqueo, 'dia_completo', False):
+        intervalo = resultado.get('intervalo_ausencia') if resultado else False
+        if (bloqueo and getattr(bloqueo, 'dia_completo', False)) or intervalo == (0.0, 24.0):
             mensaje = _(
                 "El técnico %s no está disponible el %s.\n\n"
                 "Horario solicitado: %s - %s."
@@ -568,6 +580,8 @@ class TicketAlquiler(models.Model):
         else:
             hora_inicio = getattr(bloqueo, 'hora_inicio', 0.0) if bloqueo else 0.0
             hora_fin = getattr(bloqueo, 'hora_fin', 0.0) if bloqueo else 0.0
+            if intervalo:
+                hora_inicio, hora_fin = intervalo
 
             mensaje = _(
                 "El técnico %s no está disponible en ese horario.\n\n"
@@ -665,7 +679,7 @@ class TicketAlquiler(models.Model):
                         tecnico=tecnico,
                         agenda=agenda,
                         tipo_servicio=vals.get('tipo_servicio_id', 'revision'),
-                        duracion_horas=vals.get('duracion_programada_horas', False),
+                        duracion_horas=vals.get('duracion_programada_horas') or self.env.context.get('mantenimiento_duracion_horas', False),
                     )
 
             # Validar instalación de cada ticket, igual que antes.
@@ -750,7 +764,7 @@ class TicketAlquiler(models.Model):
                 elif 'duracion_programada_horas' in record._fields:
                     duracion_horas = record.duracion_programada_horas
                 else:
-                    duracion_horas = False
+                    duracion_horas = record._get_duracion_ticket_calendario() if tipo_servicio == record.tipo_servicio_id else False
 
                 if responsable_id and agenda:
                     tecnico = self.env['res.users'].browse(responsable_id)
@@ -1816,6 +1830,9 @@ class TicketAlquiler(models.Model):
                 'estado':                    'finalizado',
                 'last_pending_notification': False,
             })
+
+            # Cerrar exclusivamente el ciclo preventivo vinculado a este ticket.
+            ticket._sincronizar_cierre_mantenimiento_preventivo()
     
             _logger.info(
                 "[action_finalizar] ✅ Ticket %s finalizado correctamente | "
@@ -1838,6 +1855,40 @@ class TicketAlquiler(models.Model):
         }
     
     
+    def _sincronizar_cierre_mantenimiento_preventivo(self):
+        """Integra el cierre validado con el ciclo contractual del planificador.
+
+        Los tickets manuales o históricos sin vínculo no avanzan el ciclo.
+        No se usa la fecha de agenda como evidencia de ejecución.
+        """
+        self.ensure_one()
+        if self.estado != 'finalizado' or self.tipo_servicio_id != 'mantenimiento_preventivo':
+            return False
+        equipo = self.product_alquiler
+        if not equipo:
+            return False
+        # Mismo bloqueo que confirmar_mantenimiento_completado y el planificador.
+        self.env.cr.execute(
+            'SELECT id FROM alquiler WHERE id = %s FOR UPDATE', (equipo.id,)
+        )
+        equipo.invalidate_recordset()
+        if (not equipo.control_mantenimiento or equipo.estado_alquiler_id != 'alquilada'
+                or not equipo.fecha_recurrente or not equipo.cliente_id
+                or self.partner_id != equipo.cliente_id):
+            _logger.warning('[MANTENIMIENTO] Ticket %s cerrado sin avanzar ciclo: equipo no elegible.', self.id)
+            return False
+        lineas = equipo._lineas_ciclo_mantenimiento()
+        vinculadas = lineas.filtered(lambda linea: linea.ticket_id == self)
+        if len(vinculadas) != 1:
+            _logger.warning('[MANTENIMIENTO] Ticket %s sin vínculo único al ciclo vigente; no se avanza la fecha.', self.id)
+            return False
+        # Reutilizar el método integrado: verifica otros tickets y conserva la periodicidad.
+        # Si la validación del ciclo falla, el cierre se revierte con la transacción.
+        equipo.with_context(tz='America/Lima').confirmar_mantenimiento_completado()
+        _logger.info('[MANTENIMIENTO] Ciclo cerrado por ticket %s; próximo mantenimiento=%s',
+                     self.id, equipo.fecha_recurrente)
+        return True
+
     def _registrar_historial_instalacion(self):
         """
         Registra el historial de durabilidad usando los contómetros REALES
@@ -3059,12 +3110,16 @@ class TicketAlquiler(models.Model):
         return 2.0
 
     def _get_duracion_ticket_calendario(self):
-        """
-        Devuelve la duración del ticket actual para crear/actualizar evento calendario.
-        Se usa también para que el calendario no cree siempre eventos de 2 horas.
-        """
         self.ensure_one()
+        if self.tipo_servicio_id == 'mantenimiento_preventivo':
+            linea = self.env['mantenimiento.planificador.linea'].sudo().search([
+                ('ticket_id', '=', self.id), ('estado', '!=', 'cancelado')], limit=1)
+            if linea and linea.duracion_horas > 0:
+                return linea.duracion_horas
+        if 'duracion_programada_horas' in self._fields and self.duracion_programada_horas > 0:
+            return self.duracion_programada_horas
         return self._get_duracion_servicio_masivo(self.tipo_servicio_id)
+
 
     def _get_horarios_laborales_masivo(self, fecha_dt):
         """
@@ -3811,6 +3866,8 @@ class TicketAlquiler(models.Model):
             ('estado', 'in', ['proceso', 'en_ruta', 'en_sitio', 'en_revision']),
             ('agenda', '<', fields.Datetime.now())
         ])
+        if not self.env['alquiler']._mantenimiento_horario_abierto():
+            tickets_pendientes = tickets_pendientes.filtered(lambda t: t.tipo_servicio_id != 'mantenimiento_preventivo')
         tecnicos_con_tickets = {}
         for ticket in tickets_pendientes:
             if not ticket.responsable:

@@ -210,6 +210,8 @@ class WhatsappBusinessHours(models.Model):
     # Constraints
     # ==========================================================
     @api.constrains(
+        "is_workday",
+        "has_break",
         "open_time",
         "close_time",
         "break_start",
@@ -273,6 +275,67 @@ class WhatsappBusinessHours(models.Model):
                         "que el fin de la tarde."
                     )
                 )
+
+    # ==========================================================
+    # Intervalos laborales compartidos con el planificador SAT
+    # ==========================================================
+    @api.model
+    def get_working_intervals(self, work_date):
+        """Devuelve intervalos regulares en horas decimales locales.
+
+        No aplica feriados ni excepciones individuales: corresponden al
+        calendario y al perfil técnico, respectivamente. No altera la
+        lógica conversacional de WhatsApp.
+        """
+        if not work_date:
+            raise ValidationError(_("Debe indicar una fecha laboral."))
+
+        work_date = fields.Date.to_date(work_date)
+        horario = self.search([
+            ("day_of_week", "=", str(work_date.weekday())),
+            ("active", "=", True),
+        ], limit=1)
+
+        resultado = {
+            "disponible": False,
+            "intervalos": [],
+            "horas_laborales": 0.0,
+            "origen": "sin_configuracion",
+        }
+
+        if not horario:
+            _logger.warning("[WA-HOURS] Sin horario activo para %s", work_date)
+            return resultado
+
+        if not horario.is_workday:
+            resultado["origen"] = "dia_no_laboral"
+            return resultado
+
+        inicio = horario.open_time
+        fin = horario.close_time
+        if not 0.0 <= inicio < fin < 24.0:
+            resultado["origen"] = "horario_invalido"
+            _logger.warning("[WA-HOURS] Horario inválido para %s", work_date)
+            return resultado
+
+        intervalos = [(inicio, fin)]
+        if horario.has_break:
+            pausa_inicio = horario.break_start
+            pausa_fin = horario.break_end
+            if not inicio <= pausa_inicio < pausa_fin <= fin:
+                resultado["origen"] = "horario_invalido"
+                _logger.warning("[WA-HOURS] Refrigerio inválido para %s", work_date)
+                return resultado
+            intervalos = [(inicio, pausa_inicio), (pausa_fin, fin)]
+
+        intervalos = [(a, b) for a, b in intervalos if a < b]
+        resultado.update({
+            "disponible": bool(intervalos),
+            "intervalos": intervalos,
+            "horas_laborales": sum(b - a for a, b in intervalos),
+            "origen": "horario_regular",
+        })
+        return resultado
 
     # ==========================================================
     # Helpers de presentación

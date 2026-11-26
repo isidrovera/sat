@@ -1,7 +1,10 @@
+import hashlib
+import hmac
 import calendar
 import requests
 import uuid
 from urllib.parse import urlencode
+from pytz import timezone, UTC
 from odoo.exceptions import UserError, ValidationError
 import io
 import qrcode
@@ -19,6 +22,27 @@ _logger = logging.getLogger(__name__)
 
 class UnidadAlquiler(models.Model):
     _inherit = 'alquiler'
+
+    mantenimiento_aviso_ciclo = fields.Date(
+        string='Ciclo del último aviso preventivo', readonly=True, copy=False, index=True)
+    mantenimiento_aviso_cliente_id = fields.Many2one(
+        'res.partner', string='Cliente del último aviso preventivo', readonly=True, copy=False)
+
+    @api.model
+    def _mantenimiento_ahora_local(self):
+        """Datetime local de Lima, independiente de la zona horaria del usuario cron."""
+        ahora = fields.Datetime.to_datetime(fields.Datetime.now())
+        if not ahora.tzinfo:
+            ahora = UTC.localize(ahora)
+        return ahora.astimezone(timezone('America/Lima')).replace(tzinfo=None)
+
+    @api.model
+    def _mantenimiento_horario_abierto(self):
+        ahora = self._mantenimiento_ahora_local()
+        horario = self.env['whatsapp.calendar.event'].sudo().get_working_intervals(ahora.date())
+        hora = ahora.hour + ahora.minute / 60.0 + ahora.second / 3600.0
+        return bool(horario.get('disponible') and any(
+            inicio <= hora < fin for inicio, fin in horario.get('intervalos', [])))
 
     control_mantenimiento = fields.Boolean(
         string="Mantenimiento mensual", default=False)
@@ -191,6 +215,7 @@ class UnidadAlquiler(models.Model):
             return {'warning': {'title': 'Error', 'message': 'Debe definir una fecha de inicio'}}
         
         # Simular 12 próximos mantenimientos
+        record = self.new(self.copy_data()[0])
         fecha_simulada = self.fecha_inicio
         resultados = []
         
@@ -439,118 +464,52 @@ class UnidadAlquiler(models.Model):
         return True
     @api.model
     def update_fecha_recurrente(self):
-        """
-        Actualiza fechas vencidas moviendo fecha_inicio hacia adelante.
-        NUEVO ENFOQUE: Actualiza fecha_inicio para simplificar cálculos futuros.
-        """
-        today = fields.Date.today()
-        
-        # Buscar registros con fechas vencidas
+        """Conservar pendientes vencidos: vencer no equivale a completar."""
+        today = fields.Date.context_today(self)
         records = self.search([
             ('fecha_recurrente', '<=', today),
             ('control_mantenimiento', '=', True),
             ('estado_alquiler_id', '=', 'alquilada'),
         ])
-        
-        _logger.info(f"CRON: Encontrados {len(records)} registros con fechas vencidas (hoy: {today})")
-
-        for record in records:
-            fecha_vencida = record.fecha_recurrente
-            fecha_inicio_anterior = record.fecha_inicio
-            
-            # Determinar descripción del patrón para logs
-            if record.patron_recurrencia == 'semana_dia' and record.semana_mes and record.dia_semana:
-                dias_nombres = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
-                pos_nombres = {'1':'Primer','2':'Segundo','3':'Tercer','4':'Cuarto','-1':'Último','-2':'Penúltimo','-3':'Antepenúltimo'}
-                patron_desc = f"{pos_nombres.get(record.semana_mes, record.semana_mes)} {dias_nombres[int(record.dia_semana)]}"
-            else:
-                patron_desc = f"Día {record.fecha_inicio.day} del mes"
-            
-            _logger.info(f"PROCESANDO: {record.name} - Patrón: {patron_desc}")
-            _logger.info(f"  fecha_inicio anterior: {fecha_inicio_anterior}")
-            _logger.info(f"  fecha_recurrente vencida: {fecha_vencida}")
-            
-            # ACTUALIZAR fecha_inicio a la fecha vencida
-            record.write({
-                'fecha_inicio': fecha_vencida,
-                'fecha_ultimo_mantenimiento': fecha_vencida,  # Registrar el último mantenimiento
-                'estado_programacion': 'pendiente',
-                'fecha_confirmacion': False
-            })
-
-            # Forzar recálculo desde la nueva fecha_inicio
-            record._compute_fecha_recurrente()
-
-            _logger.info(f"ACTUALIZADO: {record.name}")
-            _logger.info(f"  nueva fecha_inicio: {record.fecha_inicio}")
-            _logger.info(f"  nueva fecha_recurrente: {record.fecha_recurrente}")
-            _logger.info(f"  patrón mantenido: {patron_desc}")
-            
-            # Verificar que el patrón se respete
-            if record.patron_recurrencia == 'semana_dia':
-                dia_calculado = record.fecha_recurrente.weekday()
-                dia_esperado = int(record.dia_semana)
-                if dia_calculado == dia_esperado:
-                    _logger.info(f"  PATRÓN VERIFICADO: {patron_desc} respetado correctamente")
-                else:
-                    _logger.error(f"  ERROR PATRÓN: Esperado {dias_nombres[dia_esperado]}, calculado {dias_nombres[dia_calculado]}")
-            
-            # Enviar notificación
-            if record.id and hasattr(record, '_origin') and record._origin and record._origin.id:
-                try:
-                    record.message_post(
-                        body=f"Mantenimiento actualizado: {fecha_vencida.strftime('%d/%m/%Y')} → {record.fecha_recurrente.strftime('%d/%m/%Y')}",
-                        message_type='notification'
-                    )
-                except Exception as e:
-                    _logger.warning(f"No se pudo enviar notificación: {str(e)}")
-
-        _logger.info(f"CRON COMPLETADO: {len(records)} registros actualizados")
+        _logger.info("[MANTENIMIENTO] %s equipos con fecha alcanzada o vencida; no se avanza el ciclo sin ejecución.", len(records))
         return True
+
     def confirmar_mantenimiento_completado(self):
-        """
-        Confirma que el mantenimiento fue completado y avanza fecha_inicio.
-        Método para usar cuando el técnico completa el mantenimiento.
-        """
+        """Cerrar manualmente el ciclo si su ticket vinculado está finalizado."""
         self.ensure_one()
+        self.env.cr.execute('SELECT id FROM alquiler WHERE id = %s FOR UPDATE', (self.id,))
+        self.invalidate_recordset()
         self._validar_equipo_mantenimiento()
-        
         if not self.fecha_recurrente:
-            raise UserError("No hay fecha de mantenimiento programada")
-        
-        fecha_completada = self.fecha_recurrente
-        
-        # Actualizar fecha_inicio para el próximo cálculo
+            raise UserError(_("No hay fecha de mantenimiento programada."))
+        ciclo = self.fecha_recurrente
+        lineas = self._lineas_ciclo_mantenimiento()
+        finalizadas = lineas.filtered(lambda l: l.ticket_id and
+            l.ticket_id.estado == 'finalizado' and
+            l.ticket_id.product_alquiler == self and
+            l.ticket_id.tipo_servicio_id == 'mantenimiento_preventivo' and
+            l.ticket_id.partner_id == self.cliente_id)
+        if len(finalizadas) != 1:
+            raise UserError(_("Debe existir exactamente un ticket finalizado vinculado a este ciclo. Revise la planificación."))
+        if lineas.filtered(lambda l: l.ticket_id and l.ticket_id.estado != 'finalizado'):
+            raise UserError(_("Existen tickets pendientes en este ciclo."))
+        # No se conoce un campo de fecha real de ejecución en ticket.alquiler.
+        # La fecha registrada corresponde a la confirmación manual del cierre.
+        fecha_cierre = fields.Date.context_today(self)
         self.write({
-            'fecha_inicio': fecha_completada,
-            'fecha_ultimo_mantenimiento': fecha_completada,
+            'fecha_inicio': ciclo,
+            'fecha_ultimo_mantenimiento': fecha_cierre,
             'estado_programacion': 'pendiente',
-            'fecha_confirmacion': fields.Datetime.now()
+            'fecha_confirmacion': False,
         })
-        
-        # Recalcular automáticamente la próxima fecha
-        self._compute_fecha_recurrente()
-        
-        # Log del cambio
-        self.message_post(
-            body=f"Mantenimiento completado el {fecha_completada.strftime('%d/%m/%Y')}. Próximo: {self.fecha_recurrente.strftime('%d/%m/%Y')}",
-            message_type='notification'
-        )
-        
-        _logger.info(f"MANTENIMIENTO COMPLETADO: {self.name} - Nueva secuencia iniciada desde {self.fecha_inicio}")
-        
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Mantenimiento Completado',
-                'message': f'Próximo mantenimiento programado para {self.fecha_recurrente.strftime("%d/%m/%Y")}',
-                'sticky': False,
-                'type': 'success',
-            }
-        }
-
-
+        self.message_post(body=_("Ciclo %(ciclo)s cerrado mediante ticket %(ticket)s. Fecha de confirmación del cierre: %(fecha)s. Próximo ciclo: %(proximo)s.") % {
+            'ciclo': ciclo, 'ticket': finalizadas.ticket_id.name,
+            'fecha': fecha_cierre, 'proximo': self.fecha_recurrente,
+        }, message_type='notification')
+        return {'type': 'ir.actions.client', 'tag': 'display_notification',
+                'params': {'title': _('Mantenimiento completado'),
+                           'message': _('Próximo mantenimiento: %s') % self.fecha_recurrente,
+                           'type': 'success', 'sticky': False}}
 
     def debug_patron_cliente(self, cliente_id=None):
         """
@@ -608,61 +567,81 @@ class UnidadAlquiler(models.Model):
             equipo.usar_fecha_recurrente_como_base = old_usar_base
     @api.model
     def send_maintenance_reminders(self):
-        """Envía recordatorios de mantenimiento a los clientes con equipos programados."""
-        today = fields.Date.today()
-        target_date = today + timedelta(days=3)
-        _logger.info(
-            f"Buscando registros con fecha_recurrente entre {target_date} y {target_date + timedelta(days=1)}")
+        """Un aviso por cliente/ciclo; adelantar ante cierres y recuperar avisos pendientes.
 
-        # Buscar registros con fecha_recurrente dentro del rango
-        records = self.search([
-            ('fecha_recurrente', '>=', target_date),
-            ('fecha_recurrente', '<', target_date + timedelta(days=1)),
+        No proponer fechas vencidas o días cerrados. Esos casos quedan para
+        coordinación operativa. El marcador es persistente y se escribe solo
+        si Odoo no informa error de envío.
+        """
+        if not self._mantenimiento_horario_abierto():
+            return False
+        self.env.cr.execute('SELECT pg_try_advisory_xact_lock(%s, %s)', (41971, 1))
+        if not self.env.cr.fetchone()[0]:
+            return False
+        hoy = self._mantenimiento_ahora_local().date()
+        calendario = self.env['whatsapp.calendar.event'].sudo()
+        cache = {}
+        def laborable(fecha):
+            if fecha not in cache:
+                cache[fecha] = bool(calendario.get_working_intervals(fecha).get('intervalos'))
+            return cache[fecha]
+        # Anticipación normal de tres días calendario. Si un cierre prolongado
+        # impide avisar con esa anticipación, enviar en el último día hábil previo.
+        limite = hoy + timedelta(days=30)
+        registros = self.search([
             ('control_mantenimiento', '=', True),
             ('estado_alquiler_id', '=', 'alquilada'),
-        ])
-        _logger.info(
-            f"Registros encontrados para enviar recordatorios: {len(records)}")
-
-        if not records:
-            _logger.warning(
-                "No se encontraron registros para enviar recordatorios.")
-            return
-
-        # Agrupar registros por cliente
-        grouped_records = {}
-        for record in records:
-            if record.cliente_id:
-                cliente_id = record.cliente_id.id
-                if cliente_id not in grouped_records:
-                    grouped_records[cliente_id] = {
-                        'cliente': record.cliente_id,
-                        'correo': record.correo_,
-                        'equipos': []
-                    }
-                grouped_records[cliente_id]['equipos'].append(record)
-
-        # Enviar correos agrupados por cliente
-        mail_template = self.env.ref(
-            'sat.mail_template_maintenance_notification')
-        for client_data in grouped_records.values():
-            correo = client_data['correo']
-            if not correo:
-                _logger.warning(
-                    f"Cliente {client_data['cliente'].name} no tiene correo. Saltando...")
+            ('estado_programacion', '=', 'pendiente'),
+            ('cliente_id', '!=', False),
+            ('fecha_recurrente', '>=', hoy), ('fecha_recurrente', '<=', limite),
+        ], order='fecha_recurrente, cliente_id, id')
+        grupos = {}
+        for equipo in registros:
+            grupos.setdefault((equipo.cliente_id.id, equipo.fecha_recurrente), equipo)
+        plantilla = self.env.ref('sat.mail_template_maintenance_notification')
+        for (cliente, ciclo), equipo in grupos.items():
+            if not self._mantenimiento_horario_abierto():
+                break
+            if not laborable(ciclo):
                 continue
-
-            primer_equipo = client_data['equipos'][0]
+            objetivo = ciclo - timedelta(days=3)
+            if hoy < objetivo:
+                # Hay un día hábil posterior a hoy y hasta el día objetivo:
+                # todavía no corresponde anticipar el envío.
+                if any(laborable(hoy + timedelta(days=i))
+                       for i in range(1, (objetivo - hoy).days + 1)):
+                    continue
             try:
-                mail_template.with_context(
-                    equipos=client_data['equipos'],
-                    fecha_mantenimiento=target_date
-                ).send_mail(primer_equipo.id, force_send=True)
-                _logger.info(
-                    f"Correo enviado a {correo} para cliente {client_data['cliente'].name}")
-            except Exception as e:
-                _logger.error(
-                    f"Error al enviar correo a {correo} para cliente {client_data['cliente'].name}: {e}")
+                with self.env.cr.savepoint():
+                    equipos = equipo._equipos_ciclo_cliente()
+                    self.env.cr.execute('SELECT id FROM alquiler WHERE id IN %s ORDER BY id FOR UPDATE',
+                                        (tuple(equipos.ids),))
+                    equipos.invalidate_recordset()
+                    if any(e.cliente_id.id != cliente or e.fecha_recurrente != ciclo or
+                           not e.control_mantenimiento or e.estado_alquiler_id != 'alquilada'
+                           for e in equipos):
+                        continue
+                    if any(e.estado_programacion != 'pendiente' for e in equipos):
+                        continue
+                    if any(e.mantenimiento_aviso_ciclo == ciclo and
+                           e.mantenimiento_aviso_cliente_id.id == cliente for e in equipos):
+                        continue
+                    destino = equipos.filtered(lambda e: bool(e.correo_))[:1]
+                    if not destino:
+                        _logger.warning('[MANT] Cliente %s sin correo para ciclo %s', cliente, ciclo)
+                        continue
+                    if not self._mantenimiento_horario_abierto():
+                        break
+                    mail_id = plantilla.with_context(equipos=equipos, fecha_mantenimiento=ciclo).send_mail(
+                        destino.id, force_send=True, raise_exception=True)
+                    if not mail_id:
+                        raise UserError(_('No se generó el correo de mantenimiento.'))
+                    equipos.write({'mantenimiento_aviso_ciclo': ciclo,
+                                   'mantenimiento_aviso_cliente_id': cliente})
+            except Exception:
+                _logger.exception('[MANT] Error de aviso cliente=%s ciclo=%s', cliente, ciclo)
+        return True
+
     def _validar_equipo_mantenimiento(self):
         self.ensure_one()
         if not self.control_mantenimiento:
@@ -772,82 +751,121 @@ class UnidadAlquiler(models.Model):
 
 
 
-    def _create_maintenance_tickets(self):
-        """Crear tickets de mantenimiento para todos los equipos del cliente"""
+    def _lineas_ciclo_mantenimiento(self):
+        self.ensure_one()
+        return self.env['mantenimiento.planificador.linea'].search([
+            ('equipo_id', '=', self.id),
+            ('cliente_id', '=', self.cliente_id.id),
+            ('fecha_ideal', '=', self.fecha_recurrente),
+            ('estado', '!=', 'cancelado'),
+            ('planificador_id.estado', '!=', 'cancelado'),
+        ])
+
+    def get_maintenance_action_url(self, accion):
+        """Genera un enlace firmado compatible con MaintenanceController."""
+        self.ensure_one()
+        self._validar_equipo_mantenimiento()
+        if not self.fecha_recurrente or accion not in ('confirm', 'reschedule'):
+            raise UserError(_("Acción o ciclo de mantenimiento inválido."))
+        params = self.env['ir.config_parameter'].sudo()
+        secreto = params.get_param('database.secret')
+        base_url = params.get_param('web.base.url')
+        if not secreto or not base_url:
+            raise UserError(_("Falta configurar la seguridad o URL base de Odoo."))
+        cliente = str(self.cliente_id.id)
+        ciclo = str(self.fecha_recurrente)
+        mensaje = f'mantenimiento:v1:{accion}:{self.id}:{cliente}:{ciclo}'
+        firma = hmac.new(secreto.encode('utf-8'), mensaje.encode('utf-8'), hashlib.sha256).hexdigest()
+        ruta = 'confirmar' if accion == 'confirm' else 'reprogramar'
+        query = urlencode({'ciclo': ciclo, 'cliente': cliente, 'firma': firma})
+        return f"{base_url.rstrip('/')}/mantenimiento/{ruta}/{self.id}?{query}"
+
+    def _equipos_ciclo_cliente(self):
+        self.ensure_one()
         self._validar_equipo_mantenimiento()
         if not self.fecha_recurrente:
-            raise UserError("No hay fecha de mantenimiento programada.")
-        try:
-            equipos = self.search([
-                ('cliente_id', '=', self.cliente_id.id),
-                ('fecha_recurrente', '=', self.fecha_recurrente),
-                ('control_mantenimiento', '=', True),
-                ('estado_alquiler_id', '=', 'alquilada'),
-                ('estado_programacion', '!=', 'confirmado'),
-            ])
+            raise UserError(_("No hay fecha de mantenimiento programada."))
+        return self.search([
+            ('cliente_id', '=', self.cliente_id.id),
+            ('fecha_recurrente', '=', self.fecha_recurrente),
+            ('control_mantenimiento', '=', True),
+            ('estado_alquiler_id', '=', 'alquilada'),
+        ], order='id')
 
-            if not equipos:
-                return False
-
+    def _create_maintenance_tickets(self):
+        """Nombre histórico conservado: confirmar sin crear tickets paralelos."""
+        equipos = self._equipos_ciclo_cliente()
+        ciclo = self.fecha_recurrente
+        cliente = self.cliente_id
+        with self.env.cr.savepoint():
             for equipo in equipos:
-                self.env['ticket.alquiler'].create({
-                    'partner_id': equipo.cliente_id.id,
-                    'product_alquiler': equipo.id,
-                    'tipo_servicio_id': 'mantenimiento_preventivo',
-                    'estado': 'nuevo',
-                    'description': 'Mantenimiento preventivo programado',
-                    'direccion_id_r': equipo.direccion,
-                    'contacto_id_r': equipo.contacto_id,
-                    'celular_id_r': equipo.celular,
-                    'corre_id_r': equipo.correo_,
-                })
-
-            # ✅ CORREGIDO: Actualizar TODOS los equipos
-            equipos.write({
-                'estado_programacion': 'confirmado',
-                'fecha_confirmacion': fields.Datetime.now()
-            })
-
-            # ✅ Opcional: enviar email solo una vez
-            template = self.env.ref(
-                'sat.mail_template_maintenance_confirmation')
-            template.send_mail(self.id, force_send=True)
-
-            # ✅ Opcional: log solo en el primer equipo
-            self.message_post(
-                body=f"✅ Mantenimiento confirmado para {self.fecha_recurrente.strftime('%d/%m/%Y')}",
-                message_type='notification'
-            )
-
-            return True
-        except Exception as e:
-            _logger.error(
-                "Error al crear tickets de mantenimiento: %s", str(e))
-            return False
+                self.env.cr.execute('SELECT id FROM alquiler WHERE id = %s FOR UPDATE', (equipo.id,))
+            equipos.invalidate_recordset()
+            for equipo in equipos:
+                equipo._validar_equipo_mantenimiento()
+                if equipo.cliente_id != cliente or equipo.fecha_recurrente != ciclo:
+                    raise UserError(_("Cambió el cliente o ciclo durante la confirmación."))
+            if any(e.estado_programacion == 'reprogramado' for e in equipos):
+                raise UserError(_('Existe una reprogramación pendiente de coordinación.'))
+            pendientes = equipos.filtered(lambda e: e.estado_programacion != 'confirmado')
+            if not pendientes:
+                return True
+            if ciclo < self._mantenimiento_ahora_local().date() or not self.env['whatsapp.calendar.event'].sudo().get_working_intervals(ciclo).get('intervalos'):
+                raise UserError(_('La fecha propuesta ya venció o no tiene horario laboral. Solicite reprogramación.'))
+            for equipo in pendientes:
+                if equipo.estado_programacion == 'reprogramado':
+                    continue
+                lineas = equipo._lineas_ciclo_mantenimiento()
+                if len(lineas) > 1:
+                    raise UserError(_("Hay más de una línea activa para el mismo ciclo."))
+                if lineas:
+                    if lineas.fecha_confirmada and lineas.fecha_confirmada != ciclo:
+                        raise UserError(_("La línea ya tiene otra fecha confirmada."))
+                    if lineas.ticket_id and lineas.fecha_programada != ciclo:
+                        raise UserError(_("Existe un ticket con otra fecha; revise la planificación."))
+                    if lineas.fecha_programada and lineas.fecha_programada != ciclo:
+                        lineas.write({'fecha_confirmada': ciclo, 'estado': 'reasignar',
+                                      'fecha_programada': False, 'hora_inicio': 0.0, 'hora_fin': 0.0,
+                                      'tecnico_id': False, 'tecnico_apoyo_ids': [(5, 0, 0)],
+                                      'nota': _('Cliente confirmó la fecha recurrente; revisar asignación.')})
+                    else:
+                        vals = {'fecha_confirmada': ciclo}
+                        if not lineas.ticket_id and lineas.estado != 'programado':
+                            vals['estado'] = 'confirmado'
+                        lineas.write(vals)
+                equipo.write({'estado_programacion': 'confirmado',
+                              'fecha_confirmacion': fields.Datetime.now()})
+            self.env.ref('sat.mail_template_maintenance_confirmation').send_mail(self.id, force_send=True)
+            self.message_post(body=_("Mantenimiento confirmado para %s. La creación de tickets corresponde al planificador.") % ciclo,
+                              message_type='notification')
+        return True
 
     def _send_reschedule_request(self):
-        """Enviar solicitud de reprogramación"""
-        self._validar_equipo_mantenimiento()
-        if not self.fecha_recurrente:
-            raise UserError("No hay fecha de mantenimiento programada.")
-        try:
-            self.write({
-                'estado_programacion': 'reprogramado',
-                'fecha_confirmacion': False
-            })
-            template = self.env.ref('sat.mail_template_maintenance_reschedule')
-            template.send_mail(self.id, force_send=True)
-
-            self.message_post(
-                body="🔄 Solicitud de reprogramación recibida",
-                message_type='notification'
-            )
-
-            return True
-        except Exception as e:
-            _logger.error(
-                "Error al enviar solicitud de reprogramación: %s", str(e))
-            return False
+        """Registrar solicitud sin cancelar ni modificar tickets existentes."""
+        equipos = self._equipos_ciclo_cliente()
+        with self.env.cr.savepoint():
+            for equipo in equipos:
+                self.env.cr.execute('SELECT id FROM alquiler WHERE id = %s FOR UPDATE', (equipo.id,))
+            equipos.invalidate_recordset()
+            for equipo in equipos:
+                equipo._validar_equipo_mantenimiento()
+                if equipo.cliente_id != self.cliente_id or equipo.fecha_recurrente != self.fecha_recurrente:
+                    raise UserError(_("Cambió el cliente o ciclo durante la reprogramación."))
+                for linea in equipo._lineas_ciclo_mantenimiento():
+                    if linea.ticket_id:
+                        linea.write({'nota': _('Cliente solicita reprogramar; revisar el ticket existente.')})
+                    else:
+                        linea.write({'estado': 'reasignar', 'fecha_confirmada': False,
+                                     'hora_confirmada': 0.0, 'fecha_programada': False,
+                                     'hora_inicio': 0.0, 'hora_fin': 0.0, 'tecnico_id': False,
+                                     'tecnico_apoyo_ids': [(5, 0, 0)],
+                                     'nota': _('Cliente solicita reprogramar; pendiente de nueva confirmación.')})
+            if all(e.estado_programacion == 'reprogramado' for e in equipos):
+                return True
+            equipos.write({'estado_programacion': 'reprogramado', 'fecha_confirmacion': False})
+            self.env.ref('sat.mail_template_maintenance_reschedule').send_mail(self.id, force_send=True)
+            self.message_post(body=_("Solicitud de reprogramación recibida."), message_type='notification')
+        return True
 
     def process_maintenance_response(self, response_type):
         """Procesa la respuesta del cliente desde el correo"""

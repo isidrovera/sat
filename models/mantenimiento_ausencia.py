@@ -3,6 +3,7 @@
 from odoo import models, fields, api, _
 from odoo.exceptions import ValidationError, UserError
 from datetime import datetime, timedelta
+from pytz import timezone, UTC
 import logging
 import requests
 import re
@@ -847,18 +848,19 @@ class MantenimientoTecnicoAusencia(models.Model):
             if rec.estado in ('rechazado', 'cancelado', 'cerrado'):
                 continue
 
-            fecha_fin = rec.fecha_fin or rec.fecha_inicio + timedelta(days=365)
+            fecha_fin = rec.fecha_fin
 
             domain = [
                 ('id', '!=', rec.id),
                 ('tecnico_id', '=', rec.tecnico_id.id),
                 ('estado', 'not in', ['rechazado', 'cancelado', 'cerrado']),
-                ('fecha_inicio', '<=', fecha_fin),
                 '|',
                 ('fecha_fin', '=', False),
                 ('fecha_fin', '>=', rec.fecha_inicio),
             ]
 
+            if fecha_fin:
+                domain.append(('fecha_inicio', '<=', fecha_fin))
             existe = self.search_count(domain)
 
             if existe:
@@ -952,97 +954,97 @@ class MantenimientoTecnicoAusencia(models.Model):
             yield fecha
             fecha += timedelta(days=1)
 
+    @api.model
+    def get_intervalos_ausencia(self, tecnico_id, fecha):
+        """Bloqueos reales, incluyendo enfermedades abiertas sin límite artificial."""
+        fecha = fields.Date.to_date(fecha)
+        ausencias = self.search([
+            ('tecnico_id', '=', tecnico_id),
+            ('estado', 'in', ['aprobado', 'ausente_activo', 'cerrado']),
+            ('fecha_inicio', '<=', fecha),
+            '|', ('fecha_fin', '=', False), ('fecha_fin', '>=', fecha),
+        ])
+        return [(0.0, 24.0) if a.dia_completo else (a.hora_inicio, a.hora_fin)
+                for a in ausencias
+                if not a.fecha_retorno_real or fecha < a.fecha_retorno_real]
+
     def _buscar_tickets_afectados(self):
         self.ensure_one()
-
         Ticket = self.env['ticket.alquiler']
+        lima = timezone('America/Lima')
+        inicio = datetime.combine(self.fecha_inicio, datetime.min.time())
+        # Dos horas es la estimación usada por el planificador original.
+        inicio_utc = lima.localize(inicio - timedelta(hours=2)).astimezone(UTC).replace(tzinfo=None)
+        domain = [('responsable', '=', self.tecnico_id.id),
+                  ('agenda', '>=', inicio_utc),
+                  ('estado', 'not in', ['finalizado'])]
+        if self.fecha_fin:
+            fin = datetime.combine(self.fecha_fin + timedelta(days=1), datetime.min.time())
+            domain.append(('agenda', '<', lima.localize(fin).astimezone(UTC).replace(tzinfo=None)))
+        tickets = Ticket.search(domain)
+        afectados = Ticket.browse()
+        for ticket in tickets:
+            local = UTC.localize(fields.Datetime.to_datetime(ticket.agenda)).astimezone(lima).replace(tzinfo=None)
+            fin_ticket = local + timedelta(hours=2)
+            fecha = max(local.date(), self.fecha_inicio)
+            while fecha <= fin_ticket.date() and (not self.fecha_fin or fecha <= self.fecha_fin):
+                base = datetime.combine(fecha, datetime.min.time())
+                a = base + timedelta(hours=0 if self.dia_completo else self.hora_inicio)
+                b = base + timedelta(hours=24 if self.dia_completo else self.hora_fin)
+                if local < b and fin_ticket > a:
+                    afectados |= ticket
+                    break
+                fecha += timedelta(days=1)
+        return afectados
 
-        fecha_inicio_dt = datetime.combine(
-            self.fecha_inicio,
-            datetime.min.time()
-        )
-
-        fecha_fin = self._get_fecha_fin_operativa()
-        fecha_fin_dt = datetime.combine(
-            fecha_fin + timedelta(days=1),
-            datetime.min.time()
-        )
-
-        tickets = Ticket.search([
-            ('responsable', '=', self.tecnico_id.id),
-            ('agenda', '>=', fecha_inicio_dt),
-            ('agenda', '<', fecha_fin_dt),
-            ('estado', 'not in', ['finalizado']),
-        ])
-
-        _logger.info(
-            "[Ausencias] Tickets afectados para %s: %s",
-            self.name,
-            tickets.ids
-        )
-
-        return tickets
+    def _bloqueos_propios(self):
+        """Solo reconoce bloqueos identificados inequívocamente por esta ausencia."""
+        self.ensure_one()
+        Disponibilidad = self.env['mantenimiento.tecnico.disponibilidad']
+        prefijo = 'Ausencia ID %s:' % self.id
+        legado = _("Bloqueo generado por ausencia %s: %s") % (
+            self.name, dict(self._fields['tipo'].selection).get(self.tipo))
+        dominio = [('tecnico_id', '=', self.tecnico_id.id),
+                   ('tipo', '=', 'bloqueo'), ('estado', '=', 'aprobado')]
+        candidatos = Disponibilidad.search(dominio)
+        # No atribuir referencias históricas repetidas a una sola ausencia.
+        unico = self.search_count([('name', '=', self.name),
+                                  ('tecnico_id', '=', self.tecnico_id.id)]) == 1
+        return candidatos.filtered(lambda b: (b.motivo or '').startswith(prefijo)
+                                    or (unico and b.motivo == legado))
 
     def _crear_bloqueo_disponibilidad(self):
         self.ensure_one()
-
-        _logger.info("[Ausencias] Creando bloqueo de disponibilidad para %s", self.name)
-
         if not self.perfil_id:
-            raise UserError(
-                _("El técnico %s no tiene perfil operativo de mantenimiento.")
-                % self.tecnico_id.name
-            )
-
+            raise UserError(_("El técnico %s no tiene perfil operativo de mantenimiento.")
+                            % self.tecnico_id.name)
         Disponibilidad = self.env['mantenimiento.tecnico.disponibilidad']
-
-        primera_disponibilidad = False
-
+        propios = self._bloqueos_propios()
+        primero = Disponibilidad.browse()
+        # Compatibilidad temporal con el perfil actual: materializar su horizonte
+        # histórico. El motor definitivo consultará get_intervalos_ausencia.
         for fecha in self._iter_fechas():
-            existente = Disponibilidad.search([
-                ('perfil_id', '=', self.perfil_id.id),
-                ('fecha', '=', fecha),
-                ('estado', '=', 'aprobado'),
-            ], limit=1)
-
             vals = {
                 'perfil_id': self.perfil_id.id,
                 'fecha': fecha,
                 'disponible': False,
                 'dia_completo': self.dia_completo,
-                'hora_inicio': self.hora_inicio if not self.dia_completo else 0.0,
-                'hora_fin': self.hora_fin if not self.dia_completo else 24.0,
+                'hora_inicio': 0.0 if self.dia_completo else self.hora_inicio,
+                'hora_fin': 24.0 if self.dia_completo else self.hora_fin,
                 'capacidad': 0,
                 'tipo': 'bloqueo',
                 'estado': 'aprobado',
-                'motivo': _(
-                    "Bloqueo generado por ausencia %s: %s"
-                ) % (
-                    self.name,
-                    dict(self._fields['tipo'].selection).get(self.tipo)
-                ),
+                'sequence': 1000000,
+                'motivo': 'Ausencia ID %s: %s' % (self.id, self.name),
             }
-
-            if existente:
-                existente.write(vals)
-                bloqueo = existente
-                _logger.info(
-                    "[Ausencias] Bloqueo actualizado fecha=%s ID=%s",
-                    fecha,
-                    bloqueo.id
-                )
+            bloqueo = propios.filtered(lambda b: b.fecha == fecha)[:1]
+            if bloqueo:
+                bloqueo.write(vals)
             else:
                 bloqueo = Disponibilidad.create(vals)
-                _logger.info(
-                    "[Ausencias] Bloqueo creado fecha=%s ID=%s",
-                    fecha,
-                    bloqueo.id
-                )
-
-            if not primera_disponibilidad:
-                primera_disponibilidad = bloqueo
-
-        self.disponibilidad_id = primera_disponibilidad.id if primera_disponibilidad else False
+            if not primero:
+                primero = bloqueo
+        self.disponibilidad_id = primero.id if primero else False
 
     def _marcar_tickets_afectados(self):
         self.ensure_one()
@@ -1783,6 +1785,15 @@ class MantenimientoTecnicoAusencia(models.Model):
 
             if not rec.fecha_retorno_real:
                 rec.fecha_retorno_real = fields.Date.context_today(rec)
+
+            if rec.fecha_retorno_real < rec.fecha_inicio:
+                raise UserError(_("La fecha de retorno no puede ser anterior al inicio."))
+
+            # El día de retorno ya está disponible. Conservar el historial previo.
+            bloqueos = rec._bloqueos_propios().filtered(
+                lambda b: b.fecha >= rec.fecha_retorno_real)
+            if bloqueos:
+                bloqueos.write({'estado': 'cancelado'})
 
             rec.write({
                 'estado': 'cerrado',

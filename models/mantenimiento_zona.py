@@ -107,21 +107,64 @@ class MantenimientoZona(models.Model):
         zonas = {next(iter(mapa[x])) for x in principales}
         return principales[0] if len(zonas) == 1 else ''
 
-    @api.depends('distrito_ids', 'distrito_ids.name', 'distrito_ids.alias',
+    @api.model
+    def _direccion_operativa_equipo(self, equipo):
+        partes = []
+        for campo in ('direccion', 'direccion_calle', 'direccion_completa'):
+            if campo in equipo._fields:
+                valor = getattr(equipo, campo, False)
+                if isinstance(valor, str) and valor.strip() and valor.strip() not in partes:
+                    partes.append(valor.strip())
+        return ', '.join(partes)
+
+    @api.model
+    def _resolver_ubicacion_equipo(self, equipo, mapa=None):
+        """Misma resolución para contadores, listados y planificación.
+
+        Devuelve (zona, clave normalizada). No modifica el equipo.
+        """
+        mapa = mapa if mapa is not None else self._mapa_distritos()
+        clave = _normalizar_ubicacion(equipo.distrito)
+        ids = mapa.get(clave, set())
+        if len(ids) > 1:
+            return self.browse(), clave
+        if len(ids) == 1:
+            return self.browse(next(iter(ids))), clave
+        clave = self._extraer_distrito_de_direccion(
+            self._direccion_operativa_equipo(equipo), mapa=mapa)
+        return self._resolver_zona_por_distrito(clave, mapa=mapa), clave
+
+    @api.model
+    def _equipos_elegibles_clasificados(self):
+        mapa = self._mapa_distritos()
+        equipos = self.env['alquiler'].search([
+            ('control_mantenimiento', '=', True),
+            ('estado_alquiler_id', '=', 'alquilada'),
+        ])
+        resultado = []
+        for equipo in equipos:
+            zona, clave = self._resolver_ubicacion_equipo(equipo, mapa=mapa)
+            if zona:
+                resultado.append((equipo, zona.id, clave))
+        return resultado
+
+    def _equipos_zona(self):
+        self.ensure_one()
+        return self.env['alquiler'].browse([
+            equipo.id for equipo, zona_id, clave in self._equipos_elegibles_clasificados()
+            if zona_id == self.id
+        ])
+
+    @api.depends('active', 'distrito_ids', 'distrito_ids.name', 'distrito_ids.alias',
                  'distrito_ids.active', 'tecnico_ids')
     def _compute_counts(self):
-        Alquiler = self.env['alquiler']
+        cantidades = {}
+        for equipo, zona_id, clave in self._equipos_elegibles_clasificados():
+            cantidades[zona_id] = cantidades.get(zona_id, 0) + 1
         for rec in self:
-            rec.distrito_count = len(rec.distrito_ids)
+            rec.distrito_count = len(rec.distrito_ids.filtered('active'))
             rec.tecnico_count = len(rec.tecnico_ids)
-            nombres = []
-            for distrito in rec.distrito_ids.filtered('active'):
-                nombres.extend(distrito._get_nombres_busqueda())
-            rec.equipo_count = Alquiler.search_count([
-                ('distrito', 'in', list(set(nombres))),
-                ('control_mantenimiento', '=', True),
-                ('estado_alquiler_id', '=', 'alquilada'),
-            ]) if nombres else 0
+            rec.equipo_count = cantidades.get(rec.id, 0) if rec.active else 0
 
     @api.constrains('name')
     def _check_name_unique(self):
@@ -136,21 +179,20 @@ class MantenimientoZona(models.Model):
                     _("Ya existe una zona con el nombre '%s'.") % rec.name
                 )
 
+    @api.constrains('active')
+    def _check_distritos_al_activar(self):
+        for rec in self.filtered('active'):
+            rec.distrito_ids._check_distrito_unique()
+
     def action_ver_maquinas(self):
         self.ensure_one()
-        nombres = []
-        for distrito in self.distrito_ids.filtered('active'):
-            nombres.extend(distrito._get_nombres_busqueda())
-        domain = [
-            ('control_mantenimiento', '=', True),
-            ('estado_alquiler_id', '=', 'alquilada'),
-        ]
-        domain.append(('distrito', 'in', list(set(nombres))) if nombres else ('id', '=', 0))
         return {
             'type': 'ir.actions.act_window',
             'name': _('Máquinas de %s') % self.name,
             'res_model': 'alquiler', 'view_mode': 'list,form',
-            'domain': domain,
+            'domain': [('id', 'in', self._equipos_zona().ids),
+                       ('control_mantenimiento', '=', True),
+                       ('estado_alquiler_id', '=', 'alquilada')],
             'context': {'default_control_mantenimiento': True},
         }
 
@@ -187,18 +229,26 @@ class MantenimientoZona(models.Model):
             distrito = distrito_original
             clave = _normalizar_ubicacion(distrito)
             if not clave or clave in ('lima', 'peru', 'provincia de lima', 'lima metropolitana'):
-                direccion = equipo.direccion_completa if 'direccion_completa' in Alquiler._fields else False
-                if not direccion and 'direccion' in Alquiler._fields:
-                    direccion = equipo.direccion
+                direccion = self._direccion_operativa_equipo(equipo)
                 distrito_extraido = self._extraer_distrito_de_direccion(direccion, mapa)
                 if distrito_extraido:
-                    distrito = distrito_extraido
+                    # Guardar el nombre configurado, no la clave normalizada.
+                    candidatos = self.env['mantenimiento.zona.distrito'].search([
+                        ('active', '=', True), ('zona_id.active', '=', True)
+                    ]).filtered(lambda d: distrito_extraido in {
+                        _normalizar_ubicacion(n) for n in d._get_nombres_busqueda()
+                    })
+                    if len(candidatos) == 1:
+                        distrito = candidatos.name
             ids = mapa.get(_normalizar_ubicacion(distrito), set())
             if len(ids) > 1:
                 ambiguos += 1
                 _logger.warning('[ZONAS] Distrito ambiguo equipo=%s distrito=%s zonas=%s',
                                 equipo.id, distrito, sorted(ids))
                 continue
+            if not ids:
+                zona_resuelta, clave_resuelta = self._resolver_ubicacion_equipo(equipo, mapa=mapa)
+                ids = {zona_resuelta.id} if zona_resuelta else set()
             if not ids:
                 sin_zona += 1
                 _logger.info('[ZONAS] Sin zona equipo=%s distrito=%s', equipo.id, distrito)
@@ -267,16 +317,24 @@ class MantenimientoZonaDistrito(models.Model):
         string='Máquinas', compute='_compute_equipo_count', store=False
     )
 
-    @api.depends('name', 'alias')
+    @api.depends('name', 'alias', 'active', 'zona_id', 'zona_id.active')
     def _compute_equipo_count(self):
-        Alquiler = self.env['alquiler']
+        clasificados = self.env['mantenimiento.zona']._equipos_elegibles_clasificados()
         for rec in self:
-            nombres = rec._get_nombres_busqueda()
-            rec.equipo_count = Alquiler.search_count([
-                ('distrito', 'in', nombres),
-                ('control_mantenimiento', '=', True),
-                ('estado_alquiler_id', '=', 'alquilada'),
-            ])
+            rec.equipo_count = len(rec._equipos_distrito(clasificados))
+
+    def _equipos_distrito(self, clasificados=None):
+        self.ensure_one()
+        Alquiler = self.env['alquiler']
+        if not self.active or not self.zona_id.active:
+            return Alquiler.browse()
+        if clasificados is None:
+            clasificados = self.env['mantenimiento.zona']._equipos_elegibles_clasificados()
+        claves = {_normalizar_ubicacion(n) for n in self._get_nombres_busqueda()}
+        return Alquiler.browse([
+            equipo.id for equipo, zona_id, clave in clasificados
+            if zona_id == self.zona_id.id and clave in claves
+        ])
 
     def _get_nombres_busqueda(self):
         self.ensure_one()
@@ -310,13 +368,12 @@ class MantenimientoZonaDistrito(models.Model):
 
     def action_ver_maquinas(self):
         self.ensure_one()
-        nombres = self._get_nombres_busqueda()
         return {
             'type': 'ir.actions.act_window',
             'name': _('Máquinas en %s') % self.name,
             'res_model': 'alquiler', 'view_mode': 'list,form',
             'domain': [
-                ('distrito', 'in', nombres),
+                ('id', 'in', self._equipos_distrito().ids),
                 ('control_mantenimiento', '=', True),
                 ('estado_alquiler_id', '=', 'alquilada'),
             ],

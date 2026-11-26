@@ -133,6 +133,7 @@ class WhatsappCalendarEvent(models.Model):
         "special_close_time",
         "special_break_start",
         "special_break_end",
+        "has_special_break",
     )
     def _check_special_hours(self):
         for rec in self:
@@ -499,6 +500,82 @@ class WhatsappCalendarEvent(models.Model):
         ], limit=1)
 
         return bool(event)
+
+    @api.model
+    def get_working_intervals(self, work_date):
+        """Horario efectivo de empresa, en horas decimales locales.
+
+        Los cierres prevalecen sobre horarios especiales. Los eventos
+        informativos no modifican la disponibilidad. No aplica todavía
+        restricciones individuales de los técnicos.
+        """
+        if not work_date:
+            raise ValidationError(_("Debe indicar una fecha laboral."))
+
+        work_date = fields.Date.to_date(work_date)
+        eventos = self.search([
+            ('event_date', '=', work_date),
+            ('active', '=', True),
+        ], order='id asc')
+
+        resultado = {
+            'disponible': False,
+            'intervalos': [],
+            'horas_laborales': 0.0,
+            'origen': 'calendario',
+            'feriado': False,
+            'evento_id': False,
+        }
+
+        cierres = eventos.filtered(lambda e: (
+            e.event_type != 'info' and (
+                e.event_type in ('holiday', 'manual_closed') or e.is_closed
+            )
+        ))
+        if cierres:
+            resultado.update({
+                'origen': 'cierre_calendario',
+                'feriado': any(e.event_type == 'holiday' for e in cierres),
+                'evento_id': cierres[0].id,
+            })
+            return resultado
+
+        especiales = eventos.filtered(lambda e: e.event_type == 'special_hours')
+        if not especiales:
+            resultado.update(self.env['whatsapp.business.hours'].get_working_intervals(work_date))
+            return resultado
+
+        # No elegir arbitrariamente entre horarios especiales simultáneos.
+        if len(especiales) > 1:
+            resultado['origen'] = 'conflicto_horarios_especiales'
+            _logger.warning('[WA-CAL] Horarios especiales múltiples fecha=%s ids=%s',
+                            work_date, especiales.ids)
+            return resultado
+
+        evento = especiales[0]
+        resultado['evento_id'] = evento.id
+        inicio, fin = evento.special_open_time, evento.special_close_time
+        if not 0.0 <= inicio < fin < 24.0:
+            resultado['origen'] = 'horario_especial_invalido'
+            return resultado
+
+        intervalos = [(inicio, fin)]
+        if evento.has_special_break:
+            pausa_inicio = evento.special_break_start
+            pausa_fin = evento.special_break_end
+            if not inicio <= pausa_inicio < pausa_fin <= fin:
+                resultado['origen'] = 'horario_especial_invalido'
+                return resultado
+            intervalos = [(inicio, pausa_inicio), (pausa_fin, fin)]
+
+        intervalos = [(a, b) for a, b in intervalos if a < b]
+        resultado.update({
+            'disponible': bool(intervalos),
+            'intervalos': intervalos,
+            'horas_laborales': sum(b - a for a, b in intervalos),
+            'origen': 'horario_especial',
+        })
+        return resultado
 
     @api.model
     def get_workday_factor(self, work_date):

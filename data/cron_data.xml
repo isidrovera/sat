@@ -13,8 +13,19 @@
             <field name="code">model.execute_task()</field>
             <field name="nextcall" eval="(datetime.now() + timedelta(days=-(datetime.today().weekday()-1)%7)).strftime('%Y-%m-%d') + ' 14:00:00'"/>
         </record>
+       <record id="cron_send_maintenance_reminders" model="ir.cron">
+            <field name="name">Mantenimiento - Enviar recordatorios a clientes</field>
+            <field name="model_id" ref="model_alquiler"/>
+            <field name="state">code</field>
+            <field name="code">model.send_maintenance_reminders()</field>
+            <field name="active" eval="True"/>
+            <field name="user_id" ref="base.user_root"/>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+        </record>
+
         <record id="cron_update_fecha_recurrente" model="ir.cron">
-            <field name="name">Actualizar fecha recurrente</field>
+            <field name="name">Mantenimiento - Controlar mantenimientos vencidos</field>
             <field name="model_id" ref="model_alquiler"/>
             <field name="state">code</field>
             <field name="code">model.update_fecha_recurrente()</field>
@@ -24,15 +35,65 @@
             <field name="interval_type">days</field>
         </record>
         <record id="cron_send_maintenance_reminders" model="ir.cron">
-            <field name="name">Enviar recordatorios de mantenimiento</field>
-            <field name="model_id" ref="model_alquiler"/>
-            <field name="state">code</field>
-            <field name="code">model.send_maintenance_reminders()</field>
-            <field name="active" eval="True"/>
-            <field name="user_id" ref="base.user_root"/>
-            <field name="interval_number">1</field>
-            <field name="interval_type">days</field>
-        </record>
+      <field name="name">Mantenimiento - Avisos preventivos</field>
+      <field name="state">code</field>
+      <field name="code">model.send_maintenance_reminders()</field>
+      <field name="interval_number">15</field>
+      <field name="interval_type">minutes</field>
+      <field name="model_id" ref="model_alquiler"/>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="active" eval="False"/>
+    </record>
+    <record id="cron_update_fecha_recurrente" model="ir.cron">
+      <field name="name">Mantenimiento - Control de vencimientos</field>
+      <field name="state">code</field>
+      <field name="code">model.update_fecha_recurrente()</field>
+      <field name="interval_number">1</field>
+      <field name="interval_type">days</field>
+      <field name="model_id" ref="model_alquiler"/>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="active" eval="False"/>
+    </record>
+    <record id="cron_generar_planificacion_mantenimiento" model="ir.cron">
+      <field name="name">Mantenimiento - Incorporar planificación</field>
+      <field name="state">code</field>
+      <field name="code">model.cron_generar_planificacion_mantenimiento()</field>
+      <field name="interval_number">1</field>
+      <field name="interval_type">days</field>
+      <field name="model_id" ref="model_mantenimiento_planificador"/>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="active" eval="False"/>
+    </record>
+    <record id="cron_asignar_mantenimiento" model="ir.cron">
+      <field name="name">Mantenimiento - Asignar servicios confirmados</field>
+      <field name="state">code</field>
+      <field name="code">model.cron_asignar_mantenimiento()</field>
+      <field name="interval_number">15</field>
+      <field name="interval_type">minutes</field>
+      <field name="model_id" ref="model_mantenimiento_planificador"/>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="active" eval="False"/>
+    </record>
+    <record id="cron_crear_tickets_mantenimiento" model="ir.cron">
+      <field name="name">Mantenimiento - Crear tickets programados</field>
+      <field name="state">code</field>
+      <field name="code">model.cron_crear_tickets_mantenimiento()</field>
+      <field name="interval_number">5</field>
+      <field name="interval_type">minutes</field>
+      <field name="model_id" ref="model_mantenimiento_planificador"/>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="active" eval="False"/>
+    </record>
+    <record id="cron_notificar_asignaciones_mantenimiento" model="ir.cron">
+      <field name="name">Mantenimiento - Notificar asignaciones</field>
+      <field name="state">code</field>
+      <field name="code">model.cron_notificar_asignaciones_mantenimiento()</field>
+      <field name="interval_number">5</field>
+      <field name="interval_type">minutes</field>
+      <field name="model_id" ref="model_mantenimiento_planificador"/>
+      <field name="user_id" ref="base.user_root"/>
+      <field name="active" eval="False"/>
+    </record>
         <record id="cron_check_expired_evaluations" model="ir.cron">
             <field name="name">Marcar Evaluaciones Expiradas</field>
             <field name="model_id" ref="model_client_service_evaluation"/>
