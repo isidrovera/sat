@@ -872,62 +872,122 @@ class ReparacionesInforme(models.Model):
         }.get(calidad, 'Evaluación pendiente.')
 
     def _rep__build_informe_html_from_data(self, data, calidad, resumen=None, conclusion=None):
-        """Python controla la calidad, las observaciones y la conclusión comercial."""
+        """Informe de observaciones para Ventas, sin duplicar el campo calidad_id.
+
+        Se conservan los argumentos anteriores por compatibilidad. La calidad
+        sigue validándose, pero no se reproduce en el cuerpo del informe.
+        """
         self.ensure_one()
         self._validar_coherencia_calidad()
-        calidad = self.calidad_id
-        etiquetas = dict(self._fields['calidad_id'].selection)
-        color = {'buena': '#2e7d32', 'regular': '#ef6c00', 'mala': '#c62828'}[calidad]
-        parts = [
-            '<div data-autogen="1" style="font-family:Arial;line-height:1.55;color:#222;">',
-            '<div style="padding:12px;border-left:5px solid %s;background:#f5f5f5;">'
-            '<strong>%s</strong></div>' % (color, self._rep__escape(etiquetas[calidad])),
-            '<p>%s</p>' % self._rep__escape(resumen or
-                'Se realizó la evaluación técnica del equipo según el checklist registrado.'),
-        ]
-        cambios = [x for x in data['requiere_cambio'] if x['estado_code'] == 'requiere_cambio']
-        desgaste = data['desgaste'] + data['mantenimiento']
-        accesorios = data['accesorios_relevantes']
+
         codigos_esteticos = {
             'carcasa_amarilla', 'carcasa_rota', 'carcasa_faltante',
             'panel_amarillo', 'panel_rayado', 'panel_roto',
-            'finalizador_rayado', 'finalizador_amarillo', 'rayado', 'amarillento', 'danos_esteticos',
+            'finalizador_rayado', 'finalizador_amarillo',
+            'rayado', 'amarillento', 'danos_esteticos',
         }
-        esteticos = data['estado_fisico'] + [x for x in accesorios if x['estado_code'] in codigos_esteticos]
-        otros_accesorios = [x for x in accesorios if x['estado_code'] not in codigos_esteticos]
-        faltantes = [x for x in data['toners_relevantes'] if x['estado_code'] in {
-            'toner_vacio', 'toner_sin_contenedor', 'vacio', 'sin_botella'}]
-        secciones = [
-            ('Componentes que requieren cambio', cambios),
-            ('Componentes que presentan fallas', data['fallas_componentes']),
-            ('Piezas con desgaste o mantenimiento', desgaste),
-            ('Consumibles faltantes o agotados', faltantes),
-            ('Observaciones físicas y estéticas', esteticos),
-            ('Observaciones de accesorios', otros_accesorios),
-            ('Funciones con fallas', data['funciones_falla']),
+        codigos_toner = {
+            'toner_vacio', 'toner_sin_contenedor', 'vacio', 'sin_botella',
+        }
+        accesorios = data.get('accesorios_relevantes') or []
+        esteticos = list(data.get('estado_fisico') or []) + [
+            x for x in accesorios if x['estado_code'] in codigos_esteticos
         ]
-        for titulo, items in secciones:
+        otros_accesorios = [
+            x for x in accesorios if x['estado_code'] not in codigos_esteticos
+        ]
+        cambios = [
+            x for x in (data.get('requiere_cambio') or [])
+            if x['estado_code'] == 'requiere_cambio'
+        ]
+        faltantes = [
+            x for x in (data.get('toners_relevantes') or [])
+            if x['estado_code'] in codigos_toner
+        ]
+
+        secciones = [
+            ('Piezas que requieren cambio', cambios, '#c62828'),
+            ('Componentes con fallas', data.get('fallas_componentes') or [], '#c62828'),
+            ('Piezas con desgaste o en estado regular', data.get('desgaste') or [], '#ef6c00'),
+            ('Piezas que requieren mantenimiento', data.get('mantenimiento') or [], '#8d6e00'),
+            ('Funciones con fallas', data.get('funciones_falla') or [], '#c62828'),
+            ('Consumibles faltantes o agotados', faltantes, '#c62828'),
+            ('Observaciones físicas y estéticas', esteticos, '#795548'),
+            ('Observaciones de accesorios', otros_accesorios, '#546e7a'),
+            ('Evaluaciones pendientes',
+             (data.get('pendientes_componentes') or []) +
+             (data.get('funciones_pendientes') or []), '#616161'),
+        ]
+
+        etiquetas = {
+            'requiere_cambio': 'Requiere cambio',
+            'falla': 'Presenta falla',
+            'gastada_pero_puede_trabajar': 'Desgastada, pero puede trabajar',
+            'regular': 'Estado regular',
+            'mantenimiento': 'Requiere mantenimiento',
+            'toner_vacio': 'Tóner vacío',
+            'vacio': 'Tóner vacío',
+            'toner_sin_contenedor': 'Sin cartucho de tóner',
+            'sin_botella': 'Sin cartucho de tóner',
+            'carcasa_rota': 'Tapas rotas',
+            'carcasa_faltante': 'Tapas o piezas faltantes',
+            'carcasa_amarilla': 'Tapas amarillentas',
+            'panel_amarillo': 'Amarillento',
+            'panel_rayado': 'Rayado',
+            'panel_roto': 'Roto',
+            'finalizador_rayado': 'Rayado',
+            'finalizador_amarillo': 'Amarillento',
+            '': 'Sin estado registrado',
+        }
+        parts = [
+            '<div data-autogen="1" style="font-family:Arial;line-height:1.45;color:#222;">'
+        ]
+        hay_observaciones = False
+
+        for titulo, items, color in secciones:
             if not items:
                 continue
-            parts.append('<h4 style="margin:14px 0 6px;">%s</h4>' % self._rep__escape(titulo))
+            hay_observaciones = True
+            parts.append(
+                '<h4 style="margin:12px 0 6px;font-size:15px;color:%s;">%s</h4>'
+                % (color, self._rep__escape(titulo))
+            )
             for item in items:
-                if item['estado_code'] == 'requiere_cambio' and 'subpartes' in item:
-                    parts.append(self._rep__build_component_card(item))
-                else:
-                    parts.append(self._rep__build_simple_card(
-                        item['nombre'], item['estado_code'], self._rep__escape(item['estado_nombre']),
-                        item.get('observaciones') or ''))
-        if not cambios:
-            parts.append('<p>No se registraron componentes con estado Requiere cambio.</p>')
-        texto = self._rep__default_conclusion(calidad)
-        if faltantes or esteticos:
-            texto += ' Las observaciones físicas y de consumibles deben considerarse por separado y no modifican la calidad.'
-        if data['fallas_componentes'] or data['funciones_falla'] or otros_accesorios:
-            texto += ' Las observaciones funcionales y de accesorios deben evaluarse antes de la entrega.'
-        if cambios:
-            texto += ' Los cambios registrados deben ser considerados antes de la entrega.'
-        parts.append('<h4>Conclusión</h4><p>%s</p>' % self._rep__escape(texto))
-        parts.append('<p>La calidad no equivale a una autorización de entrega. Consulte el checklist completo.</p></div>')
+                code = item.get('estado_code') or ''
+                etiqueta = etiquetas.get(code) or item.get('estado_nombre') or 'Sin estado registrado'
+                nombre = self._rep__escape(item.get('nombre'))
+                parts.append(
+                    '<div style="margin:0 0 6px;padding:8px 10px;'
+                    'border-left:3px solid %s;background:#f5f5f5;">'
+                    '<strong>%s</strong> — %s'
+                    % (color, nombre, self._rep__escape(etiqueta))
+                )
+                # Solo los cambios registrados muestran las piezas recomendadas.
+                if code == 'requiere_cambio':
+                    subpartes = self._rep__unique(item.get('subpartes') or [])
+                    if subpartes:
+                        parts.append('<ul style="margin:4px 0 4px 20px;padding:0;">')
+                        for subparte in subpartes:
+                            parts.append('<li>%s</li>' % self._rep__escape(subparte))
+                        parts.append('</ul>')
+                    elif 'subpartes' in item:
+                        parts.append(
+                            '<div style="margin-top:4px;">Piezas específicas no detalladas.</div>'
+                        )
+                if item.get('observaciones'):
+                    parts.append(
+                        '<div style="margin-top:4px;">%s</div>'
+                        % self._rep__escape(item['observaciones'])
+                    )
+                parts.append('</div>')
+
+        if not hay_observaciones:
+            parts.append(
+                '<p style="margin:0;">No se registraron observaciones '
+                'en las secciones del informe.</p>'
+            )
+
+        parts.append('</div>')
         return ''.join(parts)
 
     def _rep__build_informe_html(self):
@@ -1122,52 +1182,14 @@ class ReparacionesInforme(models.Model):
     # GENERACIÓN CON IA
     # ========================================
     def _generar_informe_con_ia(self):
-        """
-        Genera una redacción natural con Gemini usando únicamente información
-        permitida para ventas: componentes con estado exacto ``requiere_cambio``.
-        No envía datos identificativos de la máquina. Python conserva el control
-        del detalle HTML.
+        """Conserva la interfaz anterior sin solicitar textos redundantes a Gemini.
+
+        El informe de Ventas contiene exclusivamente observaciones estructuradas.
+        No se marca como generado por IA porque no se realiza una llamada externa.
         """
         self.ensure_one()
-
-        if not GEMINI_AVAILABLE:
-            html, calidad = self._rep__build_informe_html()
-            return html, calidad, 'Generado automáticamente: google-genai no está instalado.', False
-
-        try:
-            config_gemini = self.env['gemini.configuracion'].get_config_activa()
-            gemini_setup = self._init_gemini_model(config_gemini)
-            datos = self._preparar_datos_para_ia()
-            prompt = self._construir_prompt_ia(datos)
-
-            response = gemini_setup['client'].models.generate_content(
-                model=gemini_setup['modelo'],
-                contents=prompt,
-                config=types.GenerateContentConfig(
-                    temperature=gemini_setup['temperature'],
-                    max_output_tokens=gemini_setup['max_tokens'],
-                    response_mime_type='application/json',
-                )
-            )
-
-            resultado = self._parsear_respuesta_ia(response.text)
-            calidad = self._rep__get_calidad_actual()
-            data = self._rep__collect_relevant_data()
-
-            informe_html = self._rep__build_informe_html_from_data(
-                data,
-                calidad,
-                resumen=resultado.get('resumen_general'),
-                conclusion=resultado.get('conclusion'),
-            )
-
-            config_gemini.incrementar_contador()
-            return informe_html, calidad, self._rep__default_conclusion(calidad), True
-
-        except Exception as e:
-            _logger.exception('Error generando informe con IA: %s', e)
-            html, calidad = self._rep__build_informe_html()
-            return html, calidad, f'Generado automáticamente por error en IA: {e}', False
+        html, calidad = self._rep__build_informe_html()
+        return html, calidad, self._rep__default_conclusion(calidad), False
 
     def _init_gemini_model(self, config):
         """Inicializa cliente de Gemini (NUEVA SINTAXIS)"""
