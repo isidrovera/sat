@@ -26,14 +26,14 @@ class ComponenteTipo(models.Model):
     # Habilita archivar/desarchivar
     active = fields.Boolean(default=True)
 
-    # =====================================================
+    # ====================================================
     # CONFIGURACIÓN AUTOMÁTICA DE CALIDAD
-    # =====================================================
+    # ====================================================
 
     afecta_calidad = fields.Boolean(
         string='Afecta la calidad de imagen',
         compute='_compute_afecta_calidad',
-        store=True,
+        store=False,
         readonly=True,
         help='Determina automáticamente si el componente '
              'interviene en la clasificación de calidad.'
