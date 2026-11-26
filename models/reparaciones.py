@@ -961,10 +961,59 @@ class Reparaciones(models.Model):
         ('gastada_pero_puede_trabajar', 'Developer Amarillo Desgastado pero Funcional - 25% Rendimiento')
     ], string="Estado Developer Amarillo", tracking=True)
     calidad_id = fields.Selection([
-    ("buena", "Calidad de Impresión Óptima - Cumple Estándares"),
-    ("regular", "Calidad de Impresión Aceptable - Requiere Ajustes"),
-    ("mala", "Calidad de Impresión Deficiente - Requiere Atención Inmediata")
-    ], string="Nivel de Calidad de Impresión", tracking=True)
+        ('buena', 'Calidad buena - Sin defectos visibles'),
+        ('regular', 'Calidad regular - Presenta desgaste, pero puede trabajar'),
+        ('mala', 'Calidad mala - Requiere reparación o cambio de piezas'),
+        ('sin_probar', 'Sin evaluar - Pendiente de evaluación'),
+    ], string='Calidad de Imagen', tracking=True,
+       help='Clasificación técnico-comercial según las piezas relacionadas con la imagen. '
+            'No equivale a una autorización de entrega.')
+
+    def _obtener_calidades_permitidas(self):
+        self.ensure_one()
+        estados = {
+            (e.estado_id.code or '').strip().lower()
+            for e in self.evaluacion_ids
+            if e.componente_tipo_id.afecta_calidad
+            and (e.estado_id.code or '').strip().lower() != 'no_aplica'
+        }
+        if estados & {'requiere_cambio', 'falla'}:
+            return ['mala']
+        if not estados or estados - {
+            'nuevo', 'correcto', 'revisado', 'regular',
+            'mantenimiento', 'gastada_pero_puede_trabajar',
+        }:
+            return ['sin_probar']
+        if estados & {'regular', 'mantenimiento', 'gastada_pero_puede_trabajar'}:
+            return ['regular']
+        return ['buena']
+
+    def _validar_coherencia_calidad(self):
+        for rec in self:
+            esperada = rec._obtener_calidades_permitidas()[0]
+            if esperada == 'sin_probar':
+                raise ValidationError(_(
+                    'La evaluación de calidad está incompleta. Revise los componentes '
+                    'relacionados con la imagen y su configuración.'
+                ))
+            if rec.calidad_id != esperada:
+                etiquetas = dict(rec._fields['calidad_id'].selection)
+                raise ValidationError(_(
+                    'La calidad registrada no coincide con la evaluación de las piezas.\n'
+                    'Calidad registrada: %s\nCalidad requerida: %s'
+                ) % (etiquetas.get(rec.calidad_id, 'Sin evaluar'), etiquetas[esperada]))
+
+    @api.onchange('calidad_id', 'evaluacion_ids')
+    def _onchange_coherencia_calidad(self):
+        for rec in self:
+            esperada = rec._obtener_calidades_permitidas()[0]
+            if rec.calidad_id and rec.calidad_id != esperada:
+                return {'warning': {
+                    'title': _('Calidad incompatible'),
+                    'message': _('Según la evaluación de las piezas corresponde: %s') %
+                        dict(rec._fields['calidad_id'].selection)[esperada],
+                }}
+
     # Sistema óptico y transfer
     optico_id = fields.Selection([
         ("sin_revisar", "Sistema Óptico Pendiente de Revisión Técnica"),
@@ -1167,6 +1216,9 @@ class Reparaciones(models.Model):
 
         res = super(Reparaciones, self).write(vals)
 
+        if finalizado:
+            self._validar_coherencia_calidad()
+
         if 'falla_proveedor' in vals:
             for rec in self:
                 existing_record = rec.env['fallas'].search([
@@ -1336,6 +1388,7 @@ class Reparaciones(models.Model):
         # ==========================================================
         # 0) Reutilizar lógica de generar informe / wizard subpartes
         # ==========================================================
+        self._validar_coherencia_calidad()
         res = self.with_context(from_finalizar_reparacion=True).action_generar_informe()
         if res:
             _logger.info(
@@ -1988,3 +2041,29 @@ class ReportReparacionView(models.AbstractModel):
             'docs': docs,
             'selection_labels': selection_labels,
         }
+
+
+class ComponenteTipoCalidad(models.Model):
+    _inherit = 'componente.tipo'
+
+    afecta_calidad = fields.Boolean(
+        string='Afecta la calidad de imagen',
+        compute='_compute_afecta_calidad', store=True, readonly=False,
+        help='Activar únicamente para piezas que intervienen en la calidad de imagen.',
+    )
+
+    @api.depends('code')
+    def _compute_afecta_calidad(self):
+        import unicodedata
+        for rec in self:
+            code = unicodedata.normalize('NFKD', rec.code or '')
+            code = ''.join(c for c in code if not unicodedata.combining(c))
+            code = re.sub(r'[^A-Z0-9]+', '_', code.upper()).strip('_')
+            rec.afecta_calidad = code in {
+                'IU', 'UI', 'IMAGEN', 'IMAGING', 'DRUM', 'DRUM_UNIT',
+                'UNIDAD_IMAGEN', 'UNIDAD_DE_IMAGEN', 'IMAGING_UNIT',
+                'DEVELOPER', 'DEV', 'FUSORA', 'FUSOR', 'FUSER', 'FUSING',
+                'ITB', 'TRANSFER_BELT', 'TRANSFERENCIA', 'FAJA', 'BANDA',
+                'TRANSFER_ROLLER', 'ROLLER_TRANSFER', 'RODILLO_TRANSFERENCIA',
+                'OPTICO', 'OPTICAL', 'ESCANER', 'SCANNER', 'LSU', 'OPTICO_ESCANER',
+            } or bool(re.fullmatch(r'(UI|IU|DEV)_[KCMY]', code))

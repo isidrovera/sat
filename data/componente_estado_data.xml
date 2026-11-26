@@ -277,5 +277,33 @@
       <field name="componente_tipo_ids" eval="[(4, ref('comp_tipo_toner_system'))]"/>
   </record>
 
+    <record id="estado_panel_rayado" model="componente.estado">
+      <field name="name">Panel rayado</field>
+      <field name="code">panel_rayado</field>
+      <field name="color">4</field>
+      <field name="prioridad">2</field>
+      <field name="descripcion">Panel de control con rayaduras superficiales; observación estética</field>
+      <field name="componente_tipo_ids" eval="[(4, ref('comp_tipo_panel_control'))]"/>
+    </record>
+
+
+    <!-- Observaciones estéticas de finalizadores (no afectan la calidad de imagen) -->
+    <record id="estado_finalizador_rayado" model="componente.estado">
+      <field name="name">Finalizador rayado</field>
+      <field name="code">finalizador_rayado</field>
+      <field name="color">4</field>
+      <field name="prioridad">2</field>
+      <field name="descripcion">Rayaduras superficiales del finalizador; observación estética</field>
+      <field name="componente_tipo_ids" search="['|', '|', '|', ('code', 'ilike', 'finisher'), ('code', 'ilike', 'finalizador'), ('code', '=', 'FIN'), ('name', 'ilike', 'finalizador')]"/>
+    </record>
+    <record id="estado_finalizador_amarillo" model="componente.estado">
+      <field name="name">Finalizador amarillento</field>
+      <field name="code">finalizador_amarillo</field>
+      <field name="color">4</field>
+      <field name="prioridad">2</field>
+      <field name="descripcion">Decoloración del finalizador por uso; observación estética</field>
+      <field name="componente_tipo_ids" search="['|', '|', '|', ('code', 'ilike', 'finisher'), ('code', 'ilike', 'finalizador'), ('code', '=', 'FIN'), ('name', 'ilike', 'finalizador')]"/>
+    </record>
+
   </data>
 </odoo>
