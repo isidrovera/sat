@@ -22,7 +22,7 @@
             <div style="margin-bottom: 20px;">Como parte de nuestro compromiso con la calidad de servicio, le proponemos la siguiente fecha para el mantenimiento preventivo de sus equipos.</div>
             <div style="background-color: #f0fff4; padding: 15px; margin: 15px 0; text-align: center; border: 1px solid #c6f6d5;">
                 <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">📅 Fecha Propuesta</div>
-                <div style="font-size: 16px;"><strong><t t-out="object.fecha_recurrente.strftime('%d/%m/%Y')"/></strong></div>
+                <div style="font-size: 16px;"><strong><t t-out="object.fecha_recurrente.strftime('%d/%m/%Y') if object.fecha_recurrente else 'Por coordinar'"/></strong></div>
             </div>
             <div style="margin: 20px 0;">
                 <div style="font-size: 18px; font-weight: bold; margin-bottom: 15px;">📋 Equipos Programados</div>
@@ -33,7 +33,7 @@
                         <th style="background-color: #38a169; color: #ffffff; padding: 12px; text-align: left; font-weight: bold; border: 1px solid #2f855a;">Ubicación</th>
                     </tr></thead>
                     <tbody>
-                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente), ('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada')])"/>
+                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente), ('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada')]) if object.cliente_id and object.fecha_recurrente else env['alquiler']"/>
                         <t t-foreach="equipos_cliente" t-as="equipo"><tr style="background-color: #ffffff;">
                             <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.name.name"/></td>
                             <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.serie"/></td>
@@ -46,7 +46,7 @@
                 <div style="font-weight: bold; margin-bottom: 10px;">Beneficios del Mantenimiento Preventivo:</div>
                 <ul style="margin: 0; padding-left: 20px;"><li>Mayor vida útil de sus equipos</li><li>Reducción de costos operativos</li><li>Calidad óptima de impresión</li></ul>
             </div>
-            <div style="text-align: center; margin: 30px 0;">
+            <div t-if="object.control_mantenimiento and object.estado_alquiler_id == 'alquilada' and object.cliente_id and object.fecha_recurrente" style="text-align: center; margin: 30px 0;">
                 <a t-att-href="object.get_maintenance_action_url('confirm')" style="display: inline-block; padding: 12px 25px; background-color: #38a169; color: #ffffff; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">✅ Confirmar Fecha</a>
                 <a t-att-href="object.get_maintenance_action_url('reschedule')" style="display: inline-block; padding: 12px 25px; background-color: #e53e3e; color: #ffffff; text-decoration: none; border-radius: 5px; margin: 0 10px; font-weight: bold;">🔄 Solicitar Reprogramación</a>
             </div>
@@ -100,7 +100,7 @@
             <!-- Fecha Confirmada -->
             <div style="background-color: #f0fff4; padding: 15px; margin: 15px 0; text-align: center; border: 1px solid #c6f6d5;">
                 <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">📅 Fecha Confirmada</div>
-                <div style="font-size: 16px;"><strong><t t-out="object.fecha_recurrente.strftime('%d/%m/%Y')"/></strong></div>
+                <div style="font-size: 16px;"><strong><t t-out="object.fecha_recurrente.strftime('%d/%m/%Y') if object.fecha_recurrente else 'Por coordinar'"/></strong></div>
             </div>
 
             <!-- Equipos Programados -->
@@ -116,7 +116,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente), ('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada')])"/>
+                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente), ('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada')]) if object.cliente_id and object.fecha_recurrente else env['alquiler']"/>
                         <t t-foreach="equipos_cliente" t-as="equipo">
                             <tr style="background-color: #ffffff;">
                                 <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.name.name"/></td>
@@ -196,7 +196,7 @@
                 <div style="margin-bottom: 10px;"><strong>Contacto:</strong> <t t-out="object.contacto_id"/></div>
                 <div style="margin-bottom: 10px;"><strong>Teléfono:</strong> <t t-out="object.celular"/></div>
                 <div style="margin-bottom: 10px;"><strong>Correo:</strong> <t t-out="object.correo_"/></div>
-                <div><strong>Fecha Original:</strong> <t t-out="object.fecha_recurrente.strftime('%d/%m/%Y')"/></div>
+                <div><strong>Fecha Original:</strong> <t t-out="object.fecha_recurrente.strftime('%d/%m/%Y') if object.fecha_recurrente else 'Por coordinar'"/></div>
             </div>
 
             <!-- Equipos Afectados -->
@@ -212,7 +212,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente), ('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada')])"/>
+                        <t t-set="equipos_cliente" t-value="env['alquiler'].search([('cliente_id', '=', object.cliente_id.id), ('fecha_recurrente', '=', object.fecha_recurrente), ('control_mantenimiento', '=', True), ('estado_alquiler_id', '=', 'alquilada')]) if object.cliente_id and object.fecha_recurrente else env['alquiler']"/>
                         <t t-foreach="equipos_cliente" t-as="equipo">
                             <tr style="background-color: #ffffff;">
                                 <td style="padding: 12px; border: 1px solid #e2e8f0;"><t t-out="equipo.name.name"/></td>
