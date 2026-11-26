@@ -26,17 +26,49 @@ class ComponenteTipo(models.Model):
     # Habilita archivar/desarchivar
     active = fields.Boolean(default=True)
 
-    # ==================================================
-    # CLASIFICACIÓN DE CALIDAD DE IMAGEN
-    # ==================================================
+    # =====================================================
+    # CONFIGURACIÓN AUTOMÁTICA DE CALIDAD
+    # =====================================================
 
     afecta_calidad = fields.Boolean(
         string='Afecta la calidad de imagen',
-        default=False,
-        help='Indica si el estado de este componente '
-             'interviene en la clasificación general de calidad.'
+        compute='_compute_afecta_calidad',
+        store=True,
+        readonly=True,
+        help='Determina automáticamente si el componente '
+             'interviene en la clasificación de calidad.'
     )
 
+    @api.depends('code')
+    def _compute_afecta_calidad(self):
+
+        codigos_calidad = {
+            'UI',
+            'IU',
+            'DEVELOPER',
+            'DEV',
+            'FAJA',
+            'ITB',
+            'FUSORA',
+            'FUSER',
+            'OPTICO',
+            'OPTICAL',
+            'ESCANER',
+            'SCANNER',
+            'LSU',
+            'TRANSFER_ROLLER',
+            'RODILLO_TRANSFERENCIA',
+            'TRANSFER_BELT',
+            'DRUM',
+            'DRUM_UNIT',
+            'IMAGING_UNIT',
+        }
+
+        for rec in self:
+
+            codigo = (rec.code or '').strip().upper()
+
+            rec.afecta_calidad = codigo in codigos_calidad
 class ComponenteSubparte(models.Model):
     _name = 'componente.subparte'
     _description = 'Subparte técnica del componente (ej. Tambor, Cuchilla, Rodillo presión)'
