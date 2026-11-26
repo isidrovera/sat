@@ -287,7 +287,7 @@ class ReparacionesInforme(models.Model):
         mantenimiento_codes = {'mantenimiento'}
         cambio_codes = {'requiere_cambio'}
         falla_codes = {'falla'}
-        pendiente_codes = {'sin_revisar', 'sin_probar'}
+        pendiente_codes = {'sin_revisar', 'sin_probar', 'no_instalado'}
         toner_relevante = {
             'toner_40', 'toner_30', 'toner_25', 'toner_20', 'toner_10',
             'toner_vacio', 'toner_sin_contenedor', 'vacio', 'sin_botella',
@@ -309,10 +309,10 @@ class ReparacionesInforme(models.Model):
             if tipo_code.startswith('FUNCION_'):
                 if estado_code in falla_codes | cambio_codes:
                     data['funciones_falla'].append(item)
-                elif estado_code in pendiente_codes or not estado_code:
-                    data['funciones_pendientes'].append(item)
-                elif estado_code in ok_codes:
+                elif estado_code in {'correcto', 'operativo', 'bueno'}:
                     data['funciones_ok'].append(item)
+                elif estado_code != 'no_aplica':
+                    data['funciones_pendientes'].append(item)
                 continue
 
             if tipo_code == 'TONER_SYSTEM':
@@ -558,59 +558,36 @@ class ReparacionesInforme(models.Model):
         return '%s y %s' % (', '.join(values[:-1]), values[-1])
 
     def _rep__general_status_text(self, data):
-        """
-        Redacción prudente del resultado general.
+        """Diagnóstico técnico independiente de la etapa administrativa."""
+        self.ensure_one()
+        estado = self.maquina_id.estado_ventas_id if self.maquina_id else self.estado_id
+        if estado == 'de_partes':
+            return _('Equipo destinado al aprovechamiento de piezas. Se detalla el estado de los componentes evaluados.')
+        if estado == 'con_problemas':
+            return _('Equipo con problemas técnicos. Se detallan las observaciones registradas.')
 
-        El checklist determina si una función está correcta, con falla o
-        pendiente. SNMP solamente confirma que hubo actividad durante la prueba.
-        """
-        snmp = data.get('snmp') or self._rep__get_snmp_test_data()
-        actividades = snmp.get('actividades') or []
-        actividad_texto = self._rep__join_human_list(actividades)
+        accesorios = data.get('accesorios_relevantes') or []
+        if (data.get('funciones_falla') or data.get('fallas_componentes')
+                or any(x.get('estado_code') in {'falla', 'instalado_con_falla', 'wifi_sin_senal'} for x in accesorios)):
+            return _('Durante la revisión del equipo se identificaron fallas de funcionamiento.')
+        if data.get('requiere_cambio') or any(x.get('estado_code') == 'requiere_cambio' for x in accesorios):
+            return _('Se realizó la revisión del equipo, identificándose componentes que requieren cambio.')
+        if data.get('funciones_pendientes') or data.get('pendientes_componentes'):
+            return _('Se realizó la revisión del equipo, quedando evaluaciones o pruebas pendientes.')
+        if any(x.get('estado_code') in {'toner_vacio', 'toner_sin_contenedor', 'vacio', 'sin_botella'}
+               for x in data.get('toners_relevantes', [])):
+            return _('Se realizó la revisión del equipo, identificándose consumibles faltantes o agotados.')
+        if data.get('mantenimiento'):
+            return _('Se realizó la revisión del equipo, identificándose componentes que requieren mantenimiento.')
+        if not data.get('evaluados_count'):
+            return _('No se registraron evaluaciones técnicas del equipo.')
 
-        if data['funciones_falla']:
-            if actividad_texto:
-                return (
-                    'Durante la evaluación se registró actividad de %s. De acuerdo con '
-                    'la revisión del técnico, se detectaron incidencias en las funciones '
-                    'señaladas.'
-                ) % actividad_texto
-            return (
-                'Durante la revisión y las pruebas realizadas se detectaron incidencias '
-                'en las funciones señaladas por el técnico.'
-            )
-
-        if data['funciones_ok'] and data['funciones_pendientes']:
-            if actividad_texto:
-                return (
-                    'Durante la evaluación se registró actividad de %s. Las funciones '
-                    'verificadas por el técnico respondieron operativamente y quedaron '
-                    'algunas pruebas pendientes.'
-                ) % actividad_texto
-            return (
-                'Se realizaron pruebas generales de funcionamiento. Las funciones '
-                'verificadas por el técnico respondieron operativamente, aunque quedaron '
-                'pruebas pendientes.'
-            )
-
-        if data['funciones_ok']:
-            if actividad_texto:
-                return (
-                    'Durante la evaluación se registró actividad de %s. Las funciones '
-                    'verificadas por el técnico respondieron operativamente.'
-                ) % actividad_texto
-            return (
-                'Se realizaron pruebas generales de funcionamiento y las funciones '
-                'verificadas por el técnico respondieron operativamente.'
-            )
-
-        if actividad_texto:
-            return (
-                'Durante la evaluación se registró actividad de %s. La condición de las '
-                'funciones y componentes corresponde a la revisión registrada por el técnico.'
-            ) % actividad_texto
-
-        return 'Se realizó una revisión general del equipo de acuerdo con el checklist técnico.'
+        funciones = {x.get('tipo_code', '').upper() for x in data.get('funciones_ok', [])}
+        # Solo declarar operativas las funciones comprobadas; no inferir
+        # operatividad total de una máquina a partir de una prueba aislada.
+        if funciones:
+            return _('Equipo revisado. Las funciones verificadas están operativas.')
+        return _('Se realizó la revisión del equipo según las evaluaciones registradas.')
 
     # ========================================
     # EXTRACCIÓN DE DATOS DESDE EVALUACIONES
@@ -919,6 +896,20 @@ class ReparacionesInforme(models.Model):
              (data.get('funciones_pendientes') or []), '#616161'),
         ]
 
+        # En equipos de partes interesa conocer también las piezas evaluadas
+        # favorablemente, sin garantizar su vida útil ni su aprovechamiento.
+        if (self.maquina_id.estado_ventas_id if self.maquina_id else self.estado_id) == 'de_partes':
+            favorables = []
+            for evaluacion in self.evaluacion_ids:
+                tipo = evaluacion.componente_tipo_id
+                codigo = (tipo.code or '').strip().upper()
+                if codigo.startswith('FUNCION_') or codigo in {'TONER_SYSTEM', 'CARCASA', 'PANEL_CONTROL'}:
+                    continue
+                if evaluacion.estado_id.code in {'nuevo', 'correcto', 'operativo', 'bueno'}:
+                    favorables.append(self._rep__component_dict(evaluacion))
+            if favorables:
+                secciones.append(('Piezas registradas en buen estado', favorables, '#2e7d32'))
+
         etiquetas = {
             'requiere_cambio': 'Requiere cambio',
             'falla': 'Presenta falla',
@@ -940,7 +931,9 @@ class ReparacionesInforme(models.Model):
             '': 'Sin estado registrado',
         }
         parts = [
-            '<div data-autogen="1" style="font-family:Arial;line-height:1.45;color:#222;">'
+            '<div data-autogen="1" style="font-family:Arial;line-height:1.45;color:#222;">',
+            '<p style="margin:0 0 10px 0;">%s</p>'
+            % self._rep__escape(self._rep__general_status_text(data)),
         ]
         hay_observaciones = False
 
@@ -981,7 +974,7 @@ class ReparacionesInforme(models.Model):
                     )
                 parts.append('</div>')
 
-        if not hay_observaciones:
+        if not hay_observaciones and data.get('evaluados_count'):
             parts.append(
                 '<p style="margin:0;">No se registraron observaciones '
                 'en las secciones del informe.</p>'
