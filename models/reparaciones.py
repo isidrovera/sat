@@ -2043,27 +2043,3 @@ class ReportReparacionView(models.AbstractModel):
         }
 
 
-class ComponenteTipoCalidad(models.Model):
-    _inherit = 'componente.tipo'
-
-    afecta_calidad = fields.Boolean(
-        string='Afecta la calidad de imagen',
-        compute='_compute_afecta_calidad', store=True, readonly=False,
-        help='Activar únicamente para piezas que intervienen en la calidad de imagen.',
-    )
-
-    @api.depends('code')
-    def _compute_afecta_calidad(self):
-        import unicodedata
-        for rec in self:
-            code = unicodedata.normalize('NFKD', rec.code or '')
-            code = ''.join(c for c in code if not unicodedata.combining(c))
-            code = re.sub(r'[^A-Z0-9]+', '_', code.upper()).strip('_')
-            rec.afecta_calidad = code in {
-                'IU', 'UI', 'IMAGEN', 'IMAGING', 'DRUM', 'DRUM_UNIT',
-                'UNIDAD_IMAGEN', 'UNIDAD_DE_IMAGEN', 'IMAGING_UNIT',
-                'DEVELOPER', 'DEV', 'FUSORA', 'FUSOR', 'FUSER', 'FUSING',
-                'ITB', 'TRANSFER_BELT', 'TRANSFERENCIA', 'FAJA', 'BANDA',
-                'TRANSFER_ROLLER', 'ROLLER_TRANSFER', 'RODILLO_TRANSFERENCIA',
-                'OPTICO', 'OPTICAL', 'ESCANER', 'SCANNER', 'LSU', 'OPTICO_ESCANER',
-            } or bool(re.fullmatch(r'(UI|IU|DEV)_[KCMY]', code))
