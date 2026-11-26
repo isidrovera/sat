@@ -448,7 +448,8 @@ class UnidadAlquiler(models.Model):
         # Buscar registros con fechas vencidas
         records = self.search([
             ('fecha_recurrente', '<=', today),
-            ('control_mantenimiento', '=', True)
+            ('control_mantenimiento', '=', True),
+            ('estado_alquiler_id', '=', 'alquilada'),
         ])
         
         _logger.info(f"CRON: Encontrados {len(records)} registros con fechas vencidas (hoy: {today})")
@@ -512,6 +513,7 @@ class UnidadAlquiler(models.Model):
         Método para usar cuando el técnico completa el mantenimiento.
         """
         self.ensure_one()
+        self._validar_equipo_mantenimiento()
         
         if not self.fecha_recurrente:
             raise UserError("No hay fecha de mantenimiento programada")
@@ -566,7 +568,8 @@ class UnidadAlquiler(models.Model):
         today = fields.Date.today()
         equipos = self.search([
             ('cliente_id', '=', cliente_id),
-            ('control_mantenimiento', '=', True)
+            ('control_mantenimiento', '=', True),
+            ('estado_alquiler_id', '=', 'alquilada'),
         ])
         
         print(f"\n=== DEBUG CRONOGRAMA CLIENTE {equipos[0].cliente_id.name if equipos else 'N/A'} ===")
@@ -615,7 +618,8 @@ class UnidadAlquiler(models.Model):
         records = self.search([
             ('fecha_recurrente', '>=', target_date),
             ('fecha_recurrente', '<', target_date + timedelta(days=1)),
-            ('control_mantenimiento', '=', True)
+            ('control_mantenimiento', '=', True),
+            ('estado_alquiler_id', '=', 'alquilada'),
         ])
         _logger.info(
             f"Registros encontrados para enviar recordatorios: {len(records)}")
@@ -659,13 +663,27 @@ class UnidadAlquiler(models.Model):
             except Exception as e:
                 _logger.error(
                     f"Error al enviar correo a {correo} para cliente {client_data['cliente'].name}: {e}")
+    def _validar_equipo_mantenimiento(self):
+        self.ensure_one()
+        if not self.control_mantenimiento:
+            raise UserError("El equipo no tiene activado el mantenimiento preventivo.")
+        if self.estado_alquiler_id != 'alquilada':
+            raise UserError("El equipo debe encontrarse en estado Alquilada.")
+        if not self.cliente_id:
+            raise UserError("El equipo no tiene un cliente asignado.")
+
     def button_send_test_mail(self):
         """Función para probar el envío de correo desde la interfaz"""
         self.ensure_one()
-        # Buscar todos los equipos del mismo cliente
+        self._validar_equipo_mantenimiento()
+        if not self.fecha_recurrente:
+            raise UserError("No hay fecha de mantenimiento programada.")
+        # Buscar equipos del mismo cliente y fecha
         equipos_cliente = self.search([
             ('cliente_id', '=', self.cliente_id.id),
-            ('control_mantenimiento', '=', True)
+            ('fecha_recurrente', '=', self.fecha_recurrente),
+            ('control_mantenimiento', '=', True),
+            ('estado_alquiler_id', '=', 'alquilada'),
         ])
 
         mail_template = self.env.ref(
@@ -680,6 +698,7 @@ class UnidadAlquiler(models.Model):
         MODIFICADO: Aplica configuración sin el campo usar_fecha_recurrente_como_base.
         """
         self.ensure_one()
+        self._validar_equipo_mantenimiento()
 
         # Verificaciones
         if not self.cliente_id:
@@ -692,7 +711,8 @@ class UnidadAlquiler(models.Model):
         otros_equipos = self.search([
             ('id', '!=', self.id),
             ('cliente_id', '=', self.cliente_id.id),
-            ('control_mantenimiento', '=', True)
+            ('control_mantenimiento', '=', True),
+            ('estado_alquiler_id', '=', 'alquilada'),
         ])
 
         if not otros_equipos:
@@ -754,12 +774,20 @@ class UnidadAlquiler(models.Model):
 
     def _create_maintenance_tickets(self):
         """Crear tickets de mantenimiento para todos los equipos del cliente"""
+        self._validar_equipo_mantenimiento()
+        if not self.fecha_recurrente:
+            raise UserError("No hay fecha de mantenimiento programada.")
         try:
             equipos = self.search([
                 ('cliente_id', '=', self.cliente_id.id),
                 ('fecha_recurrente', '=', self.fecha_recurrente),
-                ('control_mantenimiento', '=', True)
+                ('control_mantenimiento', '=', True),
+                ('estado_alquiler_id', '=', 'alquilada'),
+                ('estado_programacion', '!=', 'confirmado'),
             ])
+
+            if not equipos:
+                return False
 
             for equipo in equipos:
                 self.env['ticket.alquiler'].create({
@@ -799,6 +827,9 @@ class UnidadAlquiler(models.Model):
 
     def _send_reschedule_request(self):
         """Enviar solicitud de reprogramación"""
+        self._validar_equipo_mantenimiento()
+        if not self.fecha_recurrente:
+            raise UserError("No hay fecha de mantenimiento programada.")
         try:
             self.write({
                 'estado_programacion': 'reprogramado',
@@ -821,6 +852,7 @@ class UnidadAlquiler(models.Model):
     def process_maintenance_response(self, response_type):
         """Procesa la respuesta del cliente desde el correo"""
         self.ensure_one()
+        self._validar_equipo_mantenimiento()
         # Validaciones
         if self.estado_programacion == 'confirmado' and response_type == 'confirm':
             raise ValidationError(_("Este mantenimiento ya está confirmado"))
