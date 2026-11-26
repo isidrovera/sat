@@ -969,49 +969,129 @@ class Reparaciones(models.Model):
        help='Clasificación técnico-comercial según las piezas relacionadas con la imagen. '
             'No equivale a una autorización de entrega.')
 
+    def _obtener_diagnostico_calidad(self):
+        """Una sola fuente de reglas y motivos para el formulario y el informe."""
+        self.ensure_one()
+        grupos = {k: [] for k in (
+            'criticos', 'moderados', 'favorables', 'pendientes',
+            'no_aplica', 'excluidos',
+        )}
+        favorables = {'nuevo', 'correcto', 'revisado'}
+        moderados = {'regular', 'mantenimiento', 'gastada_pero_puede_trabajar'}
+        criticos = {'requiere_cambio', 'falla'}
+        motivos_pendientes = {
+            '': _('Falta seleccionar el estado'),
+            'sin_revisar': _('Falta revisar el componente'),
+            'sin_probar': _('Falta probar el componente'),
+            'no_instalado': _('Componente no instalado; verificar si corresponde No aplica'),
+        }
+        configurados = 0
+        for e in self.evaluacion_ids:
+            tipo = e.componente_tipo_id
+            estado = (e.estado_id.code or '').strip().lower()
+            nombre = tipo.name or _('Componente sin tipo')
+            if e.color_id:
+                nombre += ' (%s)' % e.color_id.name
+            detalle = '%s: %s' % (nombre, e.estado_id.name or _('Sin estado'))
+            if not tipo.afecta_calidad:
+                grupos['excluidos'].append('%s [%s]' % (nombre, tipo.code or '-'))
+                continue
+            configurados += 1
+            if estado == 'no_aplica':
+                grupos['no_aplica'].append(detalle)
+            elif estado in criticos:
+                grupos['criticos'].append(detalle)
+            elif estado in moderados:
+                grupos['moderados'].append(detalle)
+            elif estado in favorables:
+                grupos['favorables'].append(detalle)
+            else:
+                motivo = motivos_pendientes.get(estado) or (
+                    _('Código de estado no reconocido: %s') % estado
+                )
+                grupos['pendientes'].append('%s — %s' % (detalle, motivo))
+
+        # Mantener la prioridad acordada: crítico > pendiente > desgaste > correcto.
+        if grupos['criticos']:
+            calidad = 'mala'
+        elif grupos['pendientes'] or not (grupos['favorables'] or grupos['moderados']):
+            calidad = 'sin_probar'
+        elif grupos['moderados']:
+            calidad = 'regular'
+        else:
+            calidad = 'buena'
+        grupos.update(calidad=calidad, configurados=configurados,
+                      total=len(self.evaluacion_ids))
+        _logger.info(
+            '[CALIDAD] Reparacion=%s total=%s configurados=%s calidad=%s '
+            'criticos=%s moderados=%s pendientes=%s excluidos=%s',
+            self.id, grupos['total'], configurados, calidad,
+            grupos['criticos'], grupos['moderados'], grupos['pendientes'],
+            grupos['excluidos'],
+        )
+        return grupos
+
     def _obtener_calidades_permitidas(self):
         self.ensure_one()
-        estados = {
-            (e.estado_id.code or '').strip().lower()
-            for e in self.evaluacion_ids
-            if e.componente_tipo_id.afecta_calidad
-            and (e.estado_id.code or '').strip().lower() != 'no_aplica'
-        }
-        if estados & {'requiere_cambio', 'falla'}:
-            return ['mala']
-        if not estados or estados - {
-            'nuevo', 'correcto', 'revisado', 'regular',
-            'mantenimiento', 'gastada_pero_puede_trabajar',
-        }:
-            return ['sin_probar']
-        if estados & {'regular', 'mantenimiento', 'gastada_pero_puede_trabajar'}:
-            return ['regular']
-        return ['buena']
+        return [self._obtener_diagnostico_calidad()['calidad']]
+
+    def _obtener_detalle_calidad(self, diagnostico=None):
+        self.ensure_one()
+        d = diagnostico if diagnostico is not None else self._obtener_diagnostico_calidad()
+        etiquetas = dict(self._fields['calidad_id'].selection)
+        lineas = [
+            _('Calidad seleccionada: %s') % etiquetas.get(self.calidad_id, _('Sin evaluar')),
+            _('Calidad requerida: %s') % etiquetas[d['calidad']],
+        ]
+        if not d['total']:
+            lineas.extend(['', _('Faltan todas las evaluaciones de componentes de esta reparación.')])
+        elif not d['configurados']:
+            lineas.extend(['', _('Ningún componente tiene activado el campo Afecta la calidad de imagen.'),
+                           _('Revise el catálogo de tipos de componentes. Códigos encontrados:')])
+            lineas.extend('• ' + x for x in d['excluidos'])
+        elif not any(d[k] for k in ('criticos', 'moderados', 'favorables', 'pendientes')):
+            lineas.extend(['', _('Todos los componentes de calidad están marcados como No aplica.')])
+            lineas.extend('• ' + x for x in d['no_aplica'])
+        for clave, titulo in (
+            ('criticos', _('Piezas que requieren cambio o presentan falla:')),
+            ('pendientes', _('Evaluaciones pendientes o estados no reconocidos:')),
+            ('moderados', _('Piezas con desgaste, estado regular o mantenimiento:')),
+        ):
+            if d[clave]:
+                lineas.extend(['', titulo])
+                lineas.extend('• ' + x for x in d[clave])
+        if d['calidad'] == 'buena':
+            lineas.extend(['', _('Piezas evaluadas sin observaciones de calidad:')])
+            lineas.extend('• ' + x for x in d['favorables'])
+        if not self.calidad_id:
+            lineas.extend(['', _('Falta seleccionar la calidad en el formulario.')])
+        if d['calidad'] == 'sin_probar':
+            lineas.extend(['', _('Complete las evaluaciones o corrija la configuración antes de generar el informe.')])
+        elif self.calidad_id != d['calidad']:
+            lineas.extend(['', _('Seleccione la calidad requerida o corrija la evaluación técnica.')])
+        elif d['pendientes']:
+            lineas.extend(['', _('Complete también las evaluaciones pendientes antes de generar el informe.')])
+        return '\n'.join(lineas)
 
     def _validar_coherencia_calidad(self):
         for rec in self:
-            esperada = rec._obtener_calidades_permitidas()[0]
-            if esperada == 'sin_probar':
-                raise ValidationError(_(
-                    'La evaluación de calidad está incompleta. Revise los componentes '
-                    'relacionados con la imagen y su configuración.'
-                ))
-            if rec.calidad_id != esperada:
-                etiquetas = dict(rec._fields['calidad_id'].selection)
-                raise ValidationError(_(
-                    'La calidad registrada no coincide con la evaluación de las piezas.\n'
-                    'Calidad registrada: %s\nCalidad requerida: %s'
-                ) % (etiquetas.get(rec.calidad_id, 'Sin evaluar'), etiquetas[esperada]))
+            d = rec._obtener_diagnostico_calidad()
+            if (d['calidad'] == 'sin_probar' or d['pendientes']
+                    or rec.calidad_id != d['calidad']):
+                mensaje = rec._obtener_detalle_calidad(d)
+                _logger.warning('[CALIDAD-DETALLE] Reparacion=%s %s', rec.id, mensaje)
+                raise ValidationError(mensaje)
 
     @api.onchange('calidad_id', 'evaluacion_ids')
     def _onchange_coherencia_calidad(self):
         for rec in self:
-            esperada = rec._obtener_calidades_permitidas()[0]
-            if rec.calidad_id and rec.calidad_id != esperada:
+            d = rec._obtener_diagnostico_calidad()
+            if rec.calidad_id and (rec.calidad_id != d['calidad'] or d['pendientes']):
+                mensaje = rec._obtener_detalle_calidad(d)
+                _logger.info('[CALIDAD-DETALLE] Reparacion=%s %s', rec.id, mensaje)
                 return {'warning': {
-                    'title': _('Calidad incompatible'),
-                    'message': _('Según la evaluación de las piezas corresponde: %s') %
-                        dict(rec._fields['calidad_id'].selection)[esperada],
+                    'title': _('Calidad incompatible') if rec.calidad_id != d['calidad'] else _('Evaluación de calidad incompleta'),
+                    'message': mensaje,
                 }}
 
     # Sistema óptico y transfer
@@ -2041,5 +2121,3 @@ class ReportReparacionView(models.AbstractModel):
             'docs': docs,
             'selection_labels': selection_labels,
         }
-
-
