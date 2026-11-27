@@ -225,6 +225,82 @@ class TicketAlquiler(models.Model):
     marca_id_r = fields.Char(related='product_alquiler.marca', string="Marca", store=True)
     modelo_id_r = fields.Char(related='product_alquiler.name.name', string='Modelo', store=True)
     direccion_id_r = fields.Char(string="Dirección")
+    direccion_notificacion = fields.Char(
+        string='Dirección completa', compute='_compute_direccion_notificacion',
+    )
+
+    @api.depends('product_alquiler', 'product_alquiler.direccion_completa', 'direccion_id_r')
+    def _compute_direccion_notificacion(self):
+        for ticket in self:
+            ticket.direccion_notificacion = ticket.product_alquiler.direccion_completa or False
+
+    @staticmethod
+    def _valor_notificacion(valor):
+        if valor is None or valor is False:
+            return ''
+        texto = str(valor).strip()
+        return '' if texto.casefold() in ('na', 'n/a', 'no especificado', 'no especificada') else texto
+
+    def _linea_notificacion(self, etiqueta, valor):
+        texto = self._valor_notificacion(valor)
+        return f'*{etiqueta}:* {texto}' if texto else ''
+
+    def _ubicacion_notificacion(self):
+        self.ensure_one()
+        equipo = self.product_alquiler
+        if equipo and equipo.tiene_coordenadas:
+            lat, lng = equipo.latitud, equipo.longitud
+            if -90 <= lat <= 90 and -180 <= lng <= 180:
+                return f'https://www.google.com/maps/search/?api=1&query={lat},{lng}'
+        return ''
+
+    def _datos_contacto_notificacion(self):
+        self.ensure_one()
+        limpiar = self._valor_notificacion
+        nombre, celular = limpiar(self.contacto_id_r), limpiar(self.celular_id_r)
+        reportante, telefono = limpiar(self.reporter_name), limpiar(self.reporter_phone)
+        if not nombre and not celular:
+            nombre, celular = reportante, telefono
+        if not nombre and not celular and self.product_alquiler:
+            nombre = limpiar(getattr(self.product_alquiler, 'contacto_id', False))
+            celular = limpiar(getattr(self.product_alquiler, 'celular', False))
+        contacto = ' | '.join(filter(None, (nombre, celular)))
+        reporte = ' | '.join(filter(None, (
+            reportante if reportante != nombre else '',
+            telefono if telefono != celular else '',
+        )))
+        return '\n'.join(filter(None, (
+            self._linea_notificacion('Contacto' if nombre else 'Celular', contacto),
+            self._linea_notificacion('Reportado por' if reportante and reportante != nombre else 'Celular del reportante', reporte),
+        )))
+
+    def _detalle_ubicacion_notificacion(self):
+        self.ensure_one()
+        return '\n'.join(filter(None, (
+            self._linea_notificacion('Dirección', self.direccion_notificacion),
+            self._linea_notificacion('Ubicación', self._ubicacion_notificacion()),
+        )))
+
+    def _bloque_visita_notificacion(self, incluir_contacto=False):
+        self.ensure_one()
+        return '\n'.join(filter(None, (
+            self._linea_notificacion('Cliente', self.partner_id.name),
+            self._detalle_ubicacion_notificacion(),
+            self._datos_contacto_notificacion() if incluir_contacto else '',
+            self._linea_notificacion('Técnico', self.responsable.name),
+            self._linea_notificacion('Fecha y hora', self.agenda_local),
+        )))
+
+    def _bloque_equipo_notificacion(self):
+        self.ensure_one()
+        return '\n'.join(filter(None, (
+            self._linea_notificacion('Ticket', self.name),
+            self._linea_notificacion('Servicio', dict(self._fields['tipo_servicio_id'].selection).get(self.tipo_servicio_id)),
+            self._linea_notificacion('Modelo', self.modelo_id_r),
+            self._linea_notificacion('Serie', self.serie_id_r),
+            self._linea_notificacion('Problema', self.description),
+        )))
+
     contacto_id_r = fields.Char(string="Contacto")
     celular_id_r = fields.Char(string="Celular")
     corre_id_r = fields.Char(string="Correo")
@@ -665,6 +741,14 @@ class TicketAlquiler(models.Model):
 
         for vals_originales in vals_list:
             vals = vals_originales.copy()
+
+            # Si el reporte trae sus propios datos y no tiene contacto asignado,
+            # conservar juntos el nombre y el celular de quien reporta.
+            if not vals.get('contacto_id_r') and not vals.get('celular_id_r'):
+                if vals.get('reporter_name') or vals.get('reporter_phone'):
+                    vals['contacto_id_r'] = vals.get('reporter_name') or False
+                    vals['celular_id_r'] = vals.get('reporter_phone') or False
+
 
             # ============================================================
             # VALIDAR DISPONIBILIDAD DEL TÉCNICO (POR TICKET)
@@ -2098,7 +2182,7 @@ class TicketAlquiler(models.Model):
                     f"Tipo de servicio: {tipo_servicio_label}\n"
                     f"Duración estimada: {duracion_horas} hora(s)"
                 ),
-                'location': self.direccion_id_r or 'NA',
+                'location': self.direccion_notificacion or self.direccion_id_r or 'NA',
                 'allday': False,
             }
 

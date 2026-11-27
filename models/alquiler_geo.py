@@ -112,30 +112,33 @@ class UnidadAlquilerGeo(models.Model):
 
 
 
-    @api.depends('direccion_calle', 'distrito', 'provincia', 'departamento',
-
-                 'nombre_establecimiento')
-
+    @api.depends(
+        'nombre_establecimiento',
+        'direccion_calle',
+        'direccion_referencia',
+        'distrito',
+        'provincia',
+        'departamento',
+    )
     def _compute_direccion_completa(self):
-
         for rec in self:
+            partes = [
+                valor.strip()
+                for valor in (
+                    rec.nombre_establecimiento,
+                    rec.direccion_calle,
+                    rec.distrito,
+                    rec.provincia,
+                    rec.departamento,
+                )
+                if valor and valor.strip()
+            ]
 
-            partes = [p for p in [
-
-                rec.nombre_establecimiento,
-
-                rec.direccion_calle,
-
-                rec.distrito,
-
-                rec.provincia,
-
-                rec.departamento,
-
-            ] if p]
+            referencia = (rec.direccion_referencia or '').strip()
+            if referencia:
+                partes.append(f'Referencia: {referencia}')
 
             rec.direccion_completa = ', '.join(partes) or False
-
 
 
     @api.depends('latitud', 'longitud')
@@ -316,7 +319,23 @@ class UnidadAlquilerGeo(models.Model):
 
         _logger.info('[GEO] Geocodificando equipo ID=%s', self.id)
 
-        direccion = self.direccion_completa or self.direccion
+        # Buscar únicamente por la dirección geográfica, sin referencias
+        # de acceso ni nombres opcionales del establecimiento.
+        calle = (self.direccion_calle or '').strip()
+        if calle:
+            direccion = ', '.join(
+                valor.strip()
+                for valor in (
+                    calle,
+                    self.distrito,
+                    self.provincia,
+                    self.departamento,
+                    self.pais,
+                )
+                if valor and valor.strip()
+            )
+        else:
+            direccion = (self.direccion or '').strip()
 
         if not direccion:
 

@@ -67,144 +67,30 @@ class SoporteMensajes(models.Model):
             _logger.error(f" Error enviando WhatsApp consolidado: {e}")
 
     def _generar_mensaje_tecnico_consolidado(self, tickets, tecnico):
-        """Genera la asignación consolidada para el técnico, sin instrucciones de evidencia."""
-        tecnico_name = tecnico.name if tecnico else 'No asignado'
-        cantidad = len(tickets)
-        mensaje = [
-            '*ASIGNACIÓN DE SERVICIOS TÉCNICOS*',
-            '',
-            f'*Técnico:* {tecnico_name}',
-            f'*Servicios asignados:* {cantidad}',
-        ]
-        clientes_agrupados = {}
+        mensaje = ['*ASIGNACIÓN DE SERVICIOS TÉCNICOS*', f'*Servicios asignados:* {len(tickets)}']
+        grupos = {}
         for ticket in tickets:
-            clave = (ticket.partner_id.id if ticket.partner_id else False,
-                     ticket.direccion_id_r or '')
-            clientes_agrupados.setdefault(clave, []).append(ticket)
-        for agrupados in clientes_agrupados.values():
-            primero = agrupados[0]
-            mensaje.extend([
-                '',
-                f'*Cliente:* {primero.partner_id.name if primero.partner_id else "No especificado"}',
-                f'*Dirección:* {primero.direccion_id_r or "No especificada"}',
-                f'*Contacto:* {primero.contacto_id_r or "No especificado"}',
-                f'*Fecha y hora:* {primero.agenda_local or "No programada"}',
-                '',
-                '*Tickets:*',
-            ])
+            clave = ticket._bloque_visita_notificacion(incluir_contacto=True)
+            grupos.setdefault(clave, []).append(ticket)
+        for visita, agrupados in grupos.items():
+            mensaje.extend(['', visita])
             for ticket in agrupados:
-                tipo = dict(ticket._fields['tipo_servicio_id'].selection).get(
-                    ticket.tipo_servicio_id, 'No especificado')
-                modelo = (ticket.product_alquiler.name.name if ticket.product_alquiler
-                          and ticket.product_alquiler.name else 'No especificado')
-                mensaje.append(f'- {ticket.name}: {tipo} | {modelo} | Serie: {ticket.serie_id_r or "NA"}')
-                if ticket.description:
-                    mensaje.append(f'  Problema: {ticket.description}')
-                if ticket.url:
-                    mensaje.append(f'  Ticket: {ticket.url}')
+                mensaje.extend(['', ticket._bloque_equipo_notificacion()])
         return '\n'.join(mensaje)
 
     def _generar_mensaje_cliente_consolidado(self, tickets, cliente, tecnico):
-
-        """
-
-        Genera un mensaje consolidado para el cliente con todos sus tickets
-
-        """
-
-        cantidad = len(tickets)
-
-        cliente_name = cliente.name if cliente else 'NA'
-
-        tecnico_name = tecnico.name if tecnico else 'NA'
-
-        tecnico_dni = tecnico.vat if tecnico else 'NA'
-
-        # Usar fecha del primer ticket (deberían ser del mismo día)
-
-        fecha_visita = tickets[0].agenda_local if tickets else 'NA'
-
-        direccion = tickets[0].direccion_id_r if tickets else 'NA'
-
-        mensaje = f"Estimado/a *{cliente_name}*,\n\n"
-
-        if cantidad == 1:
-
-            mensaje += "Le informamos que hemos programado una visita técnica para atender su requerimiento:"
-
-        else:
-
-            mensaje += f"Le informamos que hemos programado una visita técnica para atender *{cantidad} requerimientos*:"
-
-        mensaje += "\n\n"
-
-        mensaje += f"*INFORMACIÓN DE LA VISITA*\n"
-
-        mensaje += f" Fecha de Visita: {fecha_visita}\n"
-
-        mensaje += f" Dirección: {direccion}\n"
-
-        mensaje += f"Técnico: {tecnico_name}\n"
-
-        mensaje += f" DNI: {tecnico_dni}\n\n"
-
-        # Agrupar por tipo de servicio
-
-        servicios_agrupados = {}
-
+        mensaje = ['*VISITA TÉCNICA PROGRAMADA*', f'Atenderemos {len(tickets)} requerimiento(s).']
+        grupos = {}
         for ticket in tickets:
-
-            tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, 'NA')
-
-            if tipo_servicio not in servicios_agrupados:
-
-                servicios_agrupados[tipo_servicio] = []
-
-            servicios_agrupados[tipo_servicio].append(ticket)
-
-        # Mostrar resumen de servicios
-
-        mensaje += f"*SERVICIOS PROGRAMADOS ({cantidad}):*\n"
-
-        for tipo_servicio, tickets_tipo in servicios_agrupados.items():
-
-            mensaje += f"• {tipo_servicio}: {len(tickets_tipo)} equipo(s)\n"
-
-        mensaje += "\n"
-
-        # Detalles de cada equipo
-
-        mensaje += f"*EQUIPOS A ATENDER:*\n"
-
-        for i, ticket in enumerate(tickets, 1):
-
-            tipo_servicio = dict(ticket._fields['tipo_servicio_id'].selection).get(ticket.tipo_servicio_id, 'NA')
-
-            mensaje += f"*EQUIPO #{i} - TICKET {ticket.name}*\n"
-
-            mensaje += f" Servicio: {tipo_servicio}\n"
-
-            mensaje += f" Marca: {ticket.marca_id_r or 'NA'}\n"
-
-            mensaje += f" Modelo: {ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'}\n"
-
-            mensaje += f" Serie: {ticket.serie_id_r or 'NA'}\n"
-
-            mensaje += f" Problema: {ticket.description or 'NA'}\n\n"
-
-        mensaje += f"*IMPORTANTE:*\n"
-
-        mensaje += f"1. Dar autorización para el ingreso de nuestro personal a sus oficinas.\n"
-
-        mensaje += f"2. Disponibilidad de espacio y tiempo para el desarrollo del trabajo.\n"
-
-        if cantidad > 1:
-
-            mensaje += f"3. Los {cantidad} equipos serán atendidos en la misma visita.\n"
-
-        mensaje += f"\nGracias por su atención."
-
-        return mensaje
+            grupos.setdefault(ticket._bloque_visita_notificacion(), []).append(ticket)
+        for visita, agrupados in grupos.items():
+            mensaje.extend(['', visita])
+            if tecnico and tecnico.vat:
+                mensaje.append(self._linea_notificacion('DNI', tecnico.vat))
+            for ticket in agrupados:
+                mensaje.extend(['', ticket._bloque_equipo_notificacion()])
+        mensaje.extend(['', 'Por favor, autorice el ingreso de nuestro personal y facilite el espacio para la atención.', 'Gracias por su atención.'])
+        return '\n'.join(mensaje)
 
     def _enviar_correos_consolidados(self, tickets, cliente, tecnico):
 
@@ -284,27 +170,9 @@ class SoporteMensajes(models.Model):
 
             cliente = tickets_directos[0].partner_id
 
-            mensaje = f" *VISITAS TÉCNICAS DIRECTAS* \n\n"
-
-            mensaje += f"Técnico: {tecnico.name if tecnico else 'NA'}\n"
-
-            mensaje += f" Cliente: {cliente.name if cliente else 'NA'}\n"
-
-            mensaje += f" Cantidad de visitas: {cantidad}\n\n"
-
-            mensaje += f"*TICKETS CON ASISTENCIA DIRECTA:*\n"
-
+            mensaje = '*VISITAS TÉCNICAS DIRECTAS*\n' + f'*Cantidad:* {cantidad}\n'
             for ticket in tickets_directos:
-
-                mensaje += f"• {ticket.name} - {ticket.product_alquiler.name.name if ticket.product_alquiler and ticket.product_alquiler.name else 'NA'}\n"
-
-                mensaje += f"   {ticket.agenda_local or 'NA'}\n"
-
-                if ticket.direccion_id_r:
-
-                    mensaje += f"   {ticket.direccion_id_r}\n"
-
-            mensaje += f"\n Se ha programado asistencia directa para todos estos equipos."
+                mensaje += '\n' + ticket._bloque_visita_notificacion(True) + '\n' + ticket._bloque_equipo_notificacion() + '\n'
 
             # Enviar al gerente
 
@@ -327,23 +195,20 @@ class SoporteMensajes(models.Model):
             visitas = {}
             for ticket in tickets:
                 clave = (ticket.partner_id.id if ticket.partner_id else False,
-                         ticket.direccion_id_r or '',
+                         ticket.direccion_notificacion or '',
                          ticket.responsable.id if ticket.responsable else False,
-                         ticket.agenda_local or '')
+                         ticket.agenda_local or '',
+                         ticket._ubicacion_notificacion(),
+                         ticket._datos_contacto_notificacion())
                 visitas.setdefault(clave, ticket)
             # Se envía un mensaje por cada visita distinta para evitar agrupar
             # incorrectamente clientes, direcciones o fechas diferentes.
             for ticket in visitas.values():
-                texto = '\n'.join([
+                texto = '\n\n'.join(filter(None, (
                     '*VISITA TÉCNICA PROGRAMADA*',
-                    '',
-                    f'*Cliente:* {ticket.partner_id.name if ticket.partner_id else "No especificado"}',
-                    f'*Dirección:* {ticket.direccion_id_r or "No especificada"}',
-                    f'*Técnico:* {ticket.responsable.name if ticket.responsable else "No asignado"}',
-                    f'*Fecha y hora:* {ticket.agenda_local or "No programada"}',
-                    '',
-                    'Aprovechar la visita programada para evaluar si existen pedidos pendientes de tóner.',
-                ])
+                    ticket._bloque_visita_notificacion(True),
+                    'Aprovechar la visita para evaluar pedidos pendientes de tóner.',
+                )))
                 resultado = ticket.send_whatsapp_message(grupo_id, texto)
                 if not resultado or not resultado.get('success'):
                     _logger.error('No se pudo notificar al grupo %s: %s', grupo_id, resultado)
@@ -362,25 +227,11 @@ class SoporteMensajes(models.Model):
 
             # Datos del reporte del cliente
 
-            message = (
-
-                f"Estimado/a {self.reporter_name},\n\n"
-
-                "Hemos recibido su reporte de incidente y agradecemos la información proporcionada. "
-
-                "A continuación, detallamos los datos registrados:\n\n"
-
-                f"Cliente: {self.partner_id.name if self.partner_id else 'No especificado'}\n"
-
-                f"Dirección: {self.direccion_id_r if self.direccion_id_r else 'No especificada'}\n"
-
-                f"Modelo: {self.modelo_id_r if self.modelo_id_r else 'No especificada'}\n"
-
-                f"Serie: {self.serie_id_r if self.serie_id_r else 'No especificada'}\n"
-
-                f"Descripción del problema: {self.description if self.description else 'No proporcionada'}\n"
-
-            )
+            message = '\n\n'.join(filter(None, (
+                'Hemos recibido su reporte de incidente.',
+                self._bloque_visita_notificacion(),
+                self._bloque_equipo_notificacion(),
+            ))) + '\n'
 
             if self.problem_photo:
 
@@ -440,7 +291,7 @@ class SoporteMensajes(models.Model):
 
         lista_tickets = "\n".join([
 
-            f"• Ticket: {t.name} - Cliente: {t.partner_id.name or 'NA'} - Fecha: {t.agenda_local or 'NA'}"
+            "• " + " | ".join(filter(None, (t._linea_notificacion("Ticket", t.name), t._linea_notificacion("Cliente", t.partner_id.name), t._linea_notificacion("Fecha", t.agenda_local))))
 
             for t in tickets[:5]  # Mostrar máximo 5 tickets para no hacer el mensaje muy largo
 
@@ -702,37 +553,19 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
     def enviar_mensaje_whatsapp_finalizacion(self):
 
-        msg_cliente_finalizacion = "Hola, estimado cliente.\n\nQueremos informarle que hemos completado satisfactoriamente nuestra visita técnica programada. A continuación, le detallamos el trabajo realizado durante la visita:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico Asignado:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n*Contómetro K:* {}\n*Contómetro color:* {}\n*Contómetro scanner:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\n*INFORME TÉCNICO*\n{}\n\nAgradecemos su confianza en nuestros servicios y productos. Si necesita más asistencia o tiene cualquier requerimiento adicional, no dude en comunicarse con nosotros.".format(
-
-            self.name if self.name else 'NA',
-
-            self.agenda.strftime('%d/%m/%Y') if self.agenda else 'NA',
-
-            self.tipo_servicio_id if self.tipo_servicio_id else 'NA',
-
-            self.direccion_id_r if self.direccion_id_r else 'NA',
-
-            self.responsable.name if self.responsable and self.responsable.name else 'NA',
-
-            self.responsable.vat if self.responsable and self.responsable.vat else 'NA',
-
-            self.marca_id_r if self.marca_id_r else 'NA',
-
-            self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA',
-
-            self.serie_id_r if self.serie_id_r else 'NA',
-
-            self.contometrok_id if self.contometrok_id else 'NA',
-
-            self.contometroc_id if self.contometroc_id else 'NA',
-
-            self.contometros_id if self.contometros_id else 'NA',
-
-            self.description if self.description else 'NA',
-
-            self.informe_id if self.informe_id else 'NA'
-
-        )
+        msg_cliente_finalizacion = '\n\n'.join(filter(None, (
+            '*VISITA TÉCNICA FINALIZADA*',
+            self._bloque_visita_notificacion(),
+            self._linea_notificacion('DNI', self.responsable.vat),
+            self._bloque_equipo_notificacion(),
+            '\n'.join(filter(None, (
+                self._linea_notificacion('Contómetro K', self.contometrok_id),
+                self._linea_notificacion('Contómetro color', self.contometroc_id),
+                self._linea_notificacion('Contómetro scanner', self.contometros_id),
+                self._linea_notificacion('Informe técnico', self.informe_id),
+            ))),
+            'Gracias por su confianza.',
+        )))
 
         # Generar URL del informe
 
@@ -820,32 +653,12 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
         try:
 
-            msg_tecnico = (
-
-                f"Hola *{self.responsable.name if self.responsable and self.responsable.name else 'NA'}*,\n\n"
-
-                "Se le ha asignado un Ticket de servicio. Lea atentamente los detalles del servicio:\n\n"
-
-                f"*Cliente:* {self.partner_id.name if self.partner_id and self.partner_id.name else 'NA'}\n"
-
-                f"*Dirección:* {self.direccion_id_r if self.direccion_id_r else 'NA'}\n"
-
-                f"*Contacto:* {self.contacto_id_r if self.contacto_id_r else 'NA'}\n"
-
-                f"*Modelo:* {self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA'}\n"
-
-                f"*Serie:* {self.serie_id_r if self.serie_id_r else 'NA'}\n"
-
-                f"*Problema:* {self.description if self.description else 'NA'}\n"
-
-                f"*Fecha de visita:* {self.agenda_local if self.agenda_local else 'NA'}\n"
-
-                f"*Tipo de servicio:* {dict(self._fields['tipo_servicio_id'].selection).get(self.tipo_servicio_id, 'NA')}\n"
-
-                f"*Asistencia directa:* {dict(self._fields['asistencia_id'].selection).get(self.asistencia_id, 'NA')}\n\n"
-
-                f"*URL del Ticket:* {self.url}\n"
-            )
+            msg_tecnico = '\n\n'.join(filter(None, (
+                '*ASIGNACIÓN DE SERVICIO TÉCNICO*',
+                self._bloque_visita_notificacion(True),
+                self._bloque_equipo_notificacion(),
+                '*Asistencia directa:* Sí' if self.asistencia_id == 'si' else '',
+            )))
 
             _logger.debug("Mensaje para técnico generado: %s", msg_tecnico)
 
@@ -859,31 +672,13 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
         try:
 
-            msg_cliente = "Estimado/a *{}*,\n\nLe informamos que hemos programado una visita técnica para atender su requerimiento. A continuación, le detallamos la información correspondiente:\n\n*Ticket #:* {}\n*Fecha de Visita:* {}\n*Tipo de servicio:* {}\n*Dirección:* {}\n*Técnico:* {}\n*DNI:* {}\n\n*ESPECIFICACIONES DEL EQUIPO*\n*Marca:* {}\n*Modelo:* {}\n*Serie:* {}\n\n*PROBLEMA REPORTADO*\n{}\n\n1. Dar autorización para el ingreso de nuestro personal a sus oficinas o el espacio donde se encuentre nuestro equipo.\n2. Disponibilidad de espacio y tiempo para que nuestro personal pueda desarrollar su labor.\n\nGracias por su atención.".format(
-
-                self.partner_id.name if self.partner_id and self.partner_id.name else 'NA',
-
-                self.name if self.name else 'NA',
-
-                self.agenda_local if self.agenda_local else 'NA',
-
-                selection_labels.get('tipo_servicio_id', 'NA'),
-
-                self.direccion_id_r if self.direccion_id_r else 'NA',
-
-                self.responsable.name if self.responsable and self.responsable.name else 'NA',
-
-                self.responsable.vat if self.responsable and self.responsable.vat else 'NA',
-
-                self.marca_id_r if self.marca_id_r else 'NA',
-
-                self.product_alquiler.name.name if self.product_alquiler.name and self.product_alquiler.name.name else 'NA',
-
-                self.serie_id_r if self.serie_id_r else 'NA',
-
-                self.description if self.description else 'NA'
-
-            )
+            msg_cliente = '\n\n'.join(filter(None, (
+                '*VISITA TÉCNICA PROGRAMADA*',
+                self._bloque_visita_notificacion(),
+                self._linea_notificacion('DNI', self.responsable.vat),
+                self._bloque_equipo_notificacion(),
+                'Por favor, autorice el ingreso de nuestro personal y facilite el espacio para la atención. Gracias.',
+            )))
 
             _logger.debug("Mensaje para cliente generado: %s", msg_cliente)
 
@@ -931,19 +726,10 @@ Para finalizar rápidamente un ticket, ingresa a Odoo y usa la opción "Finaliza
 
         if self.asistencia_id == 'si':
 
-            msg_gerente = (
-
-                f" *VISITA TÉCNICA DIRECTA*\n\n"
-
-                f"Técnico: {self.responsable.name if self.responsable and self.responsable.name else 'NA'}\n"
-
-                f"Cliente: {self.partner_id.name if self.partner_id and self.partner_id.name else 'NA'}\n"
-
-                f"Fecha y hora: {self.agenda_local if self.agenda_local else 'NA'}\n"
-
-                f"Dirección: {self.direccion_id_r if self.direccion_id_r else 'NA'}"
-
-            )
+            msg_gerente = '\n\n'.join(filter(None, (
+                '*VISITA TÉCNICA DIRECTA*', self._bloque_visita_notificacion(True),
+                self._bloque_equipo_notificacion(),
+            )))
 
             try:
 

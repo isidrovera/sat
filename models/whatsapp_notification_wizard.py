@@ -46,7 +46,7 @@ class WhatsappNotificationWizard(models.TransientModel):
 
     cliente_name = fields.Char(string='Cliente', related='ticket_id.partner_id.name', readonly=True)
 
-    direccion = fields.Char(string='Dirección', related='ticket_id.direccion_id_r', readonly=True)
+    direccion = fields.Char(string='Dirección', related='ticket_id.direccion_notificacion', readonly=True)
 
     modelo_equipo = fields.Char(string='Modelo', related='ticket_id.modelo_id_r', readonly=True)
 
@@ -326,18 +326,11 @@ class WhatsappNotificationWizard(models.TransientModel):
         ticket = self.ticket_id
         if not ticket:
             raise UserError('No se encontró el ticket para notificar.')
-        # agenda_local es la representación de fecha/hora local del ticket.
-        fecha_hora = ticket.agenda_local or 'No programada'
-        return '\n'.join([
+        return '\n\n'.join(filter(None, (
             '*VISITA TÉCNICA PROGRAMADA*',
-            '',
-            f'*Cliente:* {ticket.partner_id.name if ticket.partner_id else "No especificado"}',
-            f'*Dirección:* {ticket.direccion_id_r or "No especificada"}',
-            f'*Técnico:* {ticket.responsable.name if ticket.responsable else "No asignado"}',
-            f'*Fecha y hora:* {fecha_hora}',
-            '',
-            'Aprovechar la visita programada para evaluar si existen pedidos pendientes de tóner.',
-        ])
+            ticket._bloque_visita_notificacion(True),
+            'Aprovechar la visita para evaluar pedidos pendientes de tóner.',
+        )))
 
     def _enviar_notificacion_whatsapp(self):
 
@@ -1943,7 +1936,7 @@ class WhatsappNotificationWizardLine(models.TransientModel):
 
         string='Dirección',
 
-        related='ticket_id.direccion_id_r',
+        related='ticket_id.direccion_notificacion',
 
         readonly=True
 
