@@ -122,17 +122,16 @@ class UnidadAlquilerGeo(models.Model):
     )
     def _compute_direccion_completa(self):
         for rec in self:
-            partes = [
-                valor.strip()
-                for valor in (
-                    rec.nombre_establecimiento,
-                    rec.direccion_calle,
-                    rec.distrito,
-                    rec.provincia,
-                    rec.departamento,
-                )
-                if valor and valor.strip()
-            ]
+            partes = []
+            vistos = set()
+            for valor in (rec.nombre_establecimiento, rec.direccion_calle,
+                          rec.distrito, rec.provincia, rec.departamento):
+                for parte in (valor or '').split(','):
+                    parte = parte.strip()
+                    clave = rec._normalizar_distrito_geo(parte)
+                    if clave and clave not in vistos:
+                        partes.append(parte)
+                        vistos.add(clave)
 
             referencia = (rec.direccion_referencia or '').strip()
             if referencia:
@@ -196,80 +195,99 @@ class UnidadAlquilerGeo(models.Model):
 
 
     def _extraer_componentes_direccion(self, address_components):
-        """Lee componentes de Google sin confundir Lima (ciudad) con distrito.
-
-        Usa el catálogo de mantenimiento.zona.distrito del módulo existente.
-        Si no es posible decidir con seguridad, conserva el distrito anterior.
-        """
+        """Extrae datos administrativos y valida distritos contra el catálogo."""
         self.ensure_one()
         vals = {}
         candidatos = []
         prioridad = {
             'sublocality_level_1': 0,
-            'sublocality': 1,
-            'administrative_area_level_3': 2,
-            'locality': 3,
-            'administrative_area_level_2': 4,
+            'administrative_area_level_3': 1,
+            'sublocality': 2,
+            'sublocality_level_2': 3,
+            'locality': 4,
+        }
+        campos = {
+            'administrative_area_level_2': 'provincia',
+            'administrative_area_level_1': 'departamento',
+            'postal_code': 'codigo_postal',
+            'country': 'pais',
         }
         for comp in address_components or []:
             tipos = set(comp.get('types') or [])
             nombre = (comp.get('long_name') or '').strip()
             if not nombre:
                 continue
-            if 'administrative_area_level_2' in tipos:
-                vals['provincia'] = nombre
-            if 'administrative_area_level_1' in tipos:
-                vals['departamento'] = nombre
-            if 'postal_code' in tipos:
-                vals['codigo_postal'] = nombre
-            if 'country' in tipos:
-                vals['pais'] = nombre
+            for tipo, campo in campos.items():
+                if tipo in tipos:
+                    vals[campo] = nombre
             for tipo, orden in prioridad.items():
                 if tipo in tipos:
                     candidatos.append((orden, nombre))
                     break
 
-        Zona = self.env['mantenimiento.zona']
-        mapa = Zona._mapa_distritos()
+        mapa = self.env['mantenimiento.zona']._mapa_distritos()
         genericos = {'lima', 'peru', 'provincia de lima', 'lima metropolitana'}
-        # Elegir únicamente un distrito que tenga una sola zona configurada.
-        # Cuando Google retorna Lima como localidad y Chorrillos como sublocalidad,
-        # gana Chorrillos, independientemente del orden de componentes.
-        candidatos.sort(key=lambda item: item[0])
-        for _, nombre in candidatos:
+        for orden, nombre in sorted(candidatos):
             clave = self._normalizar_distrito_geo(nombre)
-            zonas = mapa.get(clave, set())
-            if clave not in genericos and len(zonas) == 1:
+            if clave not in genericos and len(mapa.get(clave, set())) == 1:
                 vals['distrito'] = nombre
-                return vals
-            if len(zonas) > 1:
-                _logger.warning('[GEO] Distrito ambiguo %s en equipo %s', nombre, self.id)
-
-        # Si Google no identifica un distrito usable, extraerlo de la dirección
-        # registrada (sin inventar una zona a partir de la palabra Lima).
-        textos = [self.direccion_calle, self.direccion]
-        if self.direccion_completa:
-            textos.append(self.direccion_completa)
-        for texto in textos:
-            detectado = Zona._extraer_distrito_de_direccion(texto, mapa)
-            if detectado:
-                zonas = mapa.get(self._normalizar_distrito_geo(detectado), set())
-                if len(zonas) == 1:
-                    vals['distrito'] = detectado
-                    return vals
-
-        # Fallback: si no hay catálogo aplicable y la localidad de Google es
-        # específica (no genérica), conservarla como en el método original.
-        # Si el distrito actual ya es específico, no reemplazarlo por otra
-        # localidad no verificada.
-        actual = self._normalizar_distrito_geo(self.distrito)
-        if not actual or actual in genericos:
-            for _, nombre in candidatos:
-                clave = self._normalizar_distrito_geo(nombre)
-                if clave and clave not in genericos and not mapa.get(clave):
-                    _logger.info('[GEO] Distrito %s no configurado en zonas; no se asigna automáticamente', nombre)
-                    break
+                break
         return vals
+
+    def _resolver_direccion_geo(self, resultados, lat, lng, consultar=True):
+        """Usa todos los resultados, con una consulta inversa si falta distrito."""
+        self.ensure_one()
+        vals = {}
+        resultados = list(resultados or [])
+        candidatos = []
+        for resultado in resultados:
+            datos = self._extraer_componentes_direccion(resultado.get('address_components', []))
+            for campo, valor in datos.items():
+                if campo != 'distrito':
+                    vals.setdefault(campo, valor)
+            if datos.get('distrito'):
+                candidatos.append(datos['distrito'])
+        if not candidatos and consultar and lat and lng:
+            try:
+                respuesta = requests.get(
+                    'https://maps.googleapis.com/maps/api/geocode/json',
+                    params={'latlng': f'{lat},{lng}', 'key': self._get_google_api_key(), 'language': 'es'},
+                    timeout=10,
+                )
+                respuesta.raise_for_status()
+                datos = respuesta.json()
+                if datos.get('status') == 'OK':
+                    inversos = self._resolver_direccion_geo(datos.get('results', []), lat, lng, consultar=False)
+                    for campo, valor in inversos.items():
+                        if campo == 'distrito':
+                            candidatos.append(valor)
+                        else:
+                            vals.setdefault(campo, valor)
+                else:
+                    _logger.warning('[GEO] Consulta inversa: %s', datos.get('status'))
+            except (requests.exceptions.RequestException, ValueError, UserError):
+                _logger.warning('[GEO] No se pudo consultar distrito por coordenadas (equipo %s)', self.id)
+        unicos = {self._normalizar_distrito_geo(v): v for v in candidatos}
+        if len(unicos) == 1:
+            vals['distrito'] = next(iter(unicos.values()))
+        elif not unicos:
+            _logger.info('[GEO] Distrito no confirmado para equipo %s', self.id)
+        else:
+            _logger.warning('[GEO] Distritos contradictorios para equipo %s: %s', self.id, candidatos)
+        return vals
+
+    def _extraer_calle_geo(self, resultado):
+        componentes = resultado.get('address_components') or []
+        calle = numero = ''
+        for comp in componentes:
+            tipos = comp.get('types') or []
+            if 'route' in tipos:
+                calle = comp.get('long_name') or ''
+            if 'street_number' in tipos:
+                numero = comp.get('long_name') or ''
+        if calle:
+            return ' '.join(v for v in (calle, numero) if v)
+        return (resultado.get('formatted_address') or '').strip()
 
     @staticmethod
     def _normalizar_distrito_geo(valor):
@@ -447,11 +465,7 @@ class UnidadAlquilerGeo(models.Model):
 
             }
 
-            vals.update(self._extraer_componentes_direccion(
-
-                result.get('address_components', [])
-
-            ))
+            vals.update(self._resolver_direccion_geo(data['results'], vals.get('latitud', self.latitud), vals.get('longitud', self.longitud), consultar=not vals.get('ubicacion_manual')))
 
             self.write(vals)
 
@@ -563,7 +577,7 @@ class UnidadAlquilerGeo(models.Model):
 
             vals = {
 
-                'direccion_calle': result.get('formatted_address', ''),
+                'direccion_calle': self._extraer_calle_geo(result),
 
                 'google_place_id': result.get('place_id', ''),
 
@@ -571,11 +585,7 @@ class UnidadAlquilerGeo(models.Model):
 
             }
 
-            vals.update(self._extraer_componentes_direccion(
-
-                result.get('address_components', [])
-
-            ))
+            vals.update(self._resolver_direccion_geo(data['results'], vals.get('latitud', self.latitud), vals.get('longitud', self.longitud), consultar=not vals.get('ubicacion_manual')))
 
             self.write(vals)
 
@@ -663,7 +673,7 @@ class UnidadAlquilerGeo(models.Model):
 
             'google_place_id': place_data.get('place_id', ''),
 
-            'direccion_calle': place_data.get('formatted_address', ''),
+            'direccion_calle': self._extraer_calle_geo(place_data),
 
             'ubicacion_manual': False,
 
@@ -687,13 +697,12 @@ class UnidadAlquilerGeo(models.Model):
 
         # Extraer componentes de dirección
 
-        vals.update(self._extraer_componentes_direccion(
-
-            place_data.get('address_components', [])
-
-        ))
+        vals.update(self._resolver_direccion_geo([place_data], vals['latitud'], vals['longitud']))
 
 
+
+        if 'distrito' not in vals and (abs(vals['latitud'] - self.latitud) > 0.0001 or abs(vals['longitud'] - self.longitud) > 0.0001):
+            vals['distrito'] = False
 
         self.write(vals)
 
