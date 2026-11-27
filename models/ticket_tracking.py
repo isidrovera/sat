@@ -970,11 +970,14 @@ class TicketAlquilerTracking(models.Model):
                     _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=misma_posicion pos_id=%s',
                                  device, visita.id, actual['pos_id'])
                     continue
-                if segundos > 600:
+                # El anclaje puede permanecer durante toda la espera del día.
+                # La posición ACTUAL sigue necesitando validez y antigüedad <= 5 min.
+                if anterior < agenda_desde or anterior > agenda_hasta:
                     Config.set_param(clave, json.dumps(actual))
-                    _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=ventana_supera_600s '
-                                 'segundos=%.0f anclaje_reiniciado=si', device, visita.id, segundos)
+                    _logger.info('[GPS-DIAG] device=%s visita=%s anclaje_de_otro_dia_reiniciado', device, visita.id)
                     continue
+                if segundos > 600:
+                    _logger.info('[GPS-DIAG] device=%s visita=%s anclaje_conservado segundos=%.0f', device, visita.id, segundos)
                 if segundos < 30:
                     _logger.info('[GPS-BLOQUEO] device=%s visita=%s razon=intervalo_inferior_30s segundos=%.0f',
                                  device, visita.id, segundos)
@@ -1488,7 +1491,7 @@ class TicketAlquilerTracking(models.Model):
             elif evento_tipo == 'geofenceExit':
                 actualizados = self._gps_procesar_salida(tickets_hoy, datos)
             elif evento_tipo == 'deviceMoving':
-                actualizados = self._gps_procesar_movimiento(tickets_hoy, datos)
+                actualizados = self._gps_procesar_movimiento(tickets_hoy, datos, tecnico_traccar_device_id)
             else:
                 _logger.warning('[GPS-BLOQUEO] webhook evento_desconocido tipo=%s device=%s',
                                 evento_tipo, tecnico_traccar_device_id)
@@ -1609,11 +1612,70 @@ class TicketAlquilerTracking(models.Model):
         )
         return resultado
 
-    def _gps_procesar_movimiento(self, tickets_hoy, datos):
-        """deviceMoving no permite determinar a cuál cliente se dirige el técnico."""
-        _logger.info('[GPS-DIAG] webhook deviceMoving solo informativo; '
-                     'el cron=113 valida movimiento y visita; tickets=%s', tickets_hoy.mapped('name'))
-        return self.env['ticket.alquiler']
+    def _gps_procesar_movimiento(self, tickets_hoy, datos, device):
+        """Evalúa deviceMoving autenticado; la agenda determina la visita, no el evento.
+
+        Si falta evidencia reciente y fiable, el cron 113 conserva su función.
+        La velocidad Traccar se expresa en nudos; 3 nudos son aproximadamente 5.6 km/h.
+        """
+        resultado = self.env['ticket.alquiler']
+        fecha = datos.get('_fecha_evento_validada')
+        ahora = fields.Datetime.now()
+        if (not fecha or not datos.get('eventId') or not datos.get('positionId')
+                or not 0 <= (ahora - fecha).total_seconds() <= 300
+                or not self._gps_posicion_valida(datos, max_edad_min=5)):
+            _logger.info('[GPS-MOVING] device=%s evidencia_incompleta_o_antigua respaldo_cron=113', device)
+            return resultado
+        try:
+            lat, lon = float(datos['latitude']), float(datos['longitude'])
+            precision, velocidad = float(datos['accuracy']), float(datos['speed'])
+            fix = datetime.fromisoformat(str(datos['fixTime']).replace('Z', '+00:00'))
+            fix = fix.astimezone(timezone.utc).replace(tzinfo=None)
+        except (ValueError, TypeError, KeyError, OverflowError):
+            _logger.info('[GPS-MOVING] device=%s posicion_incompleta respaldo_cron=113', device)
+            return resultado
+        if (not all(math.isfinite(v) for v in (lat, lon, precision, velocidad))
+                or not (-90 <= lat <= 90 and -180 <= lon <= 180)
+                or (lat == 0 and lon == 0) or not 0 <= precision <= 30
+                or velocidad < 3 or abs((fix - fecha).total_seconds()) > 120):
+            _logger.info('[GPS-MOVING] device=%s evidencia_insuficiente respaldo_cron=113', device)
+            return resultado
+        tecnico = tickets_hoy[0].responsable
+        desde, hasta = self._get_rango_hoy()
+        if not desde <= fecha <= hasta:
+            return resultado
+        Visita = self.env['sat.visita.tecnica'].sudo()
+        Config = self.env['ir.config_parameter'].sudo()
+        with self.env.cr.savepoint():
+            # Serializa el webhook con el inicio por cron (mismo bloqueo del técnico).
+            self.env.cr.execute('SELECT id FROM res_users WHERE id = %s FOR UPDATE', [tecnico.id])
+            self._gps_preparar_agenda_pendiente(tecnico, desde, hasta)
+            visita = Visita._gps_siguiente_visita_principal(tecnico, desde, hasta)
+            if not visita or visita.estado != 'programada':
+                _logger.info('[GPS-MOVING] device=%s sin_siguiente_programada', device)
+                return resultado
+            tickets = visita.ticket_ids.filtered(lambda t: t.responsable == tecnico and t.estado == 'proceso')
+            if (not tickets or not any(t.traccar_geofence_id for t in tickets)
+                    or not visita._coordenadas_validas(visita.latitud, visita.longitud)):
+                return resultado
+            if any(t.fecha_asignacion and fecha < t.fecha_asignacion for t in tickets):
+                return resultado
+            anterior = Visita.search([('tecnico_id', '=', tecnico.id), ('fecha_salida', '!=', False)],
+                                     order='fecha_salida desc, id desc', limit=1)
+            if anterior and fecha <= anterior.fecha_salida:
+                _logger.info('[GPS-MOVING] device=%s evento_anterior_a_salida', device)
+                return resultado
+            if self._haversine_metros(lat, lon, visita.latitud, visita.longitud) <= 150:
+                return resultado  # La llegada se comprueba por su propio circuito.
+            referencia = 'traccar-deviceMoving:%s:%s' % (device, datos['eventId'])
+            if not visita.registrar_inicio_ruta_gps(fecha, referencia,
+                    ubicacion_actual={'latitude': lat, 'longitude': lon}):
+                return resultado
+            Config.set_param('sat.gps.movimiento.%s' % device, '')
+            Config.set_param('sat.gps.encadenamiento.%s' % device, '')
+            resultado = tickets.filtered(lambda t: t.estado == 'en_ruta')
+            _logger.info('[GPS-MOVING] EXITO device=%s visita=%s tickets=%s', device, visita.id, resultado.mapped('name'))
+        return resultado
 
     @staticmethod
     def _get_rango_hoy():
